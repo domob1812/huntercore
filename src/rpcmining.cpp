@@ -435,10 +435,10 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
 
     if (vNodes.empty())
-        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Namecoin is not connected!");
+        throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED, "Huntercoin is not connected!");
 
     if (IsInitialBlockDownload())
-        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Namecoin is downloading blocks...");
+        throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, "Huntercoin is downloading blocks...");
 
     static unsigned int nTransactionsUpdatedLast;
 
@@ -773,11 +773,11 @@ UniValue getauxblock(const UniValue& params, bool fHelp)
 
     if (vNodes.empty() && !Params().MineBlocksOnDemand())
         throw JSONRPCError(RPC_CLIENT_NOT_CONNECTED,
-                           "Namecoin is not connected!");
+                           "Huntercoin is not connected!");
 
     if (IsInitialBlockDownload() && !Params().MineBlocksOnDemand())
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD,
-                           "Namecoin is downloading blocks...");
+                           "Huntercoin is downloading blocks...");
     
     /* This should never fail, since the chain is already
        past the point of merge-mining start.  Check nevertheless.  */

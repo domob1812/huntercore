@@ -69,11 +69,11 @@ TESTS =
 BENCHMARKS =
 
 if BUILD_BITCOIND
-  bin_PROGRAMS += namecoind
+  bin_PROGRAMS += huntercoind
 endif
 
 if BUILD_BITCOIN_UTILS
-  bin_PROGRAMS += namecoin-cli namecoin-tx
+  bin_PROGRAMS += huntercoin-cli huntercoin-tx
 endif
 
 .PHONY: FORCE
@@ -340,16 +340,16 @@ nodist_libbitcoin_util_a_SOURCES = $(srcdir)/obj/build.h
 #
 
 # bitcoind binary #
-namecoind_SOURCES = bitcoind.cpp
-namecoind_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-namecoind_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-namecoind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+huntercoind_SOURCES = bitcoind.cpp
+huntercoind_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+huntercoind_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+huntercoind_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-namecoind_SOURCES += bitcoind-res.rc
+huntercoind_SOURCES += bitcoind-res.rc
 endif
 
-namecoind_LDADD = \
+huntercoind_LDADD = \
   $(LIBBITCOIN_SERVER) \
   $(LIBBITCOIN_COMMON) \
   $(LIBUNIVALUE) \
@@ -360,51 +360,51 @@ namecoind_LDADD = \
   $(LIBSECP256K1)
 
 if ENABLE_ZMQ
-namecoind_LDADD += $(LIBBITCOIN_ZMQ) $(ZMQ_LIBS)
+huntercoind_LDADD += $(LIBBITCOIN_ZMQ) $(ZMQ_LIBS)
 endif
 
 if ENABLE_WALLET
-namecoind_LDADD += libbitcoin_wallet.a
+huntercoind_LDADD += libbitcoin_wallet.a
 endif
 
-namecoind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS)
+huntercoind_LDADD += $(BOOST_LIBS) $(BDB_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(MINIUPNPC_LIBS) $(EVENT_PTHREADS_LIBS) $(EVENT_LIBS)
 
 # bitcoin-cli binary #
-namecoin_cli_SOURCES = bitcoin-cli.cpp
-namecoin_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
-namecoin_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-namecoin_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+huntercoin_cli_SOURCES = bitcoin-cli.cpp
+huntercoin_cli_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) $(EVENT_CFLAGS)
+huntercoin_cli_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+huntercoin_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-namecoin_cli_SOURCES += bitcoin-cli-res.rc
+huntercoin_cli_SOURCES += bitcoin-cli-res.rc
 endif
 
-namecoin_cli_LDADD = \
+huntercoin_cli_LDADD = \
   $(LIBBITCOIN_CLI) \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_UTIL)
 
-namecoin_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
+huntercoin_cli_LDADD += $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) $(EVENT_LIBS)
 #
 
 # bitcoin-tx binary #
-namecoin_tx_SOURCES = bitcoin-tx.cpp
-namecoin_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
-namecoin_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
-namecoin_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+huntercoin_tx_SOURCES = bitcoin-tx.cpp
+huntercoin_tx_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
+huntercoin_tx_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+huntercoin_tx_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 
 if TARGET_WINDOWS
-namecoin_tx_SOURCES += bitcoin-tx-res.rc
+huntercoin_tx_SOURCES += bitcoin-tx-res.rc
 endif
 
-namecoin_tx_LDADD = \
+huntercoin_tx_LDADD = \
   $(LIBUNIVALUE) \
   $(LIBBITCOIN_COMMON) \
   $(LIBBITCOIN_UTIL) \
   $(LIBBITCOIN_CRYPTO) \
   $(LIBSECP256K1)
 
-namecoin_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
+huntercoin_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
 #
 
 # namecoinconsensus library #

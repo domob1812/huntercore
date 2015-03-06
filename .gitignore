@@ -4,9 +4,9 @@
 src/bitcoind
 src/bitcoin-cli
 src/bitcoin-tx
-src/namecoind
-src/namecoin-cli
-src/namecoin-tx
+src/huntercoind
+src/huntercoin-cli
+src/huntercoin-tx
 src/test/test_bitcoin
 src/qt/test/test_bitcoin-qt
 
@@ -77,9 +77,9 @@ src/qt/test/moc*.cpp
 *.qm
 Makefile
 bitcoin-qt
-namecoin-qt
+huntercoin-qt
 Bitcoin-Qt.app
-Namecoin-Qt.app
+Huntercoin-Qt.app
 
 # Unit-tests
 Makefile.test

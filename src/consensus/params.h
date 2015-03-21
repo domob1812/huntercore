@@ -11,6 +11,36 @@
 
 #include <memory>
 
+/* Handle fork heights.  The function checks whether a fork is in effect
+   at the given height -- and may use different heights for testnet
+   and mainnet, or for a "testing mode".  */
+enum Fork
+{
+
+  /* Poison disaster, increased general cost 1 HUC -> 10 HUC, just general
+     as initial character.  */
+  FORK_POISON,
+
+  /* Maximum carrying-capacity introduced, removed spawn death,
+     new-style name registration, stricter rule checks for transaction
+     version and auxpow (in parallel to Namecoin).  */
+  FORK_CARRYINGCAP,
+
+  /* Update parameters (general 10 HUC -> 200 HUC, carrying capacity increased
+     to 2000 HUC, heart spawn rate reduced to 1/500, general explosion
+     radius only 1).  */
+  FORK_LESSHEARTS,
+
+};
+
+/** Dual-algo PoW algorithms.  */
+enum PowAlgo
+{
+  ALGO_SHA256D = 0,
+  ALGO_SCRYPT,
+  NUM_ALGOS
+};
+
 namespace Consensus {
 
 /**
@@ -23,6 +53,9 @@ public:
 
     /* Return the expiration depth for names at the given height.  */
     virtual unsigned NameExpirationDepth(unsigned nHeight) const = 0;
+
+    /* Check whether a given fork is in effect at the height.  */
+    virtual bool ForkInEffect(Fork type, unsigned nHeight) const = 0;
 
     /* Return minimum locked amount in a name.  */
     virtual CAmount MinNameCoinAmount(unsigned nHeight) const = 0;
@@ -47,12 +80,29 @@ public:
         return 36000;
     }
 
+    bool ForkInEffect(Fork type, unsigned nHeight) const
+    {
+        switch (type)
+        {
+            case FORK_POISON:
+                return nHeight >= 255000;
+            case FORK_CARRYINGCAP:
+                return nHeight >= 500000;
+            case FORK_LESSHEARTS:
+                return nHeight >= 590000;
+            default:
+                assert (false);
+        }
+    }
+
     CAmount MinNameCoinAmount(unsigned nHeight) const
     {
-        if (nHeight < 212500)
-            return 0;
+        if (ForkInEffect (FORK_LESSHEARTS, nHeight))
+            return 200 * COIN;
+        if (ForkInEffect (FORK_POISON, nHeight))
+            return 10 * COIN;
 
-        return COIN / 100;
+        return COIN;
     }
 
 };
@@ -61,9 +111,19 @@ class TestNetConsensus : public MainNetConsensus
 {
 public:
 
-    CAmount MinNameCoinAmount(unsigned) const
+    bool ForkInEffect(Fork type, unsigned nHeight) const
     {
-        return COIN / 100;
+        switch (type)
+        {
+            case FORK_POISON:
+                return nHeight >= 190000;
+            case FORK_CARRYINGCAP:
+                return nHeight >= 200000;
+            case FORK_LESSHEARTS:
+                return nHeight >= 240000;
+            default:
+                assert (false);
+        }
     }
 
 };
@@ -93,34 +153,17 @@ struct Params {
     int BIP34Height;
     uint256 BIP34Hash;
     /** Proof of work parameters */
-    uint256 powLimit;
-    bool fPowAllowMinDifficultyBlocks;
-    int64_t nMinDifficultySince;
+    uint256 powLimit[NUM_ALGOS];
     bool fPowNoRetargeting;
     int64_t nPowTargetSpacing;
     int64_t nPowTargetTimespan;
     int64_t DifficultyAdjustmentInterval() const { return nPowTargetTimespan / nPowTargetSpacing; }
     /** Auxpow parameters */
-    int32_t nAuxpowChainId;
-    int nAuxpowStartHeight;
+    int32_t nAuxpowChainId[NUM_ALGOS];
     bool fStrictChainId;
-    int nLegacyBlocksBefore; // -1 for "always allow"
 
     /** Consensus rule interface.  */
     std::auto_ptr<ConsensusRules> rules;
-
-    /**
-     * Check whether or not minimum difficulty blocks are allowed
-     * with the given time stamp.
-     * @param nBlockTime Time of the block with minimum difficulty.
-     * @return True if it is allowed to have minimum difficulty.
-     */
-    bool AllowMinDifficultyBlocks(int64_t nBlockTime) const
-    {
-        if (!fPowAllowMinDifficultyBlocks)
-            return false;
-        return nBlockTime > nMinDifficultySince;
-    }
 
     /**
      * Check whether or not to allow legacy blocks at the given height.
@@ -129,9 +172,7 @@ struct Params {
      */
     bool AllowLegacyBlocks(unsigned nHeight) const
     {
-        if (nLegacyBlocksBefore < 0)
-            return true;
-        return static_cast<int> (nHeight) < nLegacyBlocksBefore;
+        return nHeight == 0;
     }
 };
 } // namespace Consensus

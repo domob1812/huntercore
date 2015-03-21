@@ -753,7 +753,7 @@ bool CheckTransaction(const CTransaction& tx, CValidationState &state)
 
     if (tx.IsCoinBase())
     {
-        if (tx.vin[0].scriptSig.size() < 2 || tx.vin[0].scriptSig.size() > 100)
+        if (tx.vin[0].scriptSig.size() < 2 || tx.vin[0].scriptSig.size() > 230)
             return state.DoS(100, false, REJECT_INVALID, "bad-cb-length");
     }
     else
@@ -1095,16 +1095,19 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
 
 bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params)
 {
+    const PowAlgo algo = block.nVersion.GetAlgo();
+
     /* Except for legacy blocks with full version 1, ensure that
        the chain ID is correct.  Legacy blocks are not allowed since
        the merge-mining start, which is checked in AcceptBlockHeader
        where the height is known.  */
     if (!block.nVersion.IsLegacy() && params.fStrictChainId
-        && block.nVersion.GetChainId() != params.nAuxpowChainId)
+        && block.nVersion.GetChainId() != params.nAuxpowChainId[algo])
         return error("%s : block does not have our chain ID"
                      " (got %d, expected %d, full nVersion %d)",
                      __func__, block.nVersion.GetChainId(),
-                     params.nAuxpowChainId, block.nVersion.GetFullVersion());
+                     params.nAuxpowChainId[algo],
+                     block.nVersion.GetFullVersion());
 
     /* If there is no auxpow, just check the block hash.  */
     if (!block.auxpow)
@@ -1113,7 +1116,7 @@ bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params
             return error("%s : no auxpow on block with auxpow version",
                          __func__);
 
-        if (!CheckProofOfWork(block.GetHash(), block.nBits, params))
+        if (!CheckProofOfWork(block.GetHash(), block.nBits, algo, params))
             return error("%s : non-AUX proof of work failed", __func__);
 
         return true;
@@ -1132,7 +1135,7 @@ bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params
 
     if (!block.auxpow->check(block.GetHash(), block.nVersion.GetChainId(), params))
         return error("%s : AUX POW is not valid", __func__);
-    if (!CheckProofOfWork(block.auxpow->getParentBlockHash(), block.nBits, params))
+    if (!CheckProofOfWork(block.auxpow->getParentBlockHash(), block.nBits, algo, params))
         return error("%s : AUX proof of work failed", __func__);
 
     return true;

@@ -165,7 +165,8 @@ UniValue generate(const UniValue& params, bool fHelp)
             LOCK(cs_main);
             IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
         }
-        while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, Params().GetConsensus())) {
+        // FIXME: Allow choosing algo.
+        while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, ALGO_SHA256D, Params().GetConsensus())) {
             // Yes, there is a chance every nonce could fail to satisfy the -regtest
             // target -- 1 in 2^(2^32). That ain't gonna happen.
             ++pblock->nNonce;
@@ -779,14 +780,6 @@ UniValue getauxblock(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD,
                            "Huntercoin is downloading blocks...");
     
-    /* This should never fail, since the chain is already
-       past the point of merge-mining start.  Check nevertheless.  */
-    {
-        LOCK(cs_main);
-        if (chainActive.Height() + 1 < Params().GetConsensus().nAuxpowStartHeight)
-            throw std::runtime_error("getauxblock method is not yet available");
-    }
-
     /* The variables below are used to keep track of created and not yet
        submitted auxpow blocks.  Lock them to be sure even for multiple
        RPC threads running in parallel.  */

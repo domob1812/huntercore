@@ -92,9 +92,13 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
     if (nOldTime < nNewTime)
         pblock->nTime = nNewTime;
 
+    // FIXME: Probably we need to change the difficulty now as well,
+    // since the time changed.
     // Updating time can change work required on testnet:
+    /*
     if (consensusParams.AllowMinDifficultyBlocks(pblock->GetBlockTime()))
         pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, consensusParams);
+    */
 
     return nNewTime - nOldTime;
 }
@@ -545,11 +549,14 @@ void static BitcoinMiner(const CChainParams& chainparams)
                 if (UpdateTime(pblock, chainparams.GetConsensus(), pindexPrev) < 0)
                     break; // Recreate the block if the clock has run backwards,
                            // so that we can use the correct time.
+                // FIXME: Update hash target.
+                /*
                 if (chainparams.GetConsensus().AllowMinDifficultyBlocks(pblock->GetBlockTime()))
                 {
                     // Changing pblock->nTime can change work required on testnet:
                     hashTarget.SetCompact(pblock->nBits);
                 }
+                */
             }
         }
     }
@@ -565,6 +572,7 @@ void static BitcoinMiner(const CChainParams& chainparams)
     }
 }
 
+/* FIXME: Allow choosing algo.  */
 void GenerateBitcoins(bool fGenerate, int nThreads, const CChainParams& chainparams)
 {
     static boost::thread_group* minerThreads = NULL;

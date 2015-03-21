@@ -13,7 +13,10 @@
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
-    unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
+    const PowAlgo algo = pblock->nVersion.GetAlgo();
+    unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit[algo]).GetCompact();
+
+    // FIXME: Add continuous retargeting algo.
 
     // Genesis block
     if (pindexLast == NULL)
@@ -21,39 +24,12 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
 
     // Only change once per difficulty adjustment interval
     if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval() != 0)
-    {
-        if (params.AllowMinDifficultyBlocks(pblock->GetBlockTime()))
-        {
-            /* khal's port of this code from Bitcoin to the old namecoind
-               has a bug:  Comparison of block times is done by an unsigned
-               difference.  Consequently, the minimum difficulty is also
-               applied if the block's timestamp is earlier than the preceding
-               block's.  Reproduce this.  */
-            if (pblock->GetBlockTime() < pindexLast->GetBlockTime())
-                return nProofOfWorkLimit;
-
-            // Special difficulty rule for testnet:
-            // If the new block's timestamp is more than 2* 10 minutes
-            // then allow mining of a min-difficulty block.
-            if (pblock->GetBlockTime() > pindexLast->GetBlockTime() + params.nPowTargetSpacing*2)
-                return nProofOfWorkLimit;
-            else
-            {
-                // Return the last non-special-min-difficulty-rules-block
-                const CBlockIndex* pindex = pindexLast;
-                while (pindex->pprev && pindex->nHeight % params.DifficultyAdjustmentInterval() != 0 && pindex->nBits == nProofOfWorkLimit)
-                    pindex = pindex->pprev;
-                return pindex->nBits;
-            }
-        }
         return pindexLast->nBits;
-    }
 
     /* Adapt the retargeting interval after merge-mining start
        according to the changed Namecoin rules.  */
     int nBlocksBack = params.DifficultyAdjustmentInterval() - 1;
-    if (pindexLast->nHeight >= params.nAuxpowStartHeight
-        && (pindexLast->nHeight + 1 > params.DifficultyAdjustmentInterval()))
+    if (pindexLast->nHeight + 1 > params.DifficultyAdjustmentInterval())
         nBlocksBack = params.DifficultyAdjustmentInterval();
 
     // Go back by what we want to be 14 days worth of blocks
@@ -62,10 +38,10 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
     assert(pindexFirst);
 
-    return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), params);
+    return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), algo, params);
 }
 
-unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
+unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, PowAlgo algo, const Consensus::Params& params)
 {
     if (params.fPowNoRetargeting)
         return pindexLast->nBits;
@@ -79,7 +55,7 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
         nActualTimespan = params.nPowTargetTimespan*4;
 
     // Retarget
-    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);
+    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit[algo]);
     arith_uint256 bnNew;
     arith_uint256 bnOld;
     bnNew.SetCompact(pindexLast->nBits);
@@ -99,7 +75,7 @@ unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nF
     return bnNew.GetCompact();
 }
 
-bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)
+bool CheckProofOfWork(uint256 hash, unsigned int nBits, PowAlgo algo, const Consensus::Params& params)
 {
     bool fNegative;
     bool fOverflow;
@@ -108,7 +84,7 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
     bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
 
     // Check range
-    if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit))
+    if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit[algo]))
         return error("CheckProofOfWork(): nBits below minimum work");
 
     // Check proof of work matches claimed amount
@@ -120,6 +96,8 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
 
 arith_uint256 GetBlockProof(const CBlockIndex& block)
 {
+    /* FIXME: Take dual-algo factor into account.  */
+
     arith_uint256 bnTarget;
     bool fNegative;
     bool fOverflow;

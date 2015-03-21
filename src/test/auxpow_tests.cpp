@@ -190,8 +190,10 @@ BOOST_AUTO_TEST_CASE (check_auxpow)
   CAuxpowBuilder builder(5, 42);
   CAuxPow auxpow;
 
+  // FIXME: Update for dual algo.
+
   const uint256 hashAux = ArithToUint256 (arith_uint256(12345));
-  const int32_t ourChainId = params.nAuxpowChainId;
+  const int32_t ourChainId = params.nAuxpowChainId[ALGO_SHA256D];
   const unsigned height = 30;
   const int nonce = 7;
   int index;
@@ -349,9 +351,9 @@ mineBlock (CBlockHeader& block, bool ok, int nBits = -1)
     }
 
   if (ok)
-    BOOST_CHECK (CheckProofOfWork (block.GetHash (), nBits, Params().GetConsensus()));
+    BOOST_CHECK (CheckProofOfWork (block.GetHash (), nBits, ALGO_SHA256D, Params().GetConsensus()));
   else
-    BOOST_CHECK (!CheckProofOfWork (block.GetHash (), nBits, Params().GetConsensus()));
+    BOOST_CHECK (!CheckProofOfWork (block.GetHash (), nBits, ALGO_SHA256D, Params().GetConsensus()));
 }
 
 BOOST_AUTO_TEST_CASE (auxpow_pow)
@@ -375,18 +377,18 @@ BOOST_AUTO_TEST_CASE (auxpow_pow)
   BOOST_CHECK (!CheckProofOfWork (block, params));
 
   block.nVersion.SetBaseVersion (2);
-  block.nVersion.SetChainId (params.nAuxpowChainId);
+  block.nVersion.SetChainId (params.nAuxpowChainId[ALGO_SHA256D]);
   mineBlock (block, true);
   BOOST_CHECK (CheckProofOfWork (block, params));
 
-  block.nVersion.SetChainId (params.nAuxpowChainId + 1);
+  block.nVersion.SetChainId (params.nAuxpowChainId[ALGO_SHA256D] + 1);
   mineBlock (block, true);
   BOOST_CHECK (!CheckProofOfWork (block, params));
 
   /* Check the case when the block does not have auxpow (this is true
      right now).  */
 
-  block.nVersion.SetChainId (params.nAuxpowChainId);
+  block.nVersion.SetChainId (params.nAuxpowChainId[ALGO_SHA256D]);
   block.nVersion.SetAuxpow (true);
   mineBlock (block, true);
   BOOST_CHECK (!CheckProofOfWork (block, params));
@@ -402,7 +404,7 @@ BOOST_AUTO_TEST_CASE (auxpow_pow)
 
   CAuxpowBuilder builder(5, 42);
   CAuxPow auxpow;
-  const int32_t ourChainId = params.nAuxpowChainId;
+  const int32_t ourChainId = params.nAuxpowChainId[ALGO_SHA256D];
   const unsigned height = 3;
   const int nonce = 7;
   const int index = CAuxPow::getExpectedIndex (nonce, ourChainId, height);

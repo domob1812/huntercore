@@ -6,6 +6,7 @@
 #ifndef BITCOIN_PRIMITIVES_PUREHEADER_H
 #define BITCOIN_PRIMITIVES_PUREHEADER_H
 
+#include "consensus/params.h"
 #include "serialize.h"
 #include "uint256.h"
 
@@ -21,6 +22,7 @@ private:
 
     /* Modifiers to the version.  */
     static const int32_t VERSION_AUXPOW = (1 << 8);
+    static const int32_t VERSION_SCRYPT = (1 << 9);
 
     /** Bits above are reserved for the auxpow chain ID.  */
     static const int32_t VERSION_CHAIN_START = (1 << 16);
@@ -121,6 +123,36 @@ public:
             nVersion |= VERSION_AUXPOW;
         else
             nVersion &= ~VERSION_AUXPOW;
+    }
+
+    /**
+     * Get the corresponding PoW algorithm.
+     * @return The block's PoW algorithm.
+     */
+    inline PowAlgo GetAlgo () const
+    {
+        if (nVersion & VERSION_SCRYPT)
+            return ALGO_SCRYPT;
+        return ALGO_SHA256D;
+    }
+
+    /**
+     * Set the PoW algorithm indication.
+     * @param algo The algorithm to set.
+     */
+    inline void SetAlgo (PowAlgo algo)
+    {
+        switch (algo)
+        {
+            case ALGO_SHA256D:
+                nVersion &= ~VERSION_SCRYPT;
+                return;
+            case ALGO_SCRYPT:
+                nVersion |= VERSION_SCRYPT;
+                return;
+            default:
+                assert (false);
+        }
     }
 
     /**

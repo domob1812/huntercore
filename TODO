@@ -1,3 +1,5 @@
+* dual-algo mining (difficulty in getinfo and co, choosing algo)
+
 * make genesis premine spendable
 
 * remove name expiration

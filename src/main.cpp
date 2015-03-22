@@ -1116,7 +1116,7 @@ bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params
             return error("%s : no auxpow on block with auxpow version",
                          __func__);
 
-        if (!CheckProofOfWork(block.GetHash(), block.nBits, algo, params))
+        if (!CheckProofOfWork(block.GetPowHash(algo), block.nBits, algo, params))
             return error("%s : non-AUX proof of work failed", __func__);
 
         return true;
@@ -1135,6 +1135,7 @@ bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params
 
     if (!block.auxpow->check(block.GetHash(), block.nVersion.GetChainId(), params))
         return error("%s : AUX POW is not valid", __func__);
+    /* FIXME: Implement algo-dependent check.  */
     if (!CheckProofOfWork(block.auxpow->getParentBlockHash(), block.nBits, algo, params))
         return error("%s : AUX proof of work failed", __func__);
 
@@ -1442,6 +1443,7 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             assert(coins);
 
             // If prev is coinbase, check that it's matured
+            // FIXME: Allow genesis coinbase to be spent immediately
             if (coins->IsCoinBase()) {
                 if (nSpendHeight - coins->nHeight < COINBASE_MATURITY)
                     return state.Invalid(false,

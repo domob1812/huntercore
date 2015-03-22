@@ -11,66 +11,90 @@
 #include "uint256.h"
 #include "util.h"
 
+static const CBlockIndex*
+GetLastBlockIndex(const CBlockIndex* pindex, PowAlgo algo)
+{
+    if (!pindex)
+        return NULL;
+
+    while (pindex && (pindex->nVersion.GetAlgo() != algo))
+        pindex = pindex->pprev;
+
+    return pindex;
+}
+
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
     const PowAlgo algo = pblock->nVersion.GetAlgo();
-    unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit[algo]).GetCompact();
+    const arith_uint256 bnProofOfWorkLimit = UintToArith256(params.powLimit[algo]);
+    const unsigned nProofOfWorkLimit = bnProofOfWorkLimit.GetCompact();
 
-    // FIXME: Add continuous retargeting algo.
-
-    // Genesis block
-    if (pindexLast == NULL)
+    if (!pindexLast)
         return nProofOfWorkLimit;
-
-    // Only change once per difficulty adjustment interval
-    if ((pindexLast->nHeight+1) % params.DifficultyAdjustmentInterval() != 0)
-        return pindexLast->nBits;
-
-    /* Adapt the retargeting interval after merge-mining start
-       according to the changed Namecoin rules.  */
-    int nBlocksBack = params.DifficultyAdjustmentInterval() - 1;
-    if (pindexLast->nHeight + 1 > params.DifficultyAdjustmentInterval())
-        nBlocksBack = params.DifficultyAdjustmentInterval();
-
-    // Go back by what we want to be 14 days worth of blocks
-    int nHeightFirst = pindexLast->nHeight - nBlocksBack;
-    assert(nHeightFirst >= 0);
-    const CBlockIndex* pindexFirst = pindexLast->GetAncestor(nHeightFirst);
-    assert(pindexFirst);
-
-    return CalculateNextWorkRequired(pindexLast, pindexFirst->GetBlockTime(), algo, params);
-}
-
-unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, PowAlgo algo, const Consensus::Params& params)
-{
     if (params.fPowNoRetargeting)
         return pindexLast->nBits;
 
-    // Limit adjustment step
-    int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;
-    LogPrintf("  nActualTimespan = %d  before bounds\n", nActualTimespan);
-    if (nActualTimespan < params.nPowTargetTimespan/4)
-        nActualTimespan = params.nPowTargetTimespan/4;
-    if (nActualTimespan > params.nPowTargetTimespan*4)
-        nActualTimespan = params.nPowTargetTimespan*4;
+    const CBlockIndex* pindexPrev = GetLastBlockIndex(pindexLast, algo);
+    if (!pindexPrev || !pindexPrev->pprev)
+        return nProofOfWorkLimit; // first block
+    const CBlockIndex* pindexPrevPrev = GetLastBlockIndex(pindexPrev->pprev, algo);
+    if (!pindexPrevPrev || !pindexPrevPrev->pprev)
+        return nProofOfWorkLimit; // second block
 
-    // Retarget
-    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit[algo]);
+    const int64_t nActualSpacing = pindexPrev->GetBlockTime() - pindexPrevPrev->GetBlockTime();
+
+    // ppcoin: target change every block
+    // ppcoin: retarget with exponential moving toward target spacing
     arith_uint256 bnNew;
-    arith_uint256 bnOld;
-    bnNew.SetCompact(pindexLast->nBits);
-    bnOld = bnNew;
-    bnNew *= nActualTimespan;
-    bnNew /= params.nPowTargetTimespan;
+    bnNew.SetCompact(pindexPrev->nBits);
 
-    if (bnNew > bnPowLimit)
-        bnNew = bnPowLimit;
+    /* The old computation here was:
+      
+          bnNew *= (nInterval - 1) * nTargetSpacing + 2 * nActualSpacing;
+          bnNew /= (nInterval + 1) * nTargetSpacing;
 
-    /// debug print
-    LogPrintf("GetNextWorkRequired RETARGET\n");
-    LogPrintf("params.nPowTargetTimespan = %d    nActualTimespan = %d\n", params.nPowTargetTimespan, nActualTimespan);
-    LogPrintf("Before: %08x  %s\n", pindexLast->nBits, bnOld.ToString());
-    LogPrintf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.ToString());
+       This, however, may exceed 256 bits for a low difficulty in the
+       intermediate step.  We can rewrite it:
+
+          A = (nInterval + 1) nTargetSpacing
+          bnNew *= A + 2 (nActualSpacing - nTargetSpacing)
+          bnNew /= A
+
+       Or also:
+
+          A = (nInterval + 1) nTargetSpacing
+          B = (nActualSpacing - nTargetSpacing)
+          bnNew = (bnNew A + bnNew 2 B) / A = bnNew + (2 bnNew B) / A
+
+      To compute (2 bnNew B) / A without overflowing, let
+
+          bnNew = P * A + R.
+
+      Then
+
+          (2 bnNew B) / A = 2 P B + (2 R B) / A.
+
+      Assuming that A is not too large (which it definitely isn't in comparison
+      to 256 bits), also (2 R B) does not overflow before the divide.
+
+    */
+
+    const int64_t nInterval = params.DifficultyAdjustmentInterval();
+
+    const int64_t a = (nInterval + 1) * params.nPowTargetSpacing;
+    const int64_t b = nActualSpacing - params.nPowTargetSpacing;
+    const arith_uint256 p = bnNew / a;
+    const arith_uint256 r = bnNew - p * a;
+
+    /* Make sure to get the division right for negative b!  Division is
+       not "preserved" under two's complement.  */
+    if (b >= 0)
+        bnNew += 2 * p * b + (2 * r * b) / a;
+    else
+        bnNew -= 2 * p * (-b) + (2 * r * (-b)) / a;
+
+    if (bnNew > bnProofOfWorkLimit)
+        bnNew = bnProofOfWorkLimit;
 
     return bnNew.GetCompact();
 }
@@ -108,7 +132,23 @@ arith_uint256 GetBlockProof(const CBlockIndex& block)
     // as it's too large for a arith_uint256. However, as 2**256 is at least as large
     // as bnTarget+1, it is equal to ((2**256 - bnTarget - 1) / (bnTarget+1)) + 1,
     // or ~bnTarget / (nTarget+1) + 1.
-    return (~bnTarget / (bnTarget + 1)) + 1;
+    arith_uint256 work = (~bnTarget / (bnTarget + 1)) + 1;
+
+    // Apply scrypt-to-SHA ratio
+    // We assume that scrypt is 2^12 times harder to mine (for the same difficulty target)
+    // This only affects how a longer chain is selected in case of conflict
+    switch (block.nVersion.GetAlgo())
+    {
+        case ALGO_SHA256D:
+            break;
+        case ALGO_SCRYPT:
+            work <<= 12;
+            break;
+        default:
+            assert (false);
+    }
+
+    return work;
 }
 
 int64_t GetBlockProofEquivalentTime(const CBlockIndex& to, const CBlockIndex& from, const CBlockIndex& tip, const Consensus::Params& params)

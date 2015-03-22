@@ -219,6 +219,7 @@ public:
     }
 
     uint256 GetHash() const;
+    uint256 GetPowHash(PowAlgo algo) const;
 
     int64_t GetBlockTime() const
     {

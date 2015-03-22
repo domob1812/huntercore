@@ -9,13 +9,13 @@
  * network protocol versioning
  */
 
-static const int PROTOCOL_VERSION = 110000;
+static const int PROTOCOL_VERSION = 2000000;
 
 //! initial proto version, to be increased after version/verack negotiation
-static const int INIT_PROTO_VERSION = 209;
+static const int INIT_PROTO_VERSION = 1000000;
 
 //! In this version, 'getheaders' was introduced.
-static const int GETHEADERS_VERSION = 31800;
+static const int GETHEADERS_VERSION = 1020001;
 
 //! disconnect from peers older than this proto version
 static const int MIN_PEER_PROTO_VERSION = GETHEADERS_VERSION;
@@ -29,15 +29,15 @@ static const int NOBLKS_VERSION_START = 32000;
 static const int NOBLKS_VERSION_END = 32400;
 
 //! BIP 0031, pong message, is enabled for all versions AFTER this one
-static const int BIP0031_VERSION = 60000;
+static const int BIP0031_VERSION = 2000000;
 
 //! "mempool" command, enhanced "getdata" behavior starts with this version
-static const int MEMPOOL_GD_VERSION = 60002;
+static const int MEMPOOL_GD_VERSION = 2000000;
 
 //! "filter*" commands are disabled without NODE_BLOOM after and including this version
-static const int NO_BLOOM_VERSION = 70011;
+static const int NO_BLOOM_VERSION = 2000000;
 
 //! Version when we switched to a size-based "headers" limit.
-static const int SIZE_HEADERS_LIMIT_VERSION = 110000;
+static const int SIZE_HEADERS_LIMIT_VERSION = 2000000;
 
 #endif // BITCOIN_VERSION_H

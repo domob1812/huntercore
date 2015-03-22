@@ -139,12 +139,13 @@ public:
   /**
    * Get the parent block's hash.  This is used to verify that it
    * satisfies the PoW requirement.
+   * @param algo The PoW algo to use.
    * @return The parent block hash.
    */
   inline uint256
-  getParentBlockHash () const
+  getParentBlockHash (PowAlgo algo) const
   {
-    return parentBlock.GetHash ();
+    return parentBlock.GetPowHash (algo);
   }
 
   /**

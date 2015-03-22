@@ -120,8 +120,6 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, PowAlgo algo, const Cons
 
 arith_uint256 GetBlockProof(const CBlockIndex& block)
 {
-    /* FIXME: Take dual-algo factor into account.  */
-
     arith_uint256 bnTarget;
     bool fNegative;
     bool fOverflow;

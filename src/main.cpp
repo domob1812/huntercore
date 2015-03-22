@@ -1135,8 +1135,7 @@ bool CheckProofOfWork(const CBlockHeader& block, const Consensus::Params& params
 
     if (!block.auxpow->check(block.GetHash(), block.nVersion.GetChainId(), params))
         return error("%s : AUX POW is not valid", __func__);
-    /* FIXME: Implement algo-dependent check.  */
-    if (!CheckProofOfWork(block.auxpow->getParentBlockHash(), block.nBits, algo, params))
+    if (!CheckProofOfWork(block.auxpow->getParentBlockHash(algo), block.nBits, algo, params))
         return error("%s : AUX proof of work failed", __func__);
 
     return true;

@@ -1,7 +1,3 @@
-* dual-algo mining (difficulty in getinfo and co, choosing algo)
-
-* make genesis premine spendable
-
 * remove name expiration
 
 * enforce exact name coin amount
@@ -9,5 +5,13 @@
 * implement game transactions
 
 * add game engine
+
+* name_register style names + RPC command
+
+* update fee and IsStandard policies
+
+* dual-algo mining (difficulty in getinfo and co, choosing algo)
+
+* reenable and update tests regtests
 
 * fully get rid of name database?

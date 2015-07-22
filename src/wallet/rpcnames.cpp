@@ -251,7 +251,7 @@ name_firstupdate (const UniValue& params, bool fHelp)
 
   const std::string valueStr = params[3].get_str ();
   const valtype value = ValtypeFromString (valueStr);
-  if (value.size () > MAX_VALUE_LENGTH_UI)
+  if (value.size () > MAX_VALUE_LENGTH)
     throw JSONRPCError (RPC_INVALID_PARAMETER, "the value is too long");
 
   {
@@ -356,7 +356,7 @@ name_update (const UniValue& params, bool fHelp)
 
   const std::string valueStr = params[1].get_str ();
   const valtype value = ValtypeFromString (valueStr);
-  if (value.size () > MAX_VALUE_LENGTH_UI)
+  if (value.size () > MAX_VALUE_LENGTH)
     throw JSONRPCError (RPC_INVALID_PARAMETER, "the value is too long");
 
   /* Reject updates to a name for which the mempool already has

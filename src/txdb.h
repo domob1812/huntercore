@@ -39,7 +39,6 @@ public:
     uint256 GetBestBlock() const;
     bool GetName(const valtype &name, CNameData &data) const;
     bool GetNameHistory(const valtype &name, CNameHistory &data) const;
-    bool GetNamesForHeight(unsigned nHeight, std::set<valtype>& data) const;
     CNameIterator* IterateNames() const;
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names);
     bool GetStats(CCoinsStats &stats) const;

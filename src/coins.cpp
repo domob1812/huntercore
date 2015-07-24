@@ -60,7 +60,6 @@ bool CCoinsView::HaveCoins(const uint256 &txid) const { return false; }
 uint256 CCoinsView::GetBestBlock() const { return uint256(); }
 bool CCoinsView::GetName(const valtype &name, CNameData &data) const { return false; }
 bool CCoinsView::GetNameHistory(const valtype &name, CNameHistory &data) const { return false; }
-bool CCoinsView::GetNamesForHeight(unsigned nHeight, std::set<valtype>& names) const { return false; }
 CNameIterator* CCoinsView::IterateNames() const { assert (false); }
 bool CCoinsView::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names) { return false; }
 bool CCoinsView::GetStats(CCoinsStats &stats) const { return false; }
@@ -73,7 +72,6 @@ bool CCoinsViewBacked::HaveCoins(const uint256 &txid) const { return base->HaveC
 uint256 CCoinsViewBacked::GetBestBlock() const { return base->GetBestBlock(); }
 bool CCoinsViewBacked::GetName(const valtype &name, CNameData &data) const { return base->GetName(name, data); }
 bool CCoinsViewBacked::GetNameHistory(const valtype &name, CNameHistory &data) const { return base->GetNameHistory(name, data); }
-bool CCoinsViewBacked::GetNamesForHeight(unsigned nHeight, std::set<valtype>& names) const { return base->GetNamesForHeight(nHeight, names); }
 CNameIterator* CCoinsViewBacked::IterateNames() const { return base->IterateNames(); }
 void CCoinsViewBacked::SetBackend(CCoinsView &viewIn) { base = &viewIn; }
 bool CCoinsViewBacked::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names) { return base->BatchWrite(mapCoins, hashBlock, names); }
@@ -191,17 +189,6 @@ bool CCoinsViewCache::GetNameHistory(const valtype &name, CNameHistory& data) co
     return base->GetNameHistory(name, data);
 }
 
-bool CCoinsViewCache::GetNamesForHeight(unsigned nHeight, std::set<valtype>& names) const {
-    /* Query the base view first, and then apply the cached changes (if
-       there are any).  */
-
-    if (!base->GetNamesForHeight(nHeight, names))
-        return false;
-
-    cacheNames.updateNamesForHeight(nHeight, names);
-    return true;
-}
-
 CNameIterator* CCoinsViewCache::IterateNames() const {
     return cacheNames.iterateNames(base->IterateNames());
 }
@@ -214,8 +201,6 @@ void CCoinsViewCache::SetName(const valtype &name, const CNameData& data, bool u
     CNameData oldData;
     if (GetName(name, oldData))
     {
-        cacheNames.removeExpireIndex(name, oldData.getHeight());
-
         /* Update the name history.  If we are undoing, we expect that
            the top history item matches the data being set now.  If we
            are not undoing, push the overwritten data onto the history stack.
@@ -243,16 +228,9 @@ void CCoinsViewCache::SetName(const valtype &name, const CNameData& data, bool u
         assert (!undo);
 
     cacheNames.set(name, data);
-    cacheNames.addExpireIndex(name, data.getHeight());
 }
 
 void CCoinsViewCache::DeleteName(const valtype &name) {
-    CNameData oldData;
-    if (GetName(name, oldData))
-        cacheNames.removeExpireIndex(name, oldData.getHeight());
-    else
-        assert(false);
-
     if (fNameHistory)
     {
         /* When deleting a name, the history should already be clean.  */

@@ -425,7 +425,8 @@ public:
      */
     bool HasNoInputsOf(const CTransaction& tx) const;
 
-    /* Remove entries that conflict with name expirations / unexpirations.  */
+    /* TODO: Add code to remove invalidated moves.  */
+    /*
     inline void
     removeUnexpireConflicts (const std::set<valtype>& unexpired,
                              std::list<CTransaction>& removed)
@@ -433,13 +434,7 @@ public:
         LOCK(cs);
         names.removeUnexpireConflicts (unexpired, removed);
     }
-    inline void
-    removeExpireConflicts (const std::set<valtype>& expired,
-                           std::list<CTransaction>& removed)
-    {
-        LOCK(cs);
-        names.removeExpireConflicts (expired, removed);
-    }
+    */
 
     /** Affect CreateNewBlock prioritisation of transactions */
     void PrioritiseTransaction(const uint256 hash, const std::string strHash, double dPriorityDelta, const CAmount& nFeeDelta);

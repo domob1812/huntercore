@@ -264,7 +264,8 @@ name_firstupdate (const UniValue& params, bool fHelp)
   {
     LOCK (cs_main);
     CNameData oldData;
-    if (pcoinsTip->GetName (name, oldData) && !oldData.isExpired ())
+    /* FIXME: Possibly check for non-dead player.  */
+    if (pcoinsTip->GetName (name, oldData))
       throw JSONRPCError (RPC_TRANSACTION_ERROR, "this name is already active");
   }
 
@@ -372,7 +373,8 @@ name_update (const UniValue& params, bool fHelp)
   CNameData oldData;
   {
     LOCK (cs_main);
-    if (!pcoinsTip->GetName (name, oldData) || oldData.isExpired ())
+    /* FIXME: POssibly check for death.  */
+    if (!pcoinsTip->GetName (name, oldData))
       throw JSONRPCError (RPC_TRANSACTION_ERROR,
                           "this name can not be updated");
   }
@@ -431,7 +433,6 @@ sendtoname (const UniValue& params, bool fHelp)
         "sendtoname \"name\" amount ( \"comment\" \"comment-to\" subtractfeefromamount )\n"
         "\nSend an amount to the owner of a name. "
         " The amount is a real and is rounded to the nearest 0.00000001.\n"
-        "\nIt is an error if the name is expired.\n"
         + HelpRequiringPassphrase () +
         "\nArguments:\n"
         "1. \"name\"        (string, required) The name to send to.\n"
@@ -468,8 +469,7 @@ sendtoname (const UniValue& params, bool fHelp)
       msg << "name not found: '" << nameStr << "'";
       throw JSONRPCError (RPC_INVALID_ADDRESS_OR_KEY, msg.str ());
     }
-  if (data.isExpired ())
-    throw JSONRPCError (RPC_INVALID_ADDRESS_OR_KEY, "the name is expired");
+  /* FIXME: Check for dead player?  */
 
   /* The code below is strongly based on sendtoaddress.  Make sure to
      keep it in sync.  */

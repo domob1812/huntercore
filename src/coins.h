@@ -334,9 +334,6 @@ public:
     // Get a name's history (if it exists)
     virtual bool GetNameHistory(const valtype& name, CNameHistory& data) const;
 
-    // Query for names that were updated at the given height
-    virtual bool GetNamesForHeight(unsigned nHeight, std::set<valtype>& names) const;
-
     // Get a name iterator.
     virtual CNameIterator* IterateNames() const;
 
@@ -368,7 +365,6 @@ public:
     uint256 GetBestBlock() const;
     bool GetName(const valtype& name, CNameData& data) const;
     bool GetNameHistory(const valtype& name, CNameHistory& data) const;
-    bool GetNamesForHeight(unsigned nHeight, std::set<valtype>& names) const;
     CNameIterator* IterateNames() const;
     void SetBackend(CCoinsView &viewIn);
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names);
@@ -432,7 +428,6 @@ public:
     void SetBestBlock(const uint256 &hashBlock);
     bool GetName(const valtype &name, CNameData &data) const;
     bool GetNameHistory(const valtype &name, CNameHistory &data) const;
-    bool GetNamesForHeight(unsigned nHeight, std::set<valtype>& names) const;
     CNameIterator* IterateNames() const;
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names);
 

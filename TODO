@@ -1,10 +1,14 @@
-* remove name expiration
-
 * enforce exact name coin amount
 
 * implement game transactions
 
 * add game engine
+
+* verify moves
+
+* invalidate moves from mempool when the game state changes
+
+* add "dead" flag to CNameData, handle killing (and reviving on undo) of players
 
 * name_register style names + RPC command
 

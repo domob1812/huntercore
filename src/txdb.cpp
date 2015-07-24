@@ -27,7 +27,6 @@ static const char DB_BLOCK_INDEX = 'b';
 
 static const char DB_NAME = 'n';
 static const char DB_NAME_HISTORY = 'h';
-static const char DB_NAME_EXPIRY = 'x';
 
 static const char DB_BEST_BLOCK = 'B';
 static const char DB_FLAG = 'F';
@@ -61,38 +60,6 @@ bool CCoinsViewDB::GetName(const valtype &name, CNameData& data) const {
 bool CCoinsViewDB::GetNameHistory(const valtype &name, CNameHistory& data) const {
     assert (fNameHistory);
     return db.Read(std::make_pair(DB_NAME_HISTORY, name), data);
-}
-
-bool CCoinsViewDB::GetNamesForHeight(unsigned nHeight, std::set<valtype>& names) const {
-    names.clear();
-
-    /* It seems that there are no "const iterators" for LevelDB.  Since we
-       only need read operations on it, use a const-cast to get around
-       that restriction.  */
-    boost::scoped_ptr<CDBIterator> pcursor(const_cast<CDBWrapper*>(&db)->NewIterator());
-
-    const CNameCache::ExpireEntry seekEntry(nHeight, valtype ());
-    pcursor->Seek(std::make_pair(DB_NAME_EXPIRY, seekEntry));
-
-    for (; pcursor->Valid(); pcursor->Next())
-    {
-        std::pair<char, CNameCache::ExpireEntry> key;
-        if (!pcursor->GetKey(key) || key.first != DB_NAME_EXPIRY)
-            break;
-        const CNameCache::ExpireEntry& entry = key.second;
-
-        assert (entry.nHeight >= nHeight);
-        if (entry.nHeight > nHeight)
-          break;
-
-        const valtype& name = entry.name;
-        if (names.count(name) > 0)
-            return error("%s : duplicate name '%s' in expire index",
-                         __func__, ValtypeToString(name).c_str());
-        names.insert(name);
-    }
-
-    return true;
 }
 
 class CDbNameIterator : public CNameIterator
@@ -261,13 +228,6 @@ bool CBlockTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBlockF
 
 bool CCoinsViewDB::ValidateNameDB() const
 {
-    const uint256 blockHash = GetBestBlock();
-    int nHeight;
-    if (blockHash.IsNull())
-        nHeight = 0;
-    else
-        nHeight = mapBlockIndex.find(blockHash)->second->nHeight;
-
     /* It seems that there are no "const iterators" for LevelDB.  Since we
        only need read operations on it, use a const-cast to get around
        that restriction.  */
@@ -331,11 +291,9 @@ bool CCoinsViewDB::ValidateNameDB() const
                              __func__, ValtypeToString(name).c_str());
             nameHeightsData.insert(std::make_pair(name, data.getHeight()));
             
-            /* Expiration is checked at height+1, because that matches
-               how the UTXO set is cleared in ExpireNames.  */
+            /* FIXME: Possibly check for dead players?  */
             assert(namesInDB.count(name) == 0);
-            if (!data.isExpired(nHeight + 1))
-                namesInDB.insert(name);
+            namesInDB.insert(name);
             break;
         }
 
@@ -351,23 +309,6 @@ bool CCoinsViewDB::ValidateNameDB() const
                 return error("%s : name %s has duplicate history",
                              __func__, ValtypeToString(name).c_str());
             namesWithHistory.insert(name);
-            break;
-        }
-
-        case DB_NAME_EXPIRY:
-        {
-            std::pair<char, CNameCache::ExpireEntry> key;
-            if (!pcursor->GetKey(key) || key.first != DB_NAME_EXPIRY)
-                return error("%s : failed to read DB_NAME_EXPIRY key",
-                             __func__);
-            const CNameCache::ExpireEntry& entry = key.second;
-            const valtype& name = entry.name;
-
-            if (nameHeightsIndex.count(name) > 0)
-                return error("%s : name %s duplicated in expire idnex",
-                             __func__, ValtypeToString(name).c_str());
-
-            nameHeightsIndex.insert(std::make_pair(name, entry.nHeight));
             break;
         }
 
@@ -402,7 +343,7 @@ bool CCoinsViewDB::ValidateNameDB() const
         return error("%s : name_history entries in DB, but"
                      " -namehistory not set", __func__);
 
-    LogPrintf("Checked name database, %u unexpired names, %u total.\n",
+    LogPrintf("Checked name database, %u living player names, %u total.\n",
               namesInDB.size(), nameHeightsData.size());
     LogPrintf("Names with history: %u\n", namesWithHistory.size());
 
@@ -427,13 +368,6 @@ CNameCache::writeBatch (CDBBatch& batch) const
       batch.Erase (std::make_pair (DB_NAME_HISTORY, i->first));
     else
       batch.Write (std::make_pair (DB_NAME_HISTORY, i->first), i->second);
-
-  for (std::map<ExpireEntry, bool>::const_iterator i = expireIndex.begin ();
-       i != expireIndex.end (); ++i)
-    if (i->second)
-      batch.Write (std::make_pair (DB_NAME_EXPIRY, i->first));
-    else
-      batch.Erase (std::make_pair (DB_NAME_EXPIRY, i->first));
 }
 
 bool CBlockTreeDB::ReadTxIndex(const uint256 &txid, CDiskTxPos &pos) {

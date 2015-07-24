@@ -93,9 +93,6 @@ BOOST_AUTO_TEST_CASE (name_database)
   const valtype value = ValtypeFromString ("my-value");
   const CScript addr = getTestAddress ();
 
-  /* Choose two height values.  To verify that serialisation of the
-     expiration entries works as it should, make sure that the values
-     are ordered wrongly when serialised in little-endian.  */
   const unsigned height1 = 0x00ff;
   const unsigned height2 = 0x0142;
 
@@ -105,56 +102,25 @@ BOOST_AUTO_TEST_CASE (name_database)
   dataHeight1.fromScript (height1, COutPoint (uint256 (), 0), nameOp);
   dataHeight2.fromScript (height2, COutPoint (uint256 (), 0), nameOp);
 
-  std::set<valtype> setExpected, setRet;
-
   CCoinsViewCache& view = *pcoinsTip;
-
-  setExpected.clear ();
-  setRet.clear ();
-  setRet.insert (name1);
-  BOOST_CHECK (view.GetNamesForHeight (height2, setRet));
-  BOOST_CHECK (setRet == setExpected);
 
   BOOST_CHECK (!view.GetName (name1, data2));
   view.SetName (name1, dataHeight2, false);
   BOOST_CHECK (view.GetName (name1, data2));
   BOOST_CHECK (dataHeight2 == data2);
 
-  BOOST_CHECK (view.GetNamesForHeight (height1, setRet));
-  BOOST_CHECK (setRet == setExpected);
-  setExpected.insert (name1);
-  BOOST_CHECK (view.GetNamesForHeight (height2, setRet));
-  BOOST_CHECK (setRet == setExpected);
-
   BOOST_CHECK (view.Flush ());
   BOOST_CHECK (view.GetName (name1, data2));
   BOOST_CHECK (dataHeight2 == data2);
-
-  view.SetName (name2, dataHeight2, false);
-  BOOST_CHECK (view.GetNamesForHeight (height2, setRet));
-  setExpected.insert (name2);
-  BOOST_CHECK (setRet == setExpected);
 
   view.DeleteName (name1);
   BOOST_CHECK (!view.GetName (name1, data2));
   BOOST_CHECK (view.Flush ());
   BOOST_CHECK (!view.GetName (name1, data2));
 
-  BOOST_CHECK (view.GetNamesForHeight (height2, setRet));
-  setExpected.erase (name1);
-  BOOST_CHECK (setRet == setExpected);
-
   view.SetName (name2, dataHeight1, false);
   BOOST_CHECK (view.Flush ());
   view.SetName (name1, dataHeight1, false);
-
-  BOOST_CHECK (view.GetNamesForHeight (height2, setRet));
-  setExpected.clear ();
-  BOOST_CHECK (setRet == setExpected);
-  BOOST_CHECK (view.GetNamesForHeight (height1, setRet));
-  setExpected.insert (name1);
-  setExpected.insert (name2);
-  BOOST_CHECK (setRet == setExpected);
 }
 
 /* ************************************************************************** */
@@ -588,26 +554,19 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   data1.fromScript (100000, COutPoint (inUpdate, 0), CNameScript (scrUpdate));
   viewUpd.SetName (name1, data1, false);
 
-  /* Check update of UPDATE output, plus expiry.  */
+  /* Check update of UPDATE output.  */
   mtx = CMutableTransaction (baseTx);
   mtx.SetNamecoin ();
   mtx.vout.push_back (CTxOut (COIN, scrUpdate));
   BOOST_CHECK (!CheckNameTransaction (mtx, 135999, viewUpd, state, 0));
   mtx.vin.push_back (CTxIn (COutPoint (inUpdate, 0)));
   BOOST_CHECK (CheckNameTransaction (mtx, 135999, viewUpd, state, 0));
-  BOOST_CHECK (!CheckNameTransaction (mtx, 136000, viewUpd, state, 0));
   BOOST_CHECK (IsStandardTx (mtx, reason));
 
-  /* Check update of FIRSTUPDATE output, plus expiry.  */
+  /* Check update of FIRSTUPDATE output.  */
   mtx.vin.clear ();
   mtx.vin.push_back (CTxIn (COutPoint (inFirst, 0)));
   BOOST_CHECK (CheckNameTransaction (mtx, 135999, viewFirst, state, 0));
-  BOOST_CHECK (!CheckNameTransaction (mtx, 136000, viewFirst, state, 0));
-
-  /* No check for greedy names, since the test names are expired
-     already at the greedy-name fork height.  Should not matter
-     too much, though, as the checks are there for NAME_NEW
-     and NAME_FIRSTUPDATE.  */
 
   /* Value length limits.  */
   mtx = CMutableTransaction (baseTx);
@@ -652,9 +611,7 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   BOOST_CHECK (CheckNameTransaction (mtx, 100011, viewClean, state,
                                      SCRIPT_VERIFY_NAMES_MEMPOOL));
 
-  /* Expiry and re-registration of a name.  */
-  BOOST_CHECK (!CheckNameTransaction (mtx, 135999, view, state, 0));
-  BOOST_CHECK (CheckNameTransaction (mtx, 136000, view, state, 0));
+  /* FIXME: Possibly check reregistration of a dead player?  */
 
   /* "Greedy" names.  */
   mtx.vout[1].nValue = COIN / 100;
@@ -754,95 +711,6 @@ BOOST_AUTO_TEST_CASE (name_updates_undo)
   BOOST_CHECK (!view.GetNameHistory (name, history) || history.empty ());
   undo.vnameundo.pop_back ();
   BOOST_CHECK (undo.vnameundo.empty ());
-}
-
-/* ************************************************************************** */
-
-BOOST_AUTO_TEST_CASE (name_expire_utxo)
-{
-  const valtype name1 = ValtypeFromString ("test-name-1");
-  const valtype name2 = ValtypeFromString ("test-name-2");
-  const valtype value = ValtypeFromString ("value");
-  const CScript addr = getTestAddress ();
-  
-  const CScript upd1 = CNameScript::buildNameUpdate (addr, name1, value);
-  const CScript upd2 = CNameScript::buildNameUpdate (addr, name2, value);
-
-  const CNameScript op1(upd1);
-  const CNameScript op2(upd2);
-
-  /* Use a "real" backing view, since GetNamesForHeight calls through
-     to the base in any case.  */
-  CCoinsViewCache view(pcoinsTip);
-
-  const uint256 coinId1 = addTestCoin (upd1, 100000, view);
-  const uint256 coinId2 = addTestCoin (upd2, 100010, view);
-
-  CNameData data;
-  data.fromScript (100000, COutPoint (coinId1, 0), op1);
-  view.SetName (name1, data, false);
-  BOOST_CHECK (!data.isExpired (135999) && data.isExpired (136000));
-  data.fromScript (100010, COutPoint (coinId2, 0), op2);
-  view.SetName (name2, data, false);
-  BOOST_CHECK (!data.isExpired (136009) && data.isExpired (136010));
-
-  std::set<valtype> setExpired;
-  BOOST_CHECK (view.GetNamesForHeight (100000, setExpired));
-  BOOST_CHECK (setExpired.size () == 1 && *setExpired.begin () == name1);
-  BOOST_CHECK (view.GetNamesForHeight (100010, setExpired));
-  BOOST_CHECK (setExpired.size () == 1 && *setExpired.begin () == name2);
-
-  CCoins coin1, coin2;
-  BOOST_CHECK (view.GetCoins (coinId1, coin1));
-  BOOST_CHECK (view.GetCoins (coinId2, coin2));
-
-  CBlockUndo undo1, undo2;
-  CCoins coins;
-
-  /* None of the two names should be expired.  */
-  BOOST_CHECK (ExpireNames (135999, view, undo1, setExpired));
-  BOOST_CHECK (undo1.vexpired.empty ());
-  BOOST_CHECK (setExpired.empty ());
-  BOOST_CHECK (view.GetCoins (coinId1, coins));
-  BOOST_CHECK (coins == coin1);
-  BOOST_CHECK (view.GetCoins (coinId2, coins));
-  BOOST_CHECK (coins == coin2);
-
-  /* The first name expires.  */
-  BOOST_CHECK (ExpireNames (136000, view, undo1, setExpired));
-  BOOST_CHECK (undo1.vexpired.size () == 1);
-  BOOST_CHECK (undo1.vexpired[0].txout == coin1.vout[0]);
-  BOOST_CHECK (setExpired.size () == 1 && *setExpired.begin () == name1);
-  BOOST_CHECK (!view.GetCoins (coinId1, coins));
-  BOOST_CHECK (view.GetCoins (coinId2, coins));
-  BOOST_CHECK (coins == coin2);
-
-  /* Also the second name expires.  */
-  BOOST_CHECK (ExpireNames (136010, view, undo2, setExpired));
-  BOOST_CHECK (undo2.vexpired.size () == 1);
-  BOOST_CHECK (undo2.vexpired[0].txout == coin2.vout[0]);
-  BOOST_CHECK (setExpired.size () == 1 && *setExpired.begin () == name2);
-  BOOST_CHECK (!view.GetCoins (coinId1, coins));
-  BOOST_CHECK (!view.GetCoins (coinId2, coins));
-
-  /* Undo the second expiration.  */
-  BOOST_CHECK (UnexpireNames (136010, undo2, view, setExpired));
-  BOOST_CHECK (setExpired.size () == 1 && *setExpired.begin () == name2);
-  BOOST_CHECK (!view.GetCoins (coinId1, coins));
-  BOOST_CHECK (view.GetCoins (coinId2, coins));
-  BOOST_CHECK (coins == coin2);
-
-  /* Undoing at the wrong height should fail.  */
-  BOOST_CHECK (!UnexpireNames (136001, undo1, view, setExpired));
-  BOOST_CHECK (!UnexpireNames (135999, undo1, view, setExpired));
-
-  /* Undo the first expiration.  */
-  BOOST_CHECK (UnexpireNames (136000, undo1, view, setExpired));
-  BOOST_CHECK (setExpired.size () == 1 && *setExpired.begin () == name1);
-  BOOST_CHECK (view.GetCoins (coinId1, coins));
-  BOOST_CHECK (coins == coin1);
-  BOOST_CHECK (view.GetCoins (coinId2, coins));
-  BOOST_CHECK (coins == coin2);
 }
 
 /* ************************************************************************** */
@@ -1012,35 +880,8 @@ BOOST_AUTO_TEST_CASE (name_mempool)
   BOOST_CHECK (!mempool.registersName (nameReg));
   BOOST_CHECK (mempool.mapTx.empty ());
 
-  /* Check removing of conflicts after name expiration.  */
-
-  mempool.addUnchecked (entryUpd.GetTx ().GetHash (), entryUpd);
-  BOOST_CHECK (mempool.updatesName (nameUpd));
-  BOOST_CHECK (!mempool.checkNameOps (txUpd2));
-
-  std::set<valtype> names;
-  names.insert (nameUpd);
-  removed.clear ();
-  mempool.removeExpireConflicts (names, removed);
-  BOOST_CHECK (removed.size () == 1);
-  BOOST_CHECK (removed.front ().GetHash () == txUpd1.GetHash ());
-  BOOST_CHECK (!mempool.updatesName (nameUpd));
-  BOOST_CHECK (mempool.mapTx.empty ());
-
-  /* Check removing of conflicts after name unexpiration.  */
-
-  mempool.addUnchecked (entryReg.GetTx ().GetHash (), entryReg);
-  BOOST_CHECK (mempool.registersName (nameReg));
-  BOOST_CHECK (!mempool.checkNameOps (txReg2));
-
-  names.clear ();
-  names.insert (nameReg);
-  removed.clear ();
-  mempool.removeUnexpireConflicts (names, removed);
-  BOOST_CHECK (removed.size () == 1);
-  BOOST_CHECK (removed.front ().GetHash () == txReg1.GetHash ());
-  BOOST_CHECK (!mempool.registersName (nameReg));
-  BOOST_CHECK (mempool.mapTx.empty ());
+  /* FIXME: In case the tests are "revived", check removing of invalidated
+     game transactions.  */
 }
 
 /* ************************************************************************** */

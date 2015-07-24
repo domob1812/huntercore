@@ -40,6 +40,7 @@ getNameInfo (const valtype& name, const valtype& value, const COutPoint& outp,
   UniValue obj(UniValue::VOBJ);
   obj.push_back (Pair ("name", ValtypeToString (name)));
   obj.push_back (Pair ("value", ValtypeToString (value)));
+  obj.push_back (Pair ("height", height));
   obj.push_back (Pair ("txid", outp.hash.GetHex ()));
   obj.push_back (Pair ("vout", static_cast<int> (outp.n)));
 
@@ -53,17 +54,6 @@ getNameInfo (const valtype& name, const valtype& value, const COutPoint& outp,
   else
     addrStr = "<nonstandard>";
   obj.push_back (Pair ("address", addrStr));
-
-  /* Calculate expiration data.  */
-  const int curHeight = chainActive.Height ();
-  const Consensus::Params& params = Params ().GetConsensus ();
-  const int expireDepth = params.rules->NameExpirationDepth (curHeight);
-  const int expireHeight = height + expireDepth;
-  const int expiresIn = expireHeight - curHeight;
-  const bool expired = (expiresIn <= 0);
-  obj.push_back (Pair ("height", height));
-  obj.push_back (Pair ("expires_in", expiresIn));
-  obj.push_back (Pair ("expired", expired));
 
   return obj;
 }
@@ -97,16 +87,12 @@ getNameInfoHelp (const std::string& indent, const std::string& trailing)
       << "(string) the requested name" << std::endl;
   res << indent << "  \"value\": xxxxx,          "
       << "(string) the name's current value" << std::endl;
+  res << indent << "  \"height\": xxxxx,         "
+      << "(numeric) the name's last update height" << std::endl;
   res << indent << "  \"txid\": xxxxx,           "
       << "(string) the name's last update tx" << std::endl;
   res << indent << "  \"address\": xxxxx,        "
       << "(string) the address holding the name" << std::endl;
-  res << indent << "  \"height\": xxxxx,         "
-      << "(numeric) the name's last update height" << std::endl;
-  res << indent << "  \"expires_in\": xxxxx,     "
-      << "(numeric) expire counter for the name" << std::endl;
-  res << indent << "  \"expired\": xxxxx,        "
-      << "(boolean) whether the name is expired" << std::endl;
   res << indent << "}" << trailing << std::endl;
 
   return res.str ();

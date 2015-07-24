@@ -51,9 +51,6 @@ class ConsensusRules
 {
 public:
 
-    /* Return the expiration depth for names at the given height.  */
-    virtual unsigned NameExpirationDepth(unsigned nHeight) const = 0;
-
     /* Check whether a given fork is in effect at the height.  */
     virtual bool ForkInEffect(Fork type, unsigned nHeight) const = 0;
 
@@ -65,20 +62,6 @@ public:
 class MainNetConsensus : public ConsensusRules
 {
 public:
-
-    unsigned NameExpirationDepth(unsigned nHeight) const
-    {
-        /* Important:  It is assumed (in ExpireNames) that
-           "n - expirationDepth(n)" is increasing!  (This is
-           the update height up to which names expire at height n.)  */
-
-        if (nHeight < 24000)
-            return 12000;
-        if (nHeight < 48000)
-            return nHeight - 12000;
-
-        return 36000;
-    }
 
     bool ForkInEffect(Fork type, unsigned nHeight) const
     {
@@ -131,11 +114,6 @@ public:
 class RegTestConsensus : public TestNetConsensus
 {
 public:
-
-    unsigned NameExpirationDepth (unsigned nHeight) const
-    {
-        return 30;
-    }
 
 };
 

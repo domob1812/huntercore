@@ -1,9 +1,6 @@
 #ifndef GAMEMAP_H
 #define GAMEMAP_H
 
-namespace Game
-{
-
 static const int MAP_WIDTH = 502;
 static const int MAP_HEIGHT = 502;
 
@@ -42,8 +39,6 @@ inline bool IsOriginalSpawnArea(int x, int y)
 {
     return ((x == 0 || x == MAP_WIDTH - 1) && (y < SPAWN_AREA_LENGTH || y >= MAP_HEIGHT - SPAWN_AREA_LENGTH))
         || ((y == 0 || y == MAP_HEIGHT - 1) && (x < SPAWN_AREA_LENGTH || x >= MAP_WIDTH - SPAWN_AREA_LENGTH));
-}
-
 }
 
 #endif

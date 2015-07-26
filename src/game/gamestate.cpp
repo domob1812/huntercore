@@ -12,8 +12,6 @@
 #include <boost/foreach.hpp>
 #include <boost/xpressive/xpressive_dynamic.hpp>
 
-using namespace Game;
-
 /* Parameters that determine when a poison-disaster will happen.  The
    probability is 1/x at each block between min and max time.  */
 static const unsigned PDISASTER_MIN_TIME = 1440;
@@ -28,9 +26,6 @@ static const unsigned POISON_MAX_LIFE = 50;
 static const unsigned DYNBANKS_NUM_BANKS = 75;
 static const unsigned DYNBANKS_MIN_LIFE = 25;
 static const unsigned DYNBANKS_MAX_LIFE = 100;
-
-namespace Game
-{
 
 inline bool IsOriginalSpawnArea(const Coord &c)
 {
@@ -141,11 +136,8 @@ FillWalkableTiles ()
   assert (!walkableTiles.empty ());
 }
 
-} // namespace Game
-
-
 // Random generator seeded with block hash
-class Game::RandomGenerator
+class RandomGenerator
 {
 public:
     RandomGenerator(const uint256& hashBlock)
@@ -1929,7 +1921,7 @@ CollectedBounty::UpdateAddress (const GameState& state)
   address = i->second.address;
 }
 
-bool Game::PerformStep(const GameState &inState, const StepData &stepData, GameState &outState, StepResult &stepResult)
+bool PerformStep(const GameState &inState, const StepData &stepData, GameState &outState, StepResult &stepResult)
 {
     BOOST_FOREACH(const Move &m, stepData.vMoves)
         if (!m.IsValid(inState))

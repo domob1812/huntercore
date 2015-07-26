@@ -13,9 +13,6 @@
 #include <map>
 #include <string>
 
-namespace Game
-{
-
 static const int NUM_TEAM_COLORS = 4;
 static const int MAX_WAYPOINTS = 100;                      // Maximum number of waypoints per character
 static const int MAX_CHARACTERS_PER_PLAYER = 20;           // Maximum number of characters per player at the same time
@@ -747,7 +744,5 @@ public:
 // for any ordering of the moves, except non-critical cases (e.g. finding
 // an empty cell to spawn new player)
 bool PerformStep(const GameState &inState, const StepData &stepData, GameState &outState, StepResult &stepResult);
-
-}
 
 #endif

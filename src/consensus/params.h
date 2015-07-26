@@ -31,6 +31,11 @@ enum Fork
      radius only 1).  */
   FORK_LESSHEARTS,
 
+  /* Implement "life steal".  This adds a game fee for destructs (5 HUC),
+     completely disables hearts and removes all "hearted" hunters.  It also
+     randomises spawn and banking locations.  */
+  FORK_LIFESTEAL,
+
 };
 
 /** Dual-algo PoW algorithms.  */
@@ -54,6 +59,17 @@ public:
     /* Check whether a given fork is in effect at the height.  */
     virtual bool ForkInEffect(Fork type, unsigned nHeight) const = 0;
 
+    /* Check whether the height is *exactly* when the fork starts to take
+       effect.  This is used sometimes to trigger special events.  */
+    inline bool
+    IsForkHeight (Fork type, unsigned nHeight) const
+    {
+      if (nHeight == 0)
+        return false;
+
+      return ForkInEffect (type, nHeight) && !ForkInEffect (type, nHeight - 1);
+    }
+
     /* Return minimum locked amount in a name.  */
     virtual CAmount MinNameCoinAmount(unsigned nHeight) const = 0;
 
@@ -73,6 +89,8 @@ public:
                 return nHeight >= 500000;
             case FORK_LESSHEARTS:
                 return nHeight >= 590000;
+            case FORK_LIFESTEAL:
+                return nHeight >= 795000;
             default:
                 assert (false);
         }
@@ -104,6 +122,8 @@ public:
                 return nHeight >= 200000;
             case FORK_LESSHEARTS:
                 return nHeight >= 240000;
+            case FORK_LIFESTEAL:
+                return nHeight >= 301000;
             default:
                 assert (false);
         }

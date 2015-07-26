@@ -263,6 +263,22 @@ const UniValue& UniValue::operator[](unsigned int index) const
     return values[index];
 }
 
+bool UniValue::extractField(const std::string& name, UniValue& res)
+{
+    assert(isObject());
+
+    for (unsigned i = 0; i < keys.size(); ++i)
+        if (keys[i] == name)
+        {
+            res = values[i];
+            keys.erase(keys.begin() + i);
+            values.erase(values.begin() + i);
+            return true;
+        }
+
+    return false;
+}
+
 const char *uvTypeName(UniValue::VType t)
 {
     switch (t) {

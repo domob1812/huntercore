@@ -157,6 +157,8 @@ public:
         return pushKV(pear.first, pear.second);
     }
     friend const UniValue& find_value( const UniValue& obj, const std::string& name);
+
+    bool extractField(const std::string& name, UniValue& res);
 };
 
 //

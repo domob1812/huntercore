@@ -141,13 +141,6 @@ CNameMemPool::check (const CCoinsView& coins) const
 {
   AssertLockHeld (pool.cs);
 
-  const uint256 blockHash = coins.GetBestBlock ();
-  int nHeight;
-  if (blockHash.IsNull())
-    nHeight = 0;
-  else
-    nHeight = mapBlockIndex.find (blockHash)->second->nHeight;
-
   std::set<valtype> nameRegs;
   std::set<valtype> nameUpdates;
   BOOST_FOREACH (const CTxMemPoolEntry& entry, pool.mapTx)

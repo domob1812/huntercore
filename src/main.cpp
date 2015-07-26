@@ -2017,7 +2017,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         setDirtyBlockIndex.insert(pindex);
     }
 
-    /* FIXME: Somewhere here create and insert gametx.  */
+    /* FIXME: Somewhere here create and insert gametx?  */
 
     if (fTxIndex)
         if (!pblocktree->WriteTxIndex(vPos))
@@ -3059,6 +3059,9 @@ bool AcceptBlock(const CBlock& block, CValidationState& state, CBlockIndex** ppi
         }
         return false;
     }
+
+    /* FIXME: Probably here could be a good place to advance the game state
+       and construct the game tx.  */
 
     int nHeight = pindex->nHeight;
 

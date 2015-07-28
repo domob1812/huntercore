@@ -266,10 +266,6 @@ CBlockTemplate* CreateNewBlock(const CScript& scriptPubKeyIn)
             if (nBlockSize + nTxSize >= nBlockMaxSize)
                 continue;
 
-            // Check the DB lock limit won't be exceeded.
-            if (!CheckDbLockLimit(*pblock, &tx))
-                continue;
-
             // Legacy limits on sigOps:
             unsigned int nTxSigOps = GetLegacySigOpCount(tx);
             if (nBlockSigOps + nTxSigOps >= MAX_BLOCK_SIGOPS)

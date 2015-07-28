@@ -392,9 +392,6 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
 /** Apply the effects of this block (with given index) on the UTXO set represented by coins */
 bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& coins, bool fJustCheck = false);
 
-// TODO: Remove when this check is no longer necessary.
-bool CheckDbLockLimit(const CBlock& block, const CTransaction* extraTx = NULL);
-
 /** Context-independent validity checks */
 bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW = true);
 bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW = true, bool fCheckMerkleRoot = true);

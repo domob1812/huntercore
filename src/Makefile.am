@@ -107,6 +107,7 @@ BITCOIN_CORE_H = \
   core_memusage.h \
   eccryptoverify.h \
   ecwrapper.h \
+  game/gamedb.h \
   game/gamemap.h \
   game/gamestate.h \
   hash.h \
@@ -197,6 +198,7 @@ libbitcoin_server_a_SOURCES = \
   bloom.cpp \
   chain.cpp \
   checkpoints.cpp \
+  game/gamedb.cpp \
   game/gamemap.cpp \
   game/gamestate.cpp \
   httprpc.cpp \

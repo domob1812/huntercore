@@ -31,6 +31,7 @@
 class CBlockIndex;
 class CBlockTreeDB;
 class CBloomFilter;
+class CGameDB;
 class CInv;
 class CScriptCheck;
 class CTxInUndo;
@@ -494,6 +495,9 @@ extern CCoinsViewCache *pcoinsTip;
 
 /** Global variable that points to the active block tree (protected by cs_main) */
 extern CBlockTreeDB *pblocktree;
+
+/** Global variable for game db.  */
+extern CGameDB *pgameDb;
 
 /**
  * Return the spend height, which is one more than the inputs.GetBestBlock().

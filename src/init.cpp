@@ -16,6 +16,7 @@
 #include "checkpoints.h"
 #include "compat/sanity.h"
 #include "consensus/validation.h"
+#include "game/gamedb.h"
 #include "httpserver.h"
 #include "httprpc.h"
 #include "key.h"
@@ -215,6 +216,8 @@ void Shutdown()
         pcoinscatcher = NULL;
         delete pcoinsdbview;
         pcoinsdbview = NULL;
+        delete pgameDb;
+        pgameDb = NULL;
         delete pblocktree;
         pblocktree = NULL;
     }
@@ -1273,11 +1276,13 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 delete pcoinsdbview;
                 delete pcoinscatcher;
                 delete pblocktree;
+                delete pgameDb;
 
                 pblocktree = new CBlockTreeDB(nBlockTreeDBCache, false, fReindex);
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex);
                 pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
                 pcoinsTip = new CCoinsViewCache(pcoinscatcher);
+                pgameDb = new CGameDB(fReindex);
 
                 if (fReindex) {
                     pblocktree->WriteReindexing(true);

@@ -1,0 +1,112 @@
+#ifndef GAME_COMMON_H
+#define GAME_COMMON_H
+
+#include "arith_uint256.h"
+#include "serialize.h"
+
+#include <map>
+#include <set>
+#include <stdexcept>
+#include <string>
+
+class uint256;
+class KilledByInfo;
+class PlayerState;
+
+// Unique player name
+typedef std::string PlayerID;
+//
+// Define STL types used for killed player identification later on.
+typedef std::set<PlayerID> PlayerSet;
+typedef std::multimap<PlayerID, KilledByInfo> KilledByMap;
+typedef std::map<PlayerID, PlayerState> PlayerStateMap;
+
+// Player name + character index
+struct CharacterID
+{
+    PlayerID player;
+    int index;
+    
+    CharacterID() : index(-1) { }
+    CharacterID(const PlayerID &player_, int index_)
+        : player(player_), index(index_)
+    {
+        if (index_ < 0)
+            throw std::runtime_error("Bad character index");
+    }
+
+    std::string ToString() const;
+
+    /*
+    FIXME: Is this actually used?
+    static CharacterID Parse(const std::string &s)
+    {
+        size_t pos = s.find('.');
+        if (pos == std::string::npos)
+            return CharacterID(s, 0);
+        return CharacterID(s.substr(0, pos), atoi(s.substr(pos + 1).c_str()));
+    }
+    */
+
+    bool operator==(const CharacterID &that) const { return player == that.player && index == that.index; }
+    bool operator!=(const CharacterID &that) const { return !(*this == that); }
+    // Lexicographical comparison
+    bool operator<(const CharacterID &that) const { return player < that.player || (player == that.player && index < that.index); }
+    bool operator>(const CharacterID &that) const { return that < *this; }
+    bool operator<=(const CharacterID &that) const { return !(*this > that); }
+    bool operator>=(const CharacterID &that) const { return !(*this < that); }
+};
+
+struct Coord
+{
+    int x, y;
+
+    Coord() : x(0), y(0) { }
+    Coord(int x_, int y_) : x(x_), y(y_) { }
+
+    ADD_SERIALIZE_METHODS;
+
+    template<typename Stream, typename Operation>
+      inline void SerializationOp (Stream& s, Operation ser_action,
+                                   int nType, int nVersion)
+    {
+      READWRITE (x);
+      READWRITE (y);
+    }
+
+    bool operator==(const Coord &that) const { return x == that.x && y == that.y; }
+    bool operator!=(const Coord &that) const { return !(*this == that); }
+    // Lexicographical comparison
+    bool operator<(const Coord &that) const { return y < that.y || (y == that.y && x < that.x); }
+    bool operator>(const Coord &that) const { return that < *this; }
+    bool operator<=(const Coord &that) const { return !(*this > that); }
+    bool operator>=(const Coord &that) const { return !(*this < that); }
+};
+
+typedef std::vector<Coord> WaypointVector;
+
+// Random generator seeded with block hash
+class RandomGenerator
+{
+public:
+    explicit RandomGenerator(const uint256& hashBlock);
+
+    int GetIntRnd (int modulo);
+
+    /* Get an integer number in [a, b].  */
+    inline int
+    GetIntRnd (int a, int b)
+    {
+      assert (a <= b);
+      const int mod = (b - a + 1);
+      const int res = GetIntRnd (mod) + a;
+      assert (res >= a && res <= b);
+      return res;
+    }
+
+private:
+    arith_uint256 state, state0;
+    static const arith_uint256 MIN_STATE;
+};
+
+#endif

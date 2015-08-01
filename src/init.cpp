@@ -16,7 +16,7 @@
 #include "checkpoints.h"
 #include "compat/sanity.h"
 #include "consensus/validation.h"
-#include "game/gamedb.h"
+#include "game/db.h"
 #include "httpserver.h"
 #include "httprpc.h"
 #include "key.h"

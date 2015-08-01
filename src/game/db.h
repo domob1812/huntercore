@@ -2,8 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_GAME_GAMEDB
-#define BITCOIN_GAME_GAMEDB
+#ifndef BITCOIN_GAME_DB
+#define BITCOIN_GAME_DB
 
 #include "leveldbwrapper.h"
 #include "sync.h"
@@ -90,4 +90,4 @@ private:
 
 };
 
-#endif // BITCOIN_GAME_GAMEDB
+#endif // BITCOIN_GAME_DB

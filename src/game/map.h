@@ -1,5 +1,5 @@
-#ifndef GAMEMAP_H
-#define GAMEMAP_H
+#ifndef GAME_MAP_H
+#define GAME_MAP_H
 
 static const int MAP_WIDTH = 502;
 static const int MAP_HEIGHT = 502;

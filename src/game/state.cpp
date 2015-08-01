@@ -1,16 +1,15 @@
-#include "game/gamestate.h"
+#include "game/state.h"
 
-#include "arith_uint256.h"
-#include "base58.h"
-#include "game/gamemap.h"
-#include "hash.h"
-#include "names/main.h"
+#include "game/map.h"
+#include "game/move.h"
 #include "rpcserver.h"
 #include "util.h"
 #include "utilstrencodings.h"
 
 #include <boost/foreach.hpp>
-#include <boost/xpressive/xpressive_dynamic.hpp>
+
+static const int MAX_CHARACTERS_PER_PLAYER = 20;           // Maximum number of characters per player at the same time
+static const int MAX_CHARACTERS_PER_PLAYER_TOTAL = 1000;   // Maximum number of characters per player in the lifetime
 
 /* Parameters that determine when a poison-disaster will happen.  The
    probability is 1/x at each block between min and max time.  */
@@ -70,7 +69,7 @@ GetCarryingCapacity (const GameState& state, bool isGeneral, bool isCrownHolder)
 /* Return the minimum necessary amount of locked coins.  This replaces the
    old NAME_COIN_AMOUNT constant and makes it more dynamic, so that we can
    change it with hard forks.  */
-static int64_t
+int64_t
 GetNameCoinAmount (const Consensus::Params& param, unsigned nHeight)
 {
   if (param.rules->ForkInEffect (FORK_LESSHEARTS, nHeight))
@@ -136,52 +135,6 @@ FillWalkableTiles ()
   assert (!walkableTiles.empty ());
 }
 
-// Random generator seeded with block hash
-class RandomGenerator
-{
-public:
-    RandomGenerator(const uint256& hashBlock)
-        : state0(UintToArith256(SerializeHash(hashBlock, SER_GETHASH, 0)))
-    {
-        state = state0;
-    }
-
-    int GetIntRnd (int modulo)
-    {
-      // Advance generator state, if most bits of the current state were used
-      if (state < MIN_STATE)
-        {
-          const uint256 fixedState0 = ArithToUint256 (state0);
-          state0 = UintToArith256 (SerializeHash (fixedState0, SER_GETHASH, 0));
-          state = state0;
-        }
-
-      arith_uint256 res = state;
-      state /= modulo;
-      res -= state * modulo;
-
-      assert (res.bits () < 64);
-      return res.GetLow64 ();
-    }
-
-    /* Get an integer number in [a, b].  */
-    int GetIntRnd (int a, int b)
-    {
-      assert (a <= b);
-      const int mod = (b - a + 1);
-      const int res = GetIntRnd (mod) + a;
-      assert (res >= a && res <= b);
-      return res;
-    }
-
-private:
-    arith_uint256 state, state0;
-    static const arith_uint256 MIN_STATE;
-};
-
-const arith_uint256 RandomGenerator::MIN_STATE
-  = arith_uint256().SetCompact (0x097FFFFFu);
-
 /* ************************************************************************** */
 /* KilledByInfo.  */
 
@@ -233,309 +186,6 @@ KilledByInfo::CanRefund (const GameState& state,
     }
 
   assert (false);
-}
-
-/* ************************************************************************** */
-/* Move.  */
-
-bool Move::IsValid(const GameState &state) const
-{
-  PlayerStateMap::const_iterator mi = state.players.find (player);
-
-  int64_t oldLocked;
-  if (mi == state.players.end ())
-    {
-      if (!IsSpawn ())
-        return false;
-      oldLocked = 0;
-    }
-  else
-    {
-      if (IsSpawn ())
-        return false;
-      oldLocked = mi->second.lockedCoins;
-    }
-
-  assert (oldLocked >= 0 && newLocked >= 0);
-  const int64_t gameFee = newLocked - oldLocked;
-  const int64_t required = MinimumGameFee (*state.param, state.nHeight + 1);
-  assert (required >= 0);
-  if (gameFee < required)
-    return error ("%s: too little game fee attached, got %lld, required %lld",
-                  __func__, gameFee, required);
-
-  return true;
-}
-
-bool ParseWaypoints(UniValue& obj, std::vector<Coord>& result, bool& bWaypoints)
-{
-    bWaypoints = false;
-    result.clear();
-    UniValue v;
-    if (!obj.extractField("wp", v))
-        return true;
-    if (!v.isArray())
-        return false;
-    if (v.size() % 2)
-        return false;
-    int n = v.size() / 2;
-    if (n > MAX_WAYPOINTS)
-        return false;
-    result.resize(n);
-    for (int i = 0; i < n; i++)
-    {
-        int x = v[2 * i].get_int();
-        int y = v[2 * i + 1].get_int();
-        if (!IsInsideMap(x, y))
-            return false;
-        // Waypoints are reversed for easier deletion of current waypoint from the end of the vector
-        result[n - 1 - i] = Coord(x, y);
-        if (i && result[n - 1 - i] == result[n - i])
-            return false; // Forbid duplicates        
-    }
-    bWaypoints = true;
-    return true;
-}
-
-bool ParseDestruct(UniValue& obj, bool& result)
-{
-    result = false;
-    UniValue v;
-    if (!obj.extractField("destruct", v))
-        return true;
-    result = v.get_bool();
-    return true;
-}
-
-static bool
-IsValidReceiveAddress (const std::string& str)
-{
-  /* TODO: Allow P2SH addresses at some point in the future.  For now,
-     we have to disable support to stay consensus-compatible with
-     the existing client.  */
-
-  CBitcoinAddress addr(str);
-  return addr.IsValid () && !addr.IsScript ();
-}
-
-bool Move::Parse(const PlayerID &player, const std::string &json)
-{
-    try
-    {
-
-    if (!IsValidPlayerName(player))
-        return false;
-        
-    UniValue obj;
-    if (!obj.read(json) || obj.isObject())
-        return false;
-
-    UniValue v;
-    if (obj.extractField ("msg", v))
-        message = v.get_str();
-    if (obj.extractField("address", v))
-    {
-        const std::string &addr = v.get_str();
-        if (!addr.empty() && !IsValidReceiveAddress(addr))
-            return false;
-        address = addr;
-    }
-    if (obj.extractField("addressLock", v))
-    {
-        const std::string &addr = v.get_str();
-        if (!addr.empty() && !IsValidReceiveAddress(addr))
-            return false;
-        addressLock = addr;
-    }
-
-    if (obj.extractField("color", v))
-    {
-        color = v.get_int();
-        if (color >= NUM_TEAM_COLORS)
-            return false;
-        if (!obj.empty()) // Extra fields are not allowed in JSON string
-            return false;
-        this->player = player;
-        return true;
-    }
-
-    const std::vector<std::string> keys = obj.getKeys ();
-    std::set<int> character_indices;
-    BOOST_FOREACH(const std::string& key, keys)
-    {
-        const int i = atoi(key.c_str());
-        if (i < 0 || strprintf("%d", i) != key)
-            return false;               // Number formatting must be strict
-        if (character_indices.count(i))
-            return false;               // Cannot contain duplicate character indices
-        character_indices.insert(i);
-        v = obj[key];
-        if (!v.isObject ())
-            return false;
-        bool bWaypoints = false;
-        std::vector<Coord> wp;
-        if (!ParseWaypoints(v, wp, bWaypoints))
-            return false;
-        bool bDestruct;
-        if (!ParseDestruct(v, bDestruct))
-            return false;
-
-        if (bDestruct)
-            destruct.insert(i);
-        if (bWaypoints)
-            waypoints.insert(std::make_pair(i, wp));
-
-        if (!v.empty())      // Extra fields are not allowed in JSON string
-            return false;
-    }
-        
-    this->player = player;
-    return true;
-
-    } catch (const std::runtime_error& exc)
-    {
-        /* This happens when some JSON value has a wrong type.  */
-        return false;
-    }
-}
-
-void Move::ApplyCommon(GameState &state) const
-{
-    std::map<PlayerID, PlayerState>::iterator mi = state.players.find(player);
-
-    if (mi == state.players.end())
-    {
-        if (message)
-        {
-            PlayerState &pl = state.dead_players_chat[player];
-            pl.message = *message;
-            pl.message_block = state.nHeight;
-        }
-        return;
-    }
-
-    PlayerState &pl = mi->second;
-    if (message)
-    {
-        pl.message = *message;
-        pl.message_block = state.nHeight;
-    }
-    if (address)
-        pl.address = *address;
-    if (addressLock)
-        pl.addressLock = *addressLock;
-}
-
-std::string Move::AddressOperationPermission(const GameState &state) const
-{
-    if (!address && !addressLock)
-        return std::string();      // No address operation requested - allow
-
-    std::map<PlayerID, PlayerState>::const_iterator mi = state.players.find(player);
-    if (mi == state.players.end())
-        return std::string();      // Spawn move - allow any address operation
-
-    return mi->second.addressLock;
-}
-
-void
-Move::ApplySpawn (GameState &state, RandomGenerator &rnd) const
-{
-  assert (state.players.count (player) == 0);
-
-  PlayerState pl;
-  assert (pl.next_character_index == 0);
-  pl.color = color;
-
-  /* This is a fresh player and name.  Set its value to the height's
-     name coin amount and put the remainder in the game fee.  This prevents
-     people from "overpaying" on purpose in order to get beefed-up players.
-     This rule, however, is only active after the life-steal fork.  Before
-     that, overpaying did, indeed, allow to set the hunter value
-     arbitrarily high.  */
-  if (state.ForkInEffect (FORK_LIFESTEAL))
-    {
-      const int64_t coinAmount = GetNameCoinAmount (*state.param, state.nHeight);
-      assert (pl.lockedCoins == 0 && pl.value == -1);
-      assert (newLocked >= coinAmount);
-      pl.value = coinAmount;
-      pl.lockedCoins = newLocked;
-      state.gameFund += newLocked - coinAmount;
-    }
-  else
-    {
-      pl.value = newLocked;
-      pl.lockedCoins = newLocked;
-    }
-
-  const unsigned limit = state.GetNumInitialCharacters ();
-  for (unsigned i = 0; i < limit; i++)
-    pl.SpawnCharacter (state, rnd);
-
-  state.players.insert (std::make_pair (player, pl));
-}
-
-void Move::ApplyWaypoints(GameState &state) const
-{
-    std::map<PlayerID, PlayerState>::iterator pl;
-    pl = state.players.find (player);
-    if (pl == state.players.end ())
-      return;
-
-    BOOST_FOREACH(const PAIRTYPE(int, std::vector<Coord>) &p, waypoints)
-    {
-        std::map<int, CharacterState>::iterator mi;
-        mi = pl->second.characters.find(p.first);
-        if (mi == pl->second.characters.end())
-            continue;
-        CharacterState &ch = mi->second;
-        const std::vector<Coord> &wp = p.second;
-
-        if (ch.waypoints.empty() || wp.empty() || ch.waypoints.back() != wp.back())
-            ch.from = ch.coord;
-        ch.waypoints = wp;
-    }
-}
-
-int64_t
-Move::MinimumGameFee (const Consensus::Params& param, unsigned nHeight) const
-{
-  if (IsSpawn ())
-    {
-      const int64_t coinAmount = GetNameCoinAmount (param, nHeight);
-
-      if (param.rules->ForkInEffect (FORK_LIFESTEAL, nHeight))
-        return coinAmount + 5 * COIN;
-
-      return coinAmount;
-    }
-
-  if (!param.rules->ForkInEffect (FORK_LIFESTEAL, nHeight))
-    return 0;
-
-  return 20 * COIN * destruct.size ();
-}
-
-bool
-Move::IsValidPlayerName (const std::string& player)
-{
-  if (player.size() > MAX_NAME_LENGTH)
-    return false;
-
-  // Check player name validity
-  // Can contain letters, digits, underscore, hyphen and whitespace
-  // Cannot contain double whitespaces or start/end with whitespace
-  using namespace boost::xpressive;
-  static sregex regex = sregex::compile("^([a-zA-Z0-9_-]+ )*[a-zA-Z0-9_-]+$");
-  smatch match;
-  return regex_search(player, match, regex);
-}
-
-std::string CharacterID::ToString() const
-{
-    if (!index)
-        return player;
-    return player + strprintf(".%d", int(index));
 }
 
 /* ************************************************************************** */
@@ -1091,6 +741,13 @@ void
 PlayerState::SpawnCharacter (const GameState& state, RandomGenerator &rnd)
 {
   characters[next_character_index++].Spawn (state, color, rnd);
+}
+
+bool
+PlayerState::CanSpawnCharacter() const
+{
+  return characters.size () < MAX_CHARACTERS_PER_PLAYER
+          && next_character_index < MAX_CHARACTERS_PER_PLAYER_TOTAL;
 }
 
 UniValue PlayerState::ToJsonValue(int crown_index, bool dead /* = false*/) const

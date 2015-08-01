@@ -1,145 +1,26 @@
-#ifndef GAMESTATE_H
-#define GAMESTATE_H
+#ifndef GAME_STATE_H
+#define GAME_STATE_H
 
 #include "consensus/params.h"
+#include "game/common.h"
 #include "uint256.h"
 #include "serialize.h"
 
 #include <univalue.h>
 
-#include <boost/optional.hpp>
-
 #include <cmath>
 #include <map>
 #include <string>
 
-static const int NUM_TEAM_COLORS = 4;
-static const int MAX_WAYPOINTS = 100;                      // Maximum number of waypoints per character
-static const int MAX_CHARACTERS_PER_PLAYER = 20;           // Maximum number of characters per player at the same time
-static const int MAX_CHARACTERS_PER_PLAYER_TOTAL = 1000;   // Maximum number of characters per player in the lifetime
-
-// Unique player name
-typedef std::string PlayerID;
-
-// Player name + character index
-struct CharacterID
-{
-    PlayerID player;
-    int index;
-    
-    CharacterID() : index(-1) { }
-    CharacterID(const PlayerID &player_, int index_)
-        : player(player_), index(index_)
-    {
-        if (index_ < 0)
-            throw std::runtime_error("Bad character index");
-    }
-
-    std::string ToString() const;
-
-    static CharacterID Parse(const std::string &s)
-    {
-        size_t pos = s.find('.');
-        if (pos == std::string::npos)
-            return CharacterID(s, 0);
-        return CharacterID(s.substr(0, pos), atoi(s.substr(pos + 1).c_str()));
-    }
-
-    bool operator==(const CharacterID &that) const { return player == that.player && index == that.index; }
-    bool operator!=(const CharacterID &that) const { return !(*this == that); }
-    // Lexicographical comparison
-    bool operator<(const CharacterID &that) const { return player < that.player || (player == that.player && index < that.index); }
-    bool operator>(const CharacterID &that) const { return that < *this; }
-    bool operator<=(const CharacterID &that) const { return !(*this > that); }
-    bool operator>=(const CharacterID &that) const { return !(*this < that); }
-};
-
 class GameState;
-class KilledByInfo;
-class PlayerState;
-class RandomGenerator;
+class Move;
+class StepData;
 class StepResult;
 
-// Define STL types used for killed player identification later on.
-typedef std::set<PlayerID> PlayerSet;
-typedef std::multimap<PlayerID, KilledByInfo> KilledByMap;
-typedef std::map<PlayerID, PlayerState> PlayerStateMap;
-
-struct Coord
-{
-    int x, y;
-
-    Coord() : x(0), y(0) { }
-    Coord(int x_, int y_) : x(x_), y(y_) { }
-
-    ADD_SERIALIZE_METHODS;
-
-    template<typename Stream, typename Operation>
-      inline void SerializationOp (Stream& s, Operation ser_action,
-                                   int nType, int nVersion)
-    {
-      READWRITE (x);
-      READWRITE (y);
-    }
-
-    bool operator==(const Coord &that) const { return x == that.x && y == that.y; }
-    bool operator!=(const Coord &that) const { return !(*this == that); }
-    // Lexicographical comparison
-    bool operator<(const Coord &that) const { return y < that.y || (y == that.y && x < that.x); }
-    bool operator>(const Coord &that) const { return that < *this; }
-    bool operator<=(const Coord &that) const { return !(*this > that); }
-    bool operator>=(const Coord &that) const { return !(*this < that); }
-};
-
-typedef std::vector<Coord> WaypointVector;
-
-struct Move
-{
-    PlayerID player;
-
-    // New amount of locked coins (equals name output of move tx).
-    int64_t newLocked;
-
-    // Updates to the player state
-    boost::optional<std::string> message;
-    boost::optional<std::string> address;
-    boost::optional<std::string> addressLock;
-
-    /* For spawning moves.  */
-    unsigned char color;
-
-    std::map<int, WaypointVector> waypoints;
-    std::set<int> destruct;
-
-    Move ()
-      : newLocked(-1), color(0xFF)
-    {}
-
-    std::string AddressOperationPermission(const GameState &state) const;
-
-    bool IsSpawn() const { return color != 0xFF; }
-    bool IsValid(const GameState &state) const;
-    void ApplyCommon(GameState &state) const;
-    void ApplySpawn(GameState &state, RandomGenerator &rnd) const;
-    void ApplyWaypoints(GameState &state) const;
-    bool IsAttack(const GameState &state, int character_index) const;
- 
-    // Move must be empty before Parse and cannot be reused after Parse
-    bool Parse(const PlayerID &player, const std::string &json);
-
-    // Returns true if move is initialized (i.e. was parsed successfully)
-    operator bool() { return !player.empty(); }
-
-    /**
-     * Return the minimum required "game fee" for this move.  The params
-     * and block height are used to decide about fork states.
-     */
-    int64_t MinimumGameFee (const Consensus::Params& param,
-                            unsigned nHeight) const;
-
-    /** Check player name.  */
-    static bool IsValidPlayerName (const std::string& player);
-};
+/* Return the minimum necessary amount of locked coins.  This influences
+   both the minimum move game fees (for spawning a new player) and
+   also the damage / HP calculation for life-steal.  */
+int64_t GetNameCoinAmount (const Consensus::Params& param, unsigned nHeight);
 
 /**
  * A character on the map that stores information while processing attacks.
@@ -446,10 +327,7 @@ struct PlayerState
     {}
 
     void SpawnCharacter(const GameState& state, RandomGenerator &rnd);
-    bool CanSpawnCharacter()
-    {
-        return characters.size() < MAX_CHARACTERS_PER_PLAYER && next_character_index < MAX_CHARACTERS_PER_PLAYER_TOTAL;
-    }
+    bool CanSpawnCharacter() const;
     UniValue ToJsonValue(int crown_index, bool dead = false) const;
 };
 
@@ -590,13 +468,6 @@ struct GameState
        including also general values).  */
     int64_t GetCoinsOnMap () const;
 
-};
-
-struct StepData
-{
-    int64_t nTreasureAmount;
-    uint256 newHash;
-    std::vector<Move> vMoves;
 };
 
 /* Encode data for a banked bounty.  This includes also the payment address

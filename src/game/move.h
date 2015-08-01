@@ -9,9 +9,17 @@
 
 #include <boost/optional.hpp>
 
+#include <set>
 #include <string>
+#include <vector>
 
+class CBlock;
+class CCoinsView;
+class CGameDB;
+class CTransaction;
+class CValidationState;
 class GameState;
+class StepResult;
 
 struct Move
 {
@@ -60,11 +68,44 @@ struct Move
     static bool IsValidPlayerName (const std::string& player);
 };
 
-struct StepData
+class StepData
 {
-    int64_t nTreasureAmount;
+
+private:
+
+    /* Reference to current game state (on which this builds).  */
+    const GameState& state;
+
+    /* Used to detect (and prevent) multiple moves per block of the same
+       player name.  */
+    std::set<PlayerID> dup;
+
+public:
+
+    /* Public due to the legacy code.  */
+    CAmount nTreasureAmount;
     uint256 newHash;
     std::vector<Move> vMoves;
+
+    /* Construct for the given current game state.  */
+    explicit StepData (const GameState& s);
+
+    /* Try to add a tx to the current block.  Returns true if the tx
+       is either not a move at all or a valid one.  False if it is not
+       valid and can not be part of a block at the moment.  This needs
+       the current UTXO set to validate address permissions.  If view
+       is set to NULL, this validation is turned off.  This can be
+       used to just compute the game state without validating, when
+       we need it for already validated blocks.  */
+    bool addTransaction (const CTransaction& tx, const CCoinsView* pview,
+                         CValidationState& res);
+
 };
+
+/* Perform a game engine step based on the given block.  Returns false if any
+   error occurs and the block should be considered invalid.  */
+bool PerformStep (const CBlock& block, const GameState& stateIn,
+                  const CCoinsView* pview, CValidationState& valid,
+                  StepResult& res, GameState& stateOut);
 
 #endif

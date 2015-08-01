@@ -1,12 +1,10 @@
-* move parsing and validation, including game fee enforcement
-
-* advancing game state for tx in a block, implement CGameDB::get
+* validate moves and name coin amount when connecting blocks
 
 * keep game state along when connecting blocks
 
-* add game_getstate and check early game states
-
 * implement game transactions
+
+* check game_getplayerstate with crown
 
 * add "dead" flag to CNameData, handle killing (and reviving on undo) of players
 

@@ -289,6 +289,10 @@ extern UniValue name_update(const UniValue& params, bool fHelp);
 extern UniValue sendtoname(const UniValue& params, bool fHelp);
 extern UniValue name_checkdb(const UniValue& params, bool fHelp);
 
+/* In rpcgame.cpp.  */
+extern UniValue game_getplayerstate(const UniValue& params, bool fHelp);
+extern UniValue game_getstate(const UniValue& params, bool fHelp);
+
 bool StartRPC();
 void InterruptRPC();
 void StopRPC();

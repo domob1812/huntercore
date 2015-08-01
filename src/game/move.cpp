@@ -1,9 +1,16 @@
 #include "game/move.h"
 
 #include "base58.h"
+#include "consensus/validation.h"
+#include "game/db.h"
 #include "game/map.h"
 #include "game/state.h"
+#include "main.h"
+#include "names/common.h"
 #include "names/main.h"
+#include "primitives/block.h"
+#include "primitives/transaction.h"
+#include "script/names.h"
 #include "util.h"
 #include "utilstrencodings.h"
 
@@ -15,6 +22,9 @@ static const int MAX_WAYPOINTS = 100;
 
 /* Number of colours in the game.  */
 static const int NUM_TEAM_COLORS = 4;
+
+/* ************************************************************************** */
+/* Move.  */
 
 bool Move::IsValid(const GameState &state) const
 {
@@ -105,7 +115,7 @@ bool Move::Parse(const PlayerID &player, const std::string &json)
         return false;
         
     UniValue obj;
-    if (!obj.read(json) || obj.isObject())
+    if (!obj.read(json) || !obj.isObject())
         return false;
 
     UniValue v;
@@ -307,4 +317,118 @@ Move::IsValidPlayerName (const std::string& player)
   static sregex regex = sregex::compile("^([a-zA-Z0-9_-]+ )*[a-zA-Z0-9_-]+$");
   smatch match;
   return regex_search(player, match, regex);
+}
+
+/* ************************************************************************** */
+/* StepData.  */
+
+StepData::StepData (const GameState& s)
+  : state(s), dup(), nTreasureAmount(-1), newHash(), vMoves()
+{
+  const CAmount nSubsidy = GetBlockSubsidy (state.nHeight + 1, *state.param);
+  // Miner subsidy is 10%, thus game treasure is 9 times the subsidy
+  nTreasureAmount = nSubsidy * 9;
+}
+
+bool
+StepData::addTransaction (const CTransaction& tx, const CCoinsView* pview,
+                          CValidationState& res)
+{
+  if (!tx.IsNamecoin ())
+    return true;
+
+  /* Keep the moves to add to the step data here first.  This is necessary
+     to prevent a situation where some moves are added already but the
+     function fails later with an error.  */
+  std::vector<Move> newMoves;
+
+  BOOST_FOREACH (const CTxOut& txo, tx.vout)
+    {
+      const CNameScript nameOp(txo.scriptPubKey);
+      if (!nameOp.isNameOp () || !nameOp.isAnyUpdate ())
+        continue;
+
+      const std::string strName = ValtypeToString (nameOp.getOpName ());
+      const std::string strValue = ValtypeToString (nameOp.getOpValue ());
+
+      if (dup.count (strName))
+        return res.Invalid (error ("%s: duplicate name '%s' in block",
+                                   __func__, strName.c_str ()));
+      dup.insert (strName);
+
+      Move m;
+      m.newLocked = txo.nValue;
+
+      if (!m.Parse (strName, strValue))
+        return res.Invalid (error ("%s: cannot parse move %s",
+                                   __func__, strValue.c_str ()));
+      if (!m.IsValid (state))
+        return res.Invalid (error ("%s: invalid move for player %s",
+                                   __func__, strName.c_str ()));
+
+      if (m.IsSpawn ())
+        {
+          if (nameOp.getNameOp () != OP_NAME_FIRSTUPDATE)
+            return res.Invalid (error ("%s: spawn is not firstupdate",
+                                       __func__));
+        }
+      else if (nameOp.getNameOp () != OP_NAME_UPDATE)
+        return res.Invalid (error ("%s: firstupdate is not spawn"));
+
+      const std::string addressLock = m.AddressOperationPermission (state);
+      if (pview && !addressLock.empty ())
+        {
+          /* If one of inputs has address equal to addressLock, then that input
+             has been signed by the address owner and thus authorizes the
+             address change operation.  */
+          bool found = false;
+          BOOST_FOREACH (const CTxIn& txi, tx.vin)
+            {
+              const COutPoint prevout = txi.prevout;
+              CCoins coins;
+
+              if (!pview->GetCoins (prevout.hash, coins)
+                    || !coins.IsAvailable (prevout.n))
+                continue;
+
+              const CTxOut& prevTxo = coins.vout[prevout.n];
+              CTxDestination dest;
+              CBitcoinAddress addrParsed;
+              if (ExtractDestination (prevTxo.scriptPubKey, dest)
+                    && addrParsed.Set (dest)
+                    && addrParsed.ToString () == addressLock)
+                {
+                  found = true;
+                  break;
+                }
+            }
+          if (!found)
+            return res.Invalid (error ("%s: address operation denied",
+                                       __func__));
+        }
+
+      newMoves.push_back (m);
+    }
+
+  vMoves.insert (vMoves.end (), newMoves.begin (), newMoves.end ());
+  return true;
+}
+
+/* ************************************************************************** */
+
+bool
+PerformStep (const CBlock& block, const GameState& stateIn,
+             const CCoinsView* pview, CValidationState& valid,
+             StepResult& res, GameState& stateOut)
+{
+  StepData step(stateIn);
+  BOOST_FOREACH (const CTransaction& tx, block.vtx)
+    if (!step.addTransaction (tx, pview, valid))
+      return false;
+  step.newHash = block.GetHash ();
+
+  if (!PerformStep (stateIn, step, stateOut, res))
+    return error ("%s: game engine failed to perform step", __func__);
+
+  return true;
 }

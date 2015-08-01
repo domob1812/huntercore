@@ -1,15 +1,29 @@
-// Copyright (c) 2015 Daniel Kraft
-// Distributed under the MIT software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+// Copyright (C) 2015 Crypto Realities Ltd
+
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "game/db.h"
 
 #include "chain.h"
 #include "chainparams.h"
+#include "consensus/validation.h"
+#include "game/move.h"
 #include "game/state.h"
 #include "main.h"
 #include "util.h"
 
+#include <vector>
 #include <memory>
 
 /* Define some configuration parameters.  */
@@ -44,18 +58,72 @@ CGameDB::getFromCache (const uint256& hash, GameState& state) const
     if (mi != cache.end ())
       {
         state = *mi->second;
+        assert (hash == state.hashBlock);
         return true;
       }
   }
 
-  return db.Read (hash, state);
+  if (!db.Read (hash, state))
+    return false;
+
+  assert (hash == state.hashBlock);
+  return true;
 }
 
 bool
 CGameDB::get (const uint256& hash, GameState& state)
 {
-  /* FIXME: Implement!  */
-  assert (false);
+  if (!getFromCache (hash, state))
+    {
+      /* Look up the latest previous block for which the game
+         state is known in the cache somewhere.  If it goes back
+         to the genesis block, use a default-constructed game state
+         instead as the input.  It corresponds to the block "before"
+         the genesis block.
+
+         We keep all CBlockIndex pointers in a vector, so that
+         we can then go back up the chain without relying on chainActive.  */
+
+      LOCK (cs_main);
+      GameState stateIn(Params ().GetConsensus ());
+
+      std::vector<const CBlockIndex*> needed;
+      needed.push_back (mapBlockIndex[hash]);
+      while (needed.back ()->pprev)
+        {
+          const CBlockIndex* pprev = needed.back ()->pprev;
+          if (getFromCache (*pprev->phashBlock, stateIn))
+            break;
+          needed.push_back (pprev);
+        }
+
+      LogPrintf ("%s: integrating game state from height %d to height %d\n",
+                 __func__, stateIn.nHeight, needed.front ()->nHeight);
+
+      while (!needed.empty ())
+        {
+          const CBlockIndex* pindex = needed.back ();
+          needed.pop_back ();
+          assert (stateIn.nHeight + 1 == pindex->nHeight);
+
+          CBlock block;
+          if (!ReadBlockFromDisk (block, pindex))
+            return error ("%s: failed to read block from disk", __func__);
+
+          CValidationState valid;
+          StepResult res;
+          if (!PerformStep (block, stateIn, NULL, valid, res, state))
+            return error ("%s: failed to perform game step", __func__);
+
+          assert (state.hashBlock == *pindex->phashBlock);
+          stateIn = state;
+        }
+
+      store (hash, state);
+    }
+
+  assert (hash == state.hashBlock);
+  return true;
 }
 
 void
@@ -70,6 +138,12 @@ CGameDB::store (const uint256& hash, const GameState& state)
       delete mi->second;
       mi->second = new GameState (Params ().GetConsensus ());
       *mi->second = state;
+    }
+  else
+    {
+      std::auto_ptr<GameState> s(new GameState (Params ().GetConsensus ()));
+      *s = state;
+      cache.insert (std::make_pair (hash, s.release ()));
     }
 
   if (cache.size () > maxInMemory)

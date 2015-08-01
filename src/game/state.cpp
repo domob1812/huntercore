@@ -1,3 +1,18 @@
+// Copyright (C) 2015 Crypto Realities Ltd
+
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 #include "game/state.h"
 
 #include "game/map.h"
@@ -864,23 +879,23 @@ UniValue GameState::ToJsonValue() const
 {
     UniValue obj(UniValue::VOBJ);
 
-    UniValue subobj(UniValue::VOBJ);
+    UniValue jsonPlayers(UniValue::VOBJ);
     BOOST_FOREACH(const PAIRTYPE(PlayerID, PlayerState) &p, players)
     {
         int crown_index = p.first == crownHolder.player ? crownHolder.index : -1;
-        subobj.push_back(Pair(p.first, p.second.ToJsonValue(crown_index)));
+        jsonPlayers.push_back(Pair(p.first, p.second.ToJsonValue(crown_index)));
     }
 
     // Save chat messages of dead players
     BOOST_FOREACH(const PAIRTYPE(PlayerID, PlayerState) &p, dead_players_chat)
-        subobj.push_back(Pair(p.first, p.second.ToJsonValue(-1, true)));
+        jsonPlayers.push_back(Pair(p.first, p.second.ToJsonValue(-1, true)));
 
-    obj.push_back(Pair("players", subobj));
+    obj.push_back(Pair("players", jsonPlayers));
 
-    UniValue arr(UniValue::VARR);
+    UniValue jsonLoot(UniValue::VARR);
     BOOST_FOREACH(const PAIRTYPE(Coord, LootInfo) &p, loot)
     {
-        subobj.clear();
+        UniValue subobj(UniValue::VOBJ);
         subobj.push_back(Pair("x", p.first.x));
         subobj.push_back(Pair("y", p.first.y));
         subobj.push_back(Pair("amount", ValueFromAmount(p.second.nAmount)));
@@ -888,40 +903,40 @@ UniValue GameState::ToJsonValue() const
         blk_rng.push_back(p.second.firstBlock);
         blk_rng.push_back(p.second.lastBlock);
         subobj.push_back(Pair("blockRange", blk_rng));
-        arr.push_back(subobj);
+        jsonLoot.push_back(subobj);
     }
-    obj.push_back(Pair("loot", arr));
+    obj.push_back(Pair("loot", jsonLoot));
 
-    arr.clear ();
+    UniValue jsonHearts(UniValue::VARR);
     BOOST_FOREACH (const Coord& c, hearts)
       {
-        subobj.clear ();
+        UniValue subobj(UniValue::VOBJ);
         subobj.push_back (Pair ("x", c.x));
         subobj.push_back (Pair ("y", c.y));
-        arr.push_back (subobj);
+        jsonHearts.push_back (subobj);
       }
-    obj.push_back (Pair ("hearts", arr));
+    obj.push_back (Pair ("hearts", jsonHearts));
 
-    arr.clear ();
+    UniValue jsonBanks(UniValue::VARR);
     BOOST_FOREACH (const PAIRTYPE(Coord, unsigned)& b, banks)
       {
-        subobj.clear ();
+        UniValue subobj(UniValue::VOBJ);
         subobj.push_back (Pair ("x", b.first.x));
         subobj.push_back (Pair ("y", b.first.y));
         subobj.push_back (Pair ("life", static_cast<int> (b.second)));
-        arr.push_back (subobj);
+        jsonBanks.push_back (subobj);
       }
-    obj.push_back (Pair ("banks", arr));
+    obj.push_back (Pair ("banks", jsonBanks));
 
-    subobj.clear();
-    subobj.push_back(Pair("x", crownPos.x));
-    subobj.push_back(Pair("y", crownPos.y));
+    UniValue jsonCrown(UniValue::VOBJ);
+    jsonCrown.push_back(Pair("x", crownPos.x));
+    jsonCrown.push_back(Pair("y", crownPos.y));
     if (!crownHolder.player.empty())
     {
-        subobj.push_back(Pair("holderName", crownHolder.player));
-        subobj.push_back(Pair("holderIndex", crownHolder.index));
+        jsonCrown.push_back(Pair("holderName", crownHolder.player));
+        jsonCrown.push_back(Pair("holderIndex", crownHolder.index));
     }
-    obj.push_back(Pair("crown", subobj));
+    obj.push_back(Pair("crown", jsonCrown));
 
     obj.push_back (Pair("gameFund", ValueFromAmount (gameFund)));
     obj.push_back (Pair("height", nHeight));

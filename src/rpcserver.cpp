@@ -344,6 +344,10 @@ static const CRPCCommand vRPCCommands[] =
     { "namecoin",           "sendtoname",             &sendtoname,             false },
 #endif // ENABLE_WALLET
 
+    /* Game functions */
+    { "game",               "game_getplayerstate",    &game_getplayerstate,    true },
+    { "game",               "game_getstate",          &game_getstate,          true },
+
 #ifdef ENABLE_WALLET
     /* Wallet */
     { "wallet",             "addmultisigaddress",     &addmultisigaddress,     true  },

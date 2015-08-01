@@ -70,9 +70,6 @@ public:
       return ForkInEffect (type, nHeight) && !ForkInEffect (type, nHeight - 1);
     }
 
-    /* Return minimum locked amount in a name.  */
-    virtual CAmount MinNameCoinAmount(unsigned nHeight) const = 0;
-
 };
 
 class MainNetConsensus : public ConsensusRules
@@ -94,16 +91,6 @@ public:
             default:
                 assert (false);
         }
-    }
-
-    CAmount MinNameCoinAmount(unsigned nHeight) const
-    {
-        if (ForkInEffect (FORK_LESSHEARTS, nHeight))
-            return 200 * COIN;
-        if (ForkInEffect (FORK_POISON, nHeight))
-            return 10 * COIN;
-
-        return COIN;
     }
 
 };

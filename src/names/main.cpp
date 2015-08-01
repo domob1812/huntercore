@@ -17,6 +17,8 @@
 #include "util.h"
 #include "utilstrencodings.h"
 
+static const CAmount NAMENEW_COIN_AMOUNT = COIN / 5;
+
 /* ************************************************************************** */
 /* CNameTxUndo.  */
 
@@ -285,6 +287,7 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
 
   int nameIn = -1;
   CNameScript nameOpIn;
+  CAmount nameAmountIn;
   CCoins coinsIn;
   for (unsigned i = 0; i < tx.vin.size (); ++i)
     {
@@ -301,6 +304,7 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
                                          " transaction %s", __func__, txid));
           nameIn = i;
           nameOpIn = op;
+          nameAmountIn = coins.vout[prevout.n].nValue;
           coinsIn = coins;
         }
     }
@@ -342,11 +346,14 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
     return state.Invalid (error ("%s: Namecoin tx %s has no name outputs",
                                  __func__, txid));
 
-  /* Reject "greedy names".  */
-  /* FIXME: Replace by Huntercoin's mandatory game fees.  */
-  const Consensus::Params& params = Params ().GetConsensus ();
-  if (tx.vout[nameOut].nValue < params.rules->MinNameCoinAmount(nHeight))
+  /* Check locked amount.  This is only part of the full rules, though.
+     Here, we enforce the minimum amount and check that the value
+     is always increasing.  The actual minimum game fee is enforced
+     when validating moves.  */
+  if (tx.vout[nameOut].nValue < NAMENEW_COIN_AMOUNT)
     return state.Invalid (error ("%s: greedy name", __func__));
+  if (tx.vout[nameOut].nValue < nameAmountIn)
+    return state.Invalid (error ("%s: name amount decreased", __func__));
 
   /* Handle NAME_NEW now, since this is easy and different from the other
      operations.  */
@@ -377,8 +384,6 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
     return state.Invalid (error ("CheckNameTransaction: name too long"));
   if (nameOpOut.getOpValue ().size () > MAX_VALUE_LENGTH)
     return state.Invalid (error ("CheckNameTransaction: value too long"));
-
-  /* FIXME: Check move for being valid wrt the game state.  */
 
   /* Process NAME_UPDATE next.  */
 

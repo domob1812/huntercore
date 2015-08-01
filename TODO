@@ -1,6 +1,4 @@
-* validate moves and name coin amount when connecting blocks
-
-* keep game state along when connecting blocks
+* keep game state along and validate moves when connecting blocks
 
 * implement game transactions
 

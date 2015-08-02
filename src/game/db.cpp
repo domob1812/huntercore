@@ -162,17 +162,10 @@ CGameDB::flush (bool saveAll)
   {
     LOCK (cs_main);
 
-    const int nBestHeight = chainActive.Tip ()->nHeight;
-    for (GameStateMap::const_iterator mi = cache.begin ();
-         mi != cache.end (); ++mi)
-      {
-        const CBlockIndex* pindex = mapBlockIndex[mi->first];
-        if (!chainActive.Contains (pindex))
-          continue;
-        assert (pindex->nHeight <= nBestHeight);
-        if (nBestHeight - pindex->nHeight < static_cast<int> (minInMemory))
-          keepInMemory.insert (mi->first);
-      }
+    const CBlockIndex* pindex = chainActive.Tip ();
+    const int minHeight = pindex->nHeight - minInMemory;
+    for (; pindex && pindex->nHeight > minHeight; pindex = pindex->pprev)
+      keepInMemory.insert (*pindex->phashBlock);
   }
 
   /* Go through everything and delete or store to disk.  */

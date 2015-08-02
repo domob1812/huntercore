@@ -170,7 +170,7 @@ CGameDB::flush (bool saveAll)
         if (!chainActive.Contains (pindex))
           continue;
         assert (pindex->nHeight <= nBestHeight);
-        if (nBestHeight - pindex->nHeight > static_cast<int> (minInMemory))
+        if (nBestHeight - pindex->nHeight < static_cast<int> (minInMemory))
           keepInMemory.insert (mi->first);
       }
   }
@@ -209,10 +209,9 @@ CGameDB::flush (bool saveAll)
      the chain since then.  */
   /* TODO: Possibly not do this always.  We could do it for saveAll only,
      or with an explicit call.  Depends on how long this usually takes.  */
-  std::auto_ptr<leveldb::Iterator> pcursor(db.NewIterator ());
-  pcursor->SeekToFirst ();
   discarded = 0;
-  while (pcursor->Valid ())
+  std::auto_ptr<leveldb::Iterator> pcursor(db.NewIterator ());
+  for (pcursor->SeekToFirst (); pcursor->Valid (); pcursor->Next ())
     {
       const leveldb::Slice slKey = pcursor->key ();
       CDataStream ssKey(slKey.data (), slKey.data () + slKey.size (),

@@ -14,6 +14,9 @@
 #include "checkqueue.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
+#include "game/db.h"
+#include "game/move.h"
+#include "game/state.h"
 #include "hash.h"
 #include "init.h"
 #include "merkleblock.h"
@@ -1980,10 +1983,34 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     int64_t nTime3 = GetTimeMicros(); nTimeConnect += nTime3 - nTime2;
     LogPrint("bench", "      - Connect %u transactions: %.2fms (%.3fms/tx, %.3fms/txin) [%.2fs]\n", (unsigned)block.vtx.size(), 0.001 * (nTime3 - nTime2), 0.001 * (nTime3 - nTime2) / block.vtx.size(), nInputs <= 1 ? 0 : 0.001 * (nTime3 - nTime2) / (nInputs-1), nTimeConnect * 0.000001);
 
+    /* Advance game state for the current block.  This includes further
+       checks about validity of all moves.  Ignore this for the genesis
+       block, since there is no "previous state" to fetch and advance.
+       There are no game transactions for it, either.  In this case,
+       the default-constructed StepResult is fine.  */
+    const bool isGenesis = (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock);
+    StepResult stepResult;
+    if (!isGenesis)
+      {
+        GameState prevGameState(chainparams.GetConsensus ());
+        if (!pgameDb->get (*pindex->pprev->phashBlock, prevGameState))
+          return state.Error ("ConnectBlock: failed to read prev game state");
+
+        GameState newGameState(chainparams.GetConsensus ());
+        if (!PerformStep (block, prevGameState, &view, state,
+                          stepResult, newGameState))
+          return state.Invalid (error ("%s: game engine step failed",
+                                       __func__));
+
+        pgameDb->store (block.GetHash (), newGameState);
+      }
+    // FIXME: Add game transactions, connect them and so on.
+    // Make sure to return an empty vector for isGenesis.
+    nFees += stepResult.nTaxAmount;
+
     /* Special rule:  Allow too high payout for genesis blocks.
        They are used in Huntercoin to add premine coins.  */
     CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());
-    const bool isGenesis = (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock);
     if (!isGenesis && block.vtx[0].GetValueOut() > blockReward)
         return state.DoS(100,
                          error("ConnectBlock(): coinbase pays too much (actual=%d vs limit=%d)",
@@ -2017,8 +2044,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
         setDirtyBlockIndex.insert(pindex);
     }
-
-    /* FIXME: Somewhere here create and insert gametx?  */
 
     if (fTxIndex)
         if (!pblocktree->WriteTxIndex(vPos))
@@ -3017,9 +3042,6 @@ bool AcceptBlock(const CBlock& block, CValidationState& state, CBlockIndex** ppi
         }
         return false;
     }
-
-    /* FIXME: Probably here could be a good place to advance the game state
-       and construct the game tx.  */
 
     int nHeight = pindex->nHeight;
 

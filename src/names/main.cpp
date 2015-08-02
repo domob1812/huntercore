@@ -347,13 +347,12 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
                                  __func__, txid));
 
   /* Check locked amount.  This is only part of the full rules, though.
-     Here, we enforce the minimum amount and check that the value
-     is always increasing.  The actual minimum game fee is enforced
-     when validating moves.  */
+     Here, we enforce the minimum amount.  For name_update, we also
+     check that the amount is always increasing (but below, since this
+     is not true for name_firstupdate due to the prepared name tx logic).
+     The actual minimum game fee is enforced when validating moves.  */
   if (tx.vout[nameOut].nValue < NAMENEW_COIN_AMOUNT)
     return state.Invalid (error ("%s: greedy name", __func__));
-  if (tx.vout[nameOut].nValue < nameAmountIn)
-    return state.Invalid (error ("%s: name amount decreased", __func__));
 
   /* Handle NAME_NEW now, since this is easy and different from the other
      operations.  */
@@ -389,6 +388,11 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
 
   if (nameOpOut.getNameOp () == OP_NAME_UPDATE)
     {
+      if (tx.vout[nameOut].nValue < nameAmountIn)
+        return state.Invalid (error ("%s: name amount decreased in tx %s",
+                                     __func__,
+                                     tx.GetHash ().GetHex ().c_str ()));
+
       if (!nameOpIn.isAnyUpdate ())
         return state.Invalid (error ("CheckNameTransaction: NAME_UPDATE with"
                                      " prev input that is no update"));

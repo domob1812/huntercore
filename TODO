@@ -1,4 +1,4 @@
-* keep game state along and validate moves when connecting blocks
+* compare long stream of RandomGenerator bytes; hearts wrong at height 720
 
 * implement game transactions
 

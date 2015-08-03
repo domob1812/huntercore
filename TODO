@@ -1,5 +1,3 @@
-* compare long stream of RandomGenerator bytes; hearts wrong at height 720
-
 * implement game transactions
 
 * check game_getplayerstate with crown

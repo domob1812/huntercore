@@ -18,6 +18,7 @@
 
 #include "arith_uint256.h"
 #include "serialize.h"
+#include "uint256.h"
 
 #include <map>
 #include <set>
@@ -51,17 +52,6 @@ struct CharacterID
     }
 
     std::string ToString() const;
-
-    /*
-    FIXME: Is this actually used?
-    static CharacterID Parse(const std::string &s)
-    {
-        size_t pos = s.find('.');
-        if (pos == std::string::npos)
-            return CharacterID(s, 0);
-        return CharacterID(s.substr(0, pos), atoi(s.substr(pos + 1).c_str()));
-    }
-    */
 
     bool operator==(const CharacterID &that) const { return player == that.player && index == that.index; }
     bool operator!=(const CharacterID &that) const { return !(*this == that); }
@@ -120,7 +110,8 @@ public:
     }
 
 private:
-    arith_uint256 state, state0;
+    uint256 state0;
+    arith_uint256 state;
     static const arith_uint256 MIN_STATE;
 };
 

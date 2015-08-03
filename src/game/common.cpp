@@ -18,7 +18,6 @@
 #include "hash.h"
 #include "names/common.h"
 #include "tinyformat.h"
-#include "uint256.h"
 
 std::string CharacterID::ToString() const
 {
@@ -28,9 +27,9 @@ std::string CharacterID::ToString() const
 }
 
 RandomGenerator::RandomGenerator (const uint256& hashBlock)
-  : state0(UintToArith256 (SerializeHash (hashBlock, SER_GETHASH, 0)))
+  : state0(SerializeHash (hashBlock, SER_GETHASH, 0))
 {
-    state = state0;
+    state = UintToArith256 (state0);
 }
 
 int
@@ -43,13 +42,17 @@ RandomGenerator::GetIntRnd (int modulo)
          the value based on valtype and with leading zeros removed.  For
          compatibility with the old consensus behaviour, we replicate this.  */
 
-      const uint256 fixedState0 = ArithToUint256 (state0);
-      valtype data(fixedState0.begin (), fixedState0.end ());
+      valtype data(state0.begin (), state0.end ());
       while (data.back () == 0)
         data.pop_back ();
 
-      state0 = UintToArith256 (SerializeHash (data, SER_GETHASH, 0));
-      state = state0;
+      /* The legacy representation uses the highest bit as sign bit.  Thus
+         we have to add a zero at the end if the highest bit is set.  */
+      if (data.back () & 128)
+        data.push_back (0);
+
+      state0 = SerializeHash (data, SER_GETHASH, 0);
+      state = UintToArith256 (state0);
     }
 
   arith_uint256 res = state;

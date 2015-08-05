@@ -17,6 +17,7 @@
 #include "game/db.h"
 #include "game/move.h"
 #include "game/state.h"
+#include "game/tx.h"
 #include "hash.h"
 #include "init.h"
 #include "merkleblock.h"
@@ -702,6 +703,10 @@ unsigned int GetLegacySigOpCount(const CTransaction& tx)
 
 unsigned int GetP2SHSigOpCount(const CTransaction& tx, const CCoinsViewCache& inputs)
 {
+    /* Game transactions should not make it here, they are filtered out
+       already higher up the call tree.  */
+    assert(!tx.IsGameTx());
+
     if (tx.IsCoinBase())
         return 0;
 
@@ -818,6 +823,8 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
     // Coinbase is only valid in a block, not as a loose transaction
     if (tx.IsCoinBase())
         return state.DoS(100, false, REJECT_INVALID, "coinbase");
+    if (tx.IsGameTx())
+        return state.DoS(100, false, REJECT_INVALID, "gametx");
 
     // Rather not work on nonstandard transactions (unless -testnet/-regtest)
     string reason;
@@ -1392,6 +1399,12 @@ void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCach
     if (!tx.IsCoinBase()) {
         txundo.vprevout.reserve(tx.vin.size());
         BOOST_FOREACH(const CTxIn &txin, tx.vin) {
+            if (txin.prevout.IsNull())
+            {
+                assert(tx.IsGameTx());
+                continue;
+            }
+
             CCoinsModifier coins = inputs.ModifyCoins(txin.prevout.hash);
             unsigned nPos = txin.prevout.n;
 
@@ -1455,6 +1468,12 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
                         REJECT_INVALID, "bad-txns-premature-spend-of-coinbase",
                         strprintf("tried to spend coinbase at depth %d", nSpendHeight - coins->nHeight));
             }
+            else if (coins->IsGameTx()) {
+                if (nSpendHeight - coins->nHeight < GAMETX_MATURITY)
+                    return state.Invalid(
+                        error("CheckInputs(): tried to spend game reward at depth %d", nSpendHeight - coins->nHeight),
+                        REJECT_INVALID, "bad-txns-premature-spend-of-gametx");
+            }
 
             // Check for negative or overflow input values
             nValueIn += coins->vout[prevout.n].nValue;
@@ -1480,6 +1499,10 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
 
 bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks)
 {
+    /* Game tx need no checks.  They should never appear here, though,
+       as they are "filtered out" already up in the call tree.  */
+    assert(!tx.IsGameTx());
+
     const int nSpendHeight = GetSpendHeight(inputs);
 
     /* Do this as very first action.  Otherwise, we can run into troubles
@@ -1943,6 +1966,10 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             return state.DoS(100, error("ConnectBlock(): too many sigops"),
                              REJECT_INVALID, "bad-blk-sigops");
 
+        /* Game transactions are not allowed here, they should be caught
+           (if present) already by CheckBlock above.  */
+        assert(!tx.IsGameTx());
+
         if (!tx.IsCoinBase())
         {
             if (!view.HaveInputs(tx))
@@ -2004,9 +2031,19 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
         pgameDb->store (block.GetHash (), newGameState);
       }
-    // FIXME: Add game transactions, connect them and so on.
-    // Make sure to return an empty vector for isGenesis.
     nFees += stepResult.nTaxAmount;
+
+    /* Construct and handle game transactions.  */
+    std::vector<CTransaction> vGameTx;
+    if (!CreateGameTransactions (view, stepResult, vGameTx))
+        return state.Error ("ConnectBlock: failed to create game tx");
+    for (unsigned i = 0; i < vGameTx.size (); ++i)
+      {
+        blockundo.vtxundo.push_back (CTxUndo ());
+        UpdateCoins (vGameTx[i], state, view, blockundo.vtxundo.back (),
+                     pindex->nHeight);
+      }
+    /* FIXME: Set killed players to "dead".  */
 
     /* Special rule:  Allow too high payout for genesis blocks.
        They are used in Huntercoin to add premine coins.  */
@@ -2850,6 +2887,12 @@ bool CheckBlock(const CBlock& block, CValidationState& state, bool fCheckPOW, bo
         if (block.vtx[i].IsCoinBase())
             return state.DoS(100, error("CheckBlock(): more than one coinbase"),
                              REJECT_INVALID, "bad-cb-multiple");
+
+    // No tx in the block can be a game tx
+    for (unsigned int i = 0; i < block.vtx.size(); ++i)
+        if (block.vtx[i].IsGameTx())
+            return state.DoS(100, error("%s: game tx in block", __func__),
+                             REJECT_INVALID, "bad-gametx");
 
     // Check transactions
     BOOST_FOREACH(const CTransaction& tx, block.vtx)

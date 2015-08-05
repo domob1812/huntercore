@@ -33,11 +33,14 @@ class CTxInUndo;
  *
  * The nCode value consists of:
  * - bit 1: IsCoinBase()
- * - bit 2: vout[0] is not spent
- * - bit 4: vout[1] is not spent
+ * - bit 2: IsGameTx()
+ * - bit 4: vout[0] is not spent
+ * - bit 8: vout[1] is not spent
  * - The higher bits encode N, the number of non-zero bytes in the following bitvector.
- *   - In case both bit 2 and bit 4 are unset, they encode N-1, as there must be at
+ *   - In case both bit 4 and bit 8 are unset, they encode N-1, as there must be at
  *     least one non-spent output).
+ *
+ * NOTE: Examples invalid for Huntercoin!
  *
  * Example: 0104835800816115944e077fe7c803cfa57f29b36bf87c1d358bb85e
  *          <><><--------------------------------------------><---->
@@ -78,6 +81,8 @@ class CCoins
 public:
     //! whether transaction is a coinbase
     bool fCoinBase;
+    //! whether transaction is a game tx
+    bool fGameTx;
 
     //! unspent transaction outputs; spent outputs are .IsNull(); spent outputs at the end of the array are dropped
     std::vector<CTxOut> vout;
@@ -91,6 +96,7 @@ public:
 
     void FromTx(const CTransaction &tx, int nHeightIn) {
         fCoinBase = tx.IsCoinBase();
+        fGameTx = tx.IsGameTx();
         vout = tx.vout;
         nHeight = nHeightIn;
         nVersion = tx.nVersion;
@@ -104,13 +110,15 @@ public:
 
     void Clear() {
         fCoinBase = false;
+        fGameTx = false;
         std::vector<CTxOut>().swap(vout);
         nHeight = 0;
         nVersion = 0;
     }
 
     //! empty constructor
-    CCoins() : fCoinBase(false), vout(0), nHeight(0), nVersion(0) { }
+    CCoins() : fCoinBase(false), fGameTx(false),
+               vout(0), nHeight(0), nVersion(0) { }
 
     //!remove spent outputs at the end of vout
     void Cleanup() {
@@ -155,6 +163,10 @@ public:
         return fCoinBase;
     }
 
+    bool IsGameTx() const {
+        return fGameTx;
+    }
+
     unsigned int GetSerializeSize(int nType, int nVersion) const {
         unsigned int nSize = 0;
         unsigned int nMaskSize = 0, nMaskCode = 0;
@@ -162,7 +174,7 @@ public:
         bool fFirst = vout.size() > 0 && !vout[0].IsNull();
         bool fSecond = vout.size() > 1 && !vout[1].IsNull();
         assert(fFirst || fSecond || nMaskCode);
-        unsigned int nCode = 8*(nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fFirst ? 2 : 0) + (fSecond ? 4 : 0);
+        unsigned int nCode = 16*(nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fGameTx ? 2 : 0) + (fFirst ? 4 : 0) + (fSecond ? 8 : 0);
         // version
         nSize += ::GetSerializeSize(VARINT(this->nVersion), nType, nVersion);
         // size of header code
@@ -185,7 +197,7 @@ public:
         bool fFirst = vout.size() > 0 && !vout[0].IsNull();
         bool fSecond = vout.size() > 1 && !vout[1].IsNull();
         assert(fFirst || fSecond || nMaskCode);
-        unsigned int nCode = 8*(nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fFirst ? 2 : 0) + (fSecond ? 4 : 0);
+        unsigned int nCode = 16*(nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fGameTx ? 2 : 0) + (fFirst ? 4 : 0) + (fSecond ? 8 : 0);
         // version
         ::Serialize(s, VARINT(this->nVersion), nType, nVersion);
         // header code
@@ -215,10 +227,11 @@ public:
         // header code
         ::Unserialize(s, VARINT(nCode), nType, nVersion);
         fCoinBase = nCode & 1;
+        fGameTx = nCode & 2;
         std::vector<bool> vAvail(2, false);
-        vAvail[0] = (nCode & 2) != 0;
-        vAvail[1] = (nCode & 4) != 0;
-        unsigned int nMaskCode = (nCode / 8) + ((nCode & 6) != 0 ? 0 : 1);
+        vAvail[0] = (nCode & 4) != 0;
+        vAvail[1] = (nCode & 8) != 0;
+        unsigned int nMaskCode = (nCode / 16) + ((nCode & 12) != 0 ? 0 : 1);
         // spentness bitmask
         while (nMaskCode > 0) {
             unsigned char chAvail = 0;

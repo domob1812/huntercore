@@ -75,6 +75,12 @@ void CMutableTransaction::SetNamecoin()
     nVersion = CTransaction::NAMECOIN_VERSION;
 }
 
+void CMutableTransaction::SetGameTx()
+{
+    assert (nVersion == CTransaction::CURRENT_VERSION);
+    nVersion = CTransaction::GAMETX_VERSION;
+}
+
 void CTransaction::UpdateHash() const
 {
     *const_cast<uint256*>(&hash) = SerializeHash(*this);

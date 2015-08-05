@@ -1,8 +1,14 @@
-* implement game transactions
-
-* check game_getplayerstate with crown
+* undo for game transactions
 
 * add "dead" flag to CNameData, handle killing (and reviving on undo) of players
+
+* checks for creating dead/not-dead players
+
+* add game tx for -txindex and store hashes somewhere (CBlockIndex?)
+
+* JSON decoding for game tx
+
+* check game_getplayerstate with crown
 
 * invalidate moves from mempool when the game state changes
 

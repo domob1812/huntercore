@@ -186,6 +186,7 @@ private:
 public:
     static const int32_t CURRENT_VERSION=1;
     static const int32_t NAMECOIN_VERSION=0x7100;
+    static const int32_t GAMETX_VERSION=0x87100;
 
     // The local variables are made const to prevent unintended modification
     // without updating the cached hash value. However, CTransaction is not
@@ -239,12 +240,17 @@ public:
 
     bool IsCoinBase() const
     {
-        return (vin.size() == 1 && vin[0].prevout.IsNull());
+        return (!IsGameTx() && vin.size() == 1 && vin[0].prevout.IsNull());
     }
 
     bool IsNamecoin() const
     {
         return nVersion == NAMECOIN_VERSION;
+    }
+
+    bool IsGameTx() const
+    {
+        return nVersion == GAMETX_VERSION;
     }
 
     friend bool operator==(const CTransaction& a, const CTransaction& b)
@@ -292,6 +298,11 @@ struct CMutableTransaction
      * that it isn't already.
      */
     void SetNamecoin();
+
+    /**
+     * Turn this into a game tx.  It is assumed that it isn't already.
+     */
+    void SetGameTx();
 };
 
 #endif // BITCOIN_PRIMITIVES_TRANSACTION_H

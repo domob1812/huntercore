@@ -330,14 +330,14 @@ static const CRPCCommand vRPCCommands[] =
 #endif
 
     /* Namecoin functions */
-    { "namecoin",           "name_show",              &name_show,              false },
-    { "namecoin",           "name_history",           &name_history,           false },
-    { "namecoin",           "name_scan",              &name_scan,              false },
-    { "namecoin",           "name_filter",            &name_filter,            false },
+    { "namecoin",           "name_show",              &name_show,              true },
+    { "namecoin",           "name_history",           &name_history,           true },
+    { "namecoin",           "name_scan",              &name_scan,              true },
+    { "namecoin",           "name_filter",            &name_filter,            true },
     { "namecoin",           "name_pending",           &name_pending,           true  },
-    { "namecoin",           "name_checkdb",           &name_checkdb,           false },
+    { "namecoin",           "name_checkdb",           &name_checkdb,           true },
 #ifdef ENABLE_WALLET
-    { "namecoin",           "name_list",              &name_list,              false },
+    { "namecoin",           "name_list",              &name_list,              true },
     { "namecoin",           "name_new",               &name_new,               false },
     { "namecoin",           "name_firstupdate",       &name_firstupdate,       false },
     { "namecoin",           "name_update",            &name_update,            false },

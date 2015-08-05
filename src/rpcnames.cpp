@@ -164,10 +164,6 @@ name_show (const UniValue& params, bool fHelp)
         + HelpExampleRpc ("name_show", "\"myname\"")
       );
 
-  if (IsInitialBlockDownload ())
-    throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD,
-                       "Namecoin is downloading blocks...");
-
   const std::string nameStr = params[0].get_str ();
   const valtype name = ValtypeFromString (nameStr);
 
@@ -209,10 +205,6 @@ name_history (const UniValue& params, bool fHelp)
 
   if (!fNameHistory)
     throw std::runtime_error ("-namehistory is not enabled");
-
-  if (IsInitialBlockDownload ())
-    throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD,
-                       "Namecoin is downloading blocks...");
 
   const std::string nameStr = params[0].get_str ();
   const valtype name = ValtypeFromString (nameStr);
@@ -266,10 +258,6 @@ name_scan (const UniValue& params, bool fHelp)
         + HelpExampleRpc ("name_scan", "\"d/abc\"")
       );
 
-  if (IsInitialBlockDownload ())
-    throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD,
-                       "Namecoin is downloading blocks...");
-
   valtype start;
   if (params.size () >= 1)
     start = ValtypeFromString (params[0].get_str ());
@@ -319,10 +307,6 @@ name_filter (const UniValue& params, bool fHelp)
         + HelpExampleCli ("name_filter", "\"^id/\" 36000 0 0 \"stat\"")
         + HelpExampleRpc ("name_scan", "\"^d/\"")
       );
-
-  if (IsInitialBlockDownload ())
-    throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD,
-                       "Namecoin is downloading blocks...");
 
   /* ********************** */
   /* Interpret parameters.  */

@@ -2045,6 +2045,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
       }
     /* FIXME: Set killed players to "dead".  */
 
+    /* TODO: Should we update pindex->nTx to include the game tx?  Not sure
+       if we want the game tx to be part of that and, in particular, also
+       the total number of transactions.  I don't know if that has
+       any real significance.  */
+
     /* Special rule:  Allow too high payout for genesis blocks.
        They are used in Huntercoin to add premine coins.  */
     CAmount blockReward = nFees + GetBlockSubsidy(pindex->nHeight, chainparams.GetConsensus());

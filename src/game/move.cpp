@@ -115,7 +115,7 @@ bool Move::Parse(const PlayerID &player, const std::string &json)
         return false;
         
     UniValue obj;
-    if (!obj.read(json) || !obj.isObject())
+    if (!obj.read(json, false) || !obj.isObject())
         return false;
 
     UniValue v;

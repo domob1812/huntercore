@@ -1,14 +1,12 @@
 * undo for game transactions
 
-* add "dead" flag to CNameData, handle killing (and reviving on undo) of players
-
-* checks for creating dead/not-dead players
-
 * add game tx for -txindex and store hashes somewhere (CBlockIndex?)
 
 * JSON decoding for game tx
 
-* check game_getplayerstate with crown
+* add "dead" flag to CNameData, handle killing (and reviving on undo) of players
+
+* checks for creating dead/not-dead players
 
 * invalidate moves from mempool when the game state changes
 
@@ -16,10 +14,12 @@
 
 * update fee and IsStandard policies
 
-* make sure miners take their taxes
-
 * dual-algo mining (difficulty in getinfo and co, choosing algo)
+
+* make sure miners take their taxes
 
 * reenable and update tests regtests
 
 * fully get rid of name database?
+
+* re-instate checks for initial blockchain download?

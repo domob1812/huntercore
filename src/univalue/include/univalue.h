@@ -124,9 +124,9 @@ public:
     std::string write(unsigned int prettyIndent = 0,
                       unsigned int indentLevel = 0) const;
 
-    bool read(const char *raw);
-    bool read(const std::string& rawStr) {
-        return read(rawStr.c_str());
+    bool read(const char *raw, bool fStrict = true);
+    bool read(const std::string& rawStr, bool fStrict = true) {
+        return read(rawStr.c_str(), fStrict);
     }
 
 private:
@@ -242,7 +242,8 @@ enum jtokentype {
 };
 
 extern enum jtokentype getJsonToken(std::string& tokenVal,
-                                    unsigned int& consumed, const char *raw);
+                                    unsigned int& consumed, const char *raw,
+                                    bool fStrict = true);
 extern const char *uvTypeName(UniValue::VType t);
 
 extern const UniValue NullUniValue;

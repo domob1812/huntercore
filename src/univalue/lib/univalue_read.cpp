@@ -37,7 +37,7 @@ static const char *hatoui(const char *first, const char *last,
 }
 
 enum jtokentype getJsonToken(string& tokenVal, unsigned int& consumed,
-                            const char *raw)
+                            const char *raw, bool fStrict)
 {
     tokenVal.clear();
     consumed = 0;
@@ -171,7 +171,10 @@ enum jtokentype getJsonToken(string& tokenVal, unsigned int& consumed,
         string valStr;
 
         while (*raw) {
-            if (*raw < 0x20)
+            /* The Huntercoin blockchain contains some chat messages
+               with characters that have bit 8 set.  Since we have
+               raw as *signed* char, make sure to not tripple over them.  */
+            if (fStrict && *raw < 0x20)
                 return JTOK_ERR;
 
             else if (*raw == '\\') {
@@ -236,7 +239,7 @@ enum jtokentype getJsonToken(string& tokenVal, unsigned int& consumed,
     }
 }
 
-bool UniValue::read(const char *raw)
+bool UniValue::read(const char *raw, bool fStrict)
 {
     clear();
 
@@ -251,7 +254,7 @@ bool UniValue::read(const char *raw)
     do {
         last_tok = tok;
 
-        tok = getJsonToken(tokenVal, consumed, raw);
+        tok = getJsonToken(tokenVal, consumed, raw, fStrict);
         if (tok == JTOK_NONE || tok == JTOK_ERR)
             return false;
         raw += consumed;
@@ -380,7 +383,7 @@ bool UniValue::read(const char *raw)
     } while (!stack.empty ());
 
     /* Check that nothing follows the initial construct (parsed above).  */
-    tok = getJsonToken(tokenVal, consumed, raw);
+    tok = getJsonToken(tokenVal, consumed, raw, fStrict);
     if (tok != JTOK_NONE)
         return false;
 

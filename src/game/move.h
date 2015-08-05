@@ -1,6 +1,7 @@
 #ifndef GAME_MOVE_H
 #define GAME_MOVE_H
 
+#include "amount.h"
 #include "game/common.h"
 #include "consensus/params.h"
 #include "uint256.h"
@@ -26,7 +27,7 @@ struct Move
     PlayerID player;
 
     // New amount of locked coins (equals name output of move tx).
-    int64_t newLocked;
+    CAmount newLocked;
 
     // Updates to the player state
     boost::optional<std::string> message;
@@ -61,7 +62,7 @@ struct Move
      * Return the minimum required "game fee" for this move.  The params
      * and block height are used to decide about fork states.
      */
-    int64_t MinimumGameFee (const Consensus::Params& param,
+    CAmount MinimumGameFee (const Consensus::Params& param,
                             unsigned nHeight) const;
 
     /** Check player name.  */

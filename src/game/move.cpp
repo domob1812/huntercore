@@ -30,7 +30,7 @@ bool Move::IsValid(const GameState &state) const
 {
   PlayerStateMap::const_iterator mi = state.players.find (player);
 
-  int64_t oldLocked;
+  CAmount oldLocked;
   if (mi == state.players.end ())
     {
       if (!IsSpawn ())
@@ -45,8 +45,8 @@ bool Move::IsValid(const GameState &state) const
     }
 
   assert (oldLocked >= 0 && newLocked >= 0);
-  const int64_t gameFee = newLocked - oldLocked;
-  const int64_t required = MinimumGameFee (*state.param, state.nHeight + 1);
+  const CAmount gameFee = newLocked - oldLocked;
+  const CAmount required = MinimumGameFee (*state.param, state.nHeight + 1);
   assert (required >= 0);
   if (gameFee < required)
     return error ("%s: too little game fee attached, got %lld, required %lld",
@@ -243,7 +243,7 @@ Move::ApplySpawn (GameState &state, RandomGenerator &rnd) const
      arbitrarily high.  */
   if (state.ForkInEffect (FORK_LIFESTEAL))
     {
-      const int64_t coinAmount = GetNameCoinAmount (*state.param, state.nHeight);
+      const CAmount coinAmount = GetNameCoinAmount (*state.param, state.nHeight);
       assert (pl.lockedCoins == 0 && pl.value == -1);
       assert (newLocked >= coinAmount);
       pl.value = coinAmount;
@@ -285,12 +285,12 @@ void Move::ApplyWaypoints(GameState &state) const
     }
 }
 
-int64_t
+CAmount
 Move::MinimumGameFee (const Consensus::Params& param, unsigned nHeight) const
 {
   if (IsSpawn ())
     {
-      const int64_t coinAmount = GetNameCoinAmount (param, nHeight);
+      const CAmount coinAmount = GetNameCoinAmount (param, nHeight);
 
       if (param.rules->ForkInEffect (FORK_LIFESTEAL, nHeight))
         return coinAmount + 5 * COIN;

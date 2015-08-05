@@ -66,7 +66,7 @@ static std::vector<Coord> walkableTiles;
    It depends on the block height (taking forks changing it into account)
    and possibly properties of the player.  Returns -1 if the capacity
    is unlimited.  */
-static int64_t
+static CAmount
 GetCarryingCapacity (const GameState& state, bool isGeneral, bool isCrownHolder)
 {
   if (!state.ForkInEffect (FORK_CARRYINGCAP) || isCrownHolder)
@@ -84,7 +84,7 @@ GetCarryingCapacity (const GameState& state, bool isGeneral, bool isCrownHolder)
 /* Return the minimum necessary amount of locked coins.  This replaces the
    old NAME_COIN_AMOUNT constant and makes it more dynamic, so that we can
    change it with hard forks.  */
-int64_t
+CAmount
 GetNameCoinAmount (const Consensus::Params& param, unsigned nHeight)
 {
   if (param.rules->ForkInEffect (FORK_LESSHEARTS, nHeight))
@@ -301,7 +301,7 @@ CharactersOnTiles::DrawLife (GameState& state, StepResult& result)
 
   /* Find damage amount if we have life steal in effect.  */
   const bool lifeSteal = state.ForkInEffect (FORK_LIFESTEAL);
-  const int64_t damage = GetNameCoinAmount (*state.param, state.nHeight);
+  const CAmount damage = GetNameCoinAmount (*state.param, state.nHeight);
 
   BOOST_FOREACH (PAIRTYPE(const Coord, AttackableCharacter)& tile, tiles)
     {
@@ -322,7 +322,7 @@ CharactersOnTiles::DrawLife (GameState& state, StepResult& result)
         {
           assert (a.chid.index == 0);
 
-          int64_t fullDamage = damage * a.attackers.size ();
+          CAmount fullDamage = damage * a.attackers.size ();
           if (fullDamage > victim.value)
             fullDamage = victim.value;
 
@@ -415,7 +415,7 @@ CharactersOnTiles::DistributeDrawnLife (RandomGenerator& rnd,
   if (!built)
     return;
 
-  const int64_t damage = GetNameCoinAmount (*state.param, state.nHeight);
+  const CAmount damage = GetNameCoinAmount (*state.param, state.nHeight);
 
   /* Life is already drawn.  It remains to distribute the drawn balances
      from each attacked character back to its attackers.  For this,
@@ -456,7 +456,7 @@ CharactersOnTiles::DistributeDrawnLife (RandomGenerator& rnd,
 
       /* Distribute the drawn life randomly until either all is spent
          or all alive attackers have gotten some.  */
-      int64_t toSpend = a.drawnLife;
+      CAmount toSpend = a.drawnLife;
       while (!alive.empty () && toSpend >= damage)
         {
           const unsigned ind = rnd.GetIntRnd (alive.size ());
@@ -720,12 +720,12 @@ CharacterState::TimeToDestination (const WaypointVector* altWP) const
   return res;
 }
 
-int64_t
-CharacterState::CollectLoot (LootInfo newLoot, int nHeight, int64_t carryCap)
+CAmount
+CharacterState::CollectLoot (LootInfo newLoot, int nHeight, CAmount carryCap)
 {
-  const int64_t totalBefore = loot.nAmount + newLoot.nAmount;
+  const CAmount totalBefore = loot.nAmount + newLoot.nAmount;
 
-  int64_t freeCap = carryCap - loot.nAmount;
+  CAmount freeCap = carryCap - loot.nAmount;
   if (freeCap < 0)
     {
       /* This means that the character is carrying more than allowed
@@ -734,7 +734,7 @@ CharacterState::CollectLoot (LootInfo newLoot, int nHeight, int64_t carryCap)
       freeCap = 0;
     }
 
-  int64_t remaining;
+  CAmount remaining;
   if (carryCap == -1 || newLoot.nAmount <= freeCap)
     remaining = 0;
   else
@@ -946,7 +946,7 @@ UniValue GameState::ToJsonValue() const
     return obj;
 }
 
-void GameState::AddLoot(Coord coord, int64_t nAmount)
+void GameState::AddLoot(Coord coord, CAmount nAmount)
 {
     if (nAmount == 0)
         return;
@@ -991,10 +991,10 @@ public:
   int cid;
 
   CharacterState* ch;
-  int64_t carryCap;
+  CAmount carryCap;
 
   /* Get remaining carrying capacity.  */
-  inline int64_t
+  inline CAmount
   GetRemainingCapacity () const
   {
     if (carryCap == -1)
@@ -1016,8 +1016,8 @@ public:
 bool
 operator< (const CharacterOnLootTile& a, const CharacterOnLootTile& b)
 {
-  const int64_t remA = a.GetRemainingCapacity ();
-  const int64_t remB = b.GetRemainingCapacity ();
+  const CAmount remA = a.GetRemainingCapacity ();
+  const CAmount remB = b.GetRemainingCapacity ();
 
   if (remA == remB)
     {
@@ -1090,7 +1090,7 @@ void GameState::DivideLootAmongPlayers()
            some of them will get nothing.  */
         if (lootInfo.nAmount > 0)
           {
-            const int64_t rem = i->ch->CollectLoot (lootInfo, nHeight,
+            const CAmount rem = i->ch->CollectLoot (lootInfo, nHeight,
                                                     i->carryCap);
             AddLoot (coord, rem - lootInfo.nAmount);
           }
@@ -1134,7 +1134,7 @@ void GameState::UpdateCrownState(bool &respawn_crown)
 }
 
 void
-GameState::CrownBonus (int64_t nAmount)
+GameState::CrownBonus (CAmount nAmount)
 {
   if (!crownHolder.player.empty ())
     {
@@ -1142,9 +1142,9 @@ GameState::CrownBonus (int64_t nAmount)
       CharacterState& ch = p.characters[crownHolder.index];
 
       const LootInfo loot(nAmount, nHeight);
-      const int64_t cap = GetCarryingCapacity (*this, crownHolder.index == 0,
+      const CAmount cap = GetCarryingCapacity (*this, crownHolder.index == 0,
                                                true);
-      const int64_t rem = ch.CollectLoot (loot, nHeight, cap);
+      const CAmount rem = ch.CollectLoot (loot, nHeight, cap);
 
       /* We keep to the logic of "crown on the floor -> game fund" and
          don't distribute coins that can not be hold by the crown holder
@@ -1168,10 +1168,10 @@ GameState::IsBank (const Coord& c) const
   return banks.count (c) > 0;
 }
 
-int64_t
+CAmount
 GameState::GetCoinsOnMap () const
 {
-  int64_t onMap = 0;
+  CAmount onMap = 0;
   BOOST_FOREACH(const PAIRTYPE(Coord, LootInfo)& l, loot)
     onMap += l.second.nAmount;
   BOOST_FOREACH(const PAIRTYPE(PlayerID, PlayerState)& p, players)
@@ -1321,7 +1321,7 @@ GameState::HandleKilledLoot (const PlayerID& pId, int chInd,
      into account, as well.  When life-steal is in effect, the value
      should already be drawn to zero (unless we have a cause of death
      that refunds).  */
-  int64_t nAmount = ch.loot.nAmount;
+  CAmount nAmount = ch.loot.nAmount;
   if (chInd == 0 && !refunded)
     {
       assert (!ForkInEffect (FORK_LIFESTEAL) || pc.value == 0);
@@ -1331,7 +1331,7 @@ GameState::HandleKilledLoot (const PlayerID& pId, int chInd,
   /* Apply the miner tax: 4%.  */
   if (info.HasDeathTax ())
     {
-      const int64_t nTax = nAmount / 25;
+      const CAmount nTax = nAmount / 25;
       step.nTaxAmount += nTax;
       nAmount -= nTax;
     }
@@ -1613,14 +1613,14 @@ bool PerformStep(const GameState &inState, const StepData &stepData, GameState &
 
     /* Pay out game fees (except for spawns) to the game fund.  This also
        keeps track of the total fees paid into the game world by moves.  */
-    int64_t moneyIn = 0;
+    CAmount moneyIn = 0;
     BOOST_FOREACH(const Move& m, stepData.vMoves)
       if (!m.IsSpawn ())
         {
           const PlayerStateMap::iterator mi = outState.players.find (m.player);
           assert (mi != outState.players.end ());
           assert (m.newLocked >= mi->second.lockedCoins);
-          const int64_t newFee = m.newLocked - mi->second.lockedCoins;
+          const CAmount newFee = m.newLocked - mi->second.lockedCoins;
           outState.gameFund += newFee;
           moneyIn += newFee;
           mi->second.lockedCoins = m.newLocked;
@@ -1679,7 +1679,7 @@ bool PerformStep(const GameState &inState, const StepData &stepData, GameState &
             if (ch.loot.nAmount > 0 && outState.IsBank (ch.coord))
             {
                 // Tax from banking: 10%
-                int64_t nTax = ch.loot.nAmount / 10;
+                CAmount nTax = ch.loot.nAmount / 10;
                 stepResult.nTaxAmount += nTax;
                 ch.loot.nAmount -= nTax;
 
@@ -1738,14 +1738,14 @@ bool PerformStep(const GameState &inState, const StepData &stepData, GameState &
     }
 
     // Drop a random rewards onto the harvest areas
-    const int64_t nCrownBonus
+    const CAmount nCrownBonus
       = CROWN_BONUS * stepData.nTreasureAmount / TOTAL_HARVEST;
-    int64_t nTotalTreasure = 0;
+    CAmount nTotalTreasure = 0;
     for (int i = 0; i < NUM_HARVEST_AREAS; i++)
     {
         int a = rnd.GetIntRnd(HarvestAreaSizes[i]);
         Coord harvest(HarvestAreas[i][2 * a], HarvestAreas[i][2 * a + 1]);
-        const int64_t nTreasure
+        const CAmount nTreasure
           = HarvestPortions[i] * stepData.nTreasureAmount / TOTAL_HARVEST;
         outState.AddLoot(harvest, nTreasure);
         nTotalTreasure += nTreasure;
@@ -1779,14 +1779,14 @@ bool PerformStep(const GameState &inState, const StepData &stepData, GameState &
     outState.CollectCrown(rnd, respawn_crown);
 
     /* Compute total money out of the game world via bounties paid.  */
-    int64_t moneyOut = stepResult.nTaxAmount;
+    CAmount moneyOut = stepResult.nTaxAmount;
     BOOST_FOREACH(const CollectedBounty& b, stepResult.bounties)
       moneyOut += b.loot.nAmount;
 
     /* Compare total money before and after the step.  If there is a mismatch,
        we have a bug in the logic.  Better not accept the new game state.  */
-    const int64_t moneyBefore = inState.GetCoinsOnMap () + inState.gameFund;
-    const int64_t moneyAfter = outState.GetCoinsOnMap () + outState.gameFund;
+    const CAmount moneyBefore = inState.GetCoinsOnMap () + inState.gameFund;
+    const CAmount moneyAfter = outState.GetCoinsOnMap () + outState.gameFund;
     if (moneyBefore + stepData.nTreasureAmount + moneyIn
           != moneyAfter + moneyOut)
       {

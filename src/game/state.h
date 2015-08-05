@@ -16,6 +16,7 @@
 #ifndef GAME_STATE_H
 #define GAME_STATE_H
 
+#include "amount.h"
 #include "consensus/params.h"
 #include "game/common.h"
 #include "uint256.h"
@@ -35,7 +36,7 @@ class StepResult;
 /* Return the minimum necessary amount of locked coins.  This influences
    both the minimum move game fees (for spawning a new player) and
    also the damage / HP calculation for life-steal.  */
-int64_t GetNameCoinAmount (const Consensus::Params& param, unsigned nHeight);
+CAmount GetNameCoinAmount (const Consensus::Params& param, unsigned nHeight);
 
 /**
  * A character on the map that stores information while processing attacks.
@@ -55,7 +56,7 @@ struct AttackableCharacter
    * Amount of coins already drawn from the attacked character's life.
    * This is the value that can be redistributed to the attackers.
    */
-  int64_t drawnLife;
+  CAmount drawnLife;
 
   /** All attackers that hit it.  */
   std::set<CharacterID> attackers;
@@ -144,14 +145,16 @@ inline unsigned distLInf(const Coord &c1, const Coord &c2)
 
 struct LootInfo
 {
-    int64_t nAmount;
+    CAmount nAmount;
     // Time span over the which this loot accumulated
     // This is merely for informative purposes, plus to make
     // hash of the loot tx unique
     int firstBlock, lastBlock;
 
     LootInfo() : nAmount(0), firstBlock(-1), lastBlock(-1) { }
-    LootInfo(int64_t nAmount_, int nHeight) : nAmount(nAmount_), firstBlock(nHeight), lastBlock(nHeight) { }
+    LootInfo(CAmount nAmount_, int nHeight)
+      : nAmount(nAmount_), firstBlock(nHeight), lastBlock(nHeight)
+    {}
 
     ADD_SERIALIZE_METHODS;
 
@@ -210,7 +213,7 @@ struct CollectedLootInfo : public LootInfo
        the spawn area, and encoded differently in the game transactions.
        The block height is present to make the resulting tx unique.  */
     inline void
-    SetRefund (int64_t refundAmount, int nHeight)
+    SetRefund (CAmount refundAmount, int nHeight)
     {
       assert (nAmount == 0);
       assert (collectedFirstBlock == -1 && collectedLastBlock == -1);
@@ -284,7 +287,7 @@ struct CharacterState
     /* Collect loot by this character.  This takes the carrying capacity
        into account and only collects until this limit is reached.  All
        loot amount that *remains* will be returned.  */
-    int64_t CollectLoot (LootInfo newLoot, int nHeight, int64_t carryCap);
+    CAmount CollectLoot (LootInfo newLoot, int nHeight, CAmount carryCap);
 
     UniValue ToJsonValue(bool has_crown) const;
 };
@@ -299,9 +302,9 @@ struct PlayerState
        to the new output value given by a move tx in order to compute
        the game fee as difference.  In that sense, it is a "cache" for
        the prevout.  */
-    int64_t lockedCoins;
+    CAmount lockedCoins;
     /* Actual value of the general in the game state.  */
-    int64_t value;
+    CAmount value;
 
     std::map<int, CharacterState> characters;   // Characters owned by the player (0 is the main character)
     int next_character_index;                   // Index of the next spawned character
@@ -371,7 +374,7 @@ struct GameState
     CharacterID crownHolder;
 
     /* Amount of coins in the "game fund" pool.  */
-    int64_t gameFund;
+    CAmount gameFund;
 
     // Number of steps since the game start.
     // State with nHeight==i includes moves from i-th block
@@ -426,12 +429,12 @@ struct GameState
     }
 
     // Helper functions
-    void AddLoot(Coord coord, int64_t nAmount);
+    void AddLoot(Coord coord, CAmount nAmount);
     void DivideLootAmongPlayers();
     void CollectHearts(RandomGenerator &rnd);
     void UpdateCrownState(bool &respawn_crown);
     void CollectCrown(RandomGenerator &rnd, bool respawn_crown);
-    void CrownBonus(int64_t nAmount);
+    void CrownBonus(CAmount nAmount);
 
     /**
      * Get the number of initial characters for players created in this
@@ -481,7 +484,7 @@ struct GameState
 
     /* Return total amount of coins on the map (in loot and hold by players,
        including also general values).  */
-    int64_t GetCoinsOnMap () const;
+    CAmount GetCoinsOnMap () const;
 
 };
 
@@ -598,7 +601,7 @@ public:
 
     std::vector<CollectedBounty> bounties;
 
-    int64_t nTaxAmount;
+    CAmount nTaxAmount;
 
     StepResult() : nTaxAmount(0) { }
 

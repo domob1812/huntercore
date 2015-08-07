@@ -168,12 +168,9 @@ CNameMemPool::check (const CCoinsView& coins) const
           assert (nameRegs.count (name) == 0);
           nameRegs.insert (name);
 
-          /* FIXME: Check for player being dead instead.  */
-          /*
           CNameData data;
           if (coins.GetName (name, data))
-            assert (data.isExpired (nHeight + 1));
-          */
+            assert (data.isDead ());
         }
 
       if (entry.isNameUpdate ())
@@ -187,14 +184,10 @@ CNameMemPool::check (const CCoinsView& coins) const
           assert (nameUpdates.count (name) == 0);
           nameUpdates.insert (name);
 
-          /* As above, use nHeight+1 for the expiration check.  */
-          /* FIXME: Update accordingly.  */
-          /*
           CNameData data;
           if (!coins.GetName (name, data))
             assert (false);
-          assert (!data.isExpired (nHeight + 1));
-          */
+          assert (!data.isDead ());
         }
     }
 
@@ -401,15 +394,15 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
         return state.Invalid (error ("%s: NAME_UPDATE name mismatch to prev tx"
                                      " found in %s", __func__, txid));
 
-      /* This is actually redundant, since expired names are removed
-         from the UTXO set and thus not available to be spent anyway.
-         But it does not hurt to enforce this here, too.  It is also
-         exercised by the unit tests.  */
+      /* Check that the name is existing and living.  This is redundant
+         since the move validator also checks against the players
+         in the game state, but it can't hurt to have the extra check here.  */
       CNameData oldName;
       if (!view.GetName (name, oldName))
         return state.Invalid (error ("%s: NAME_UPDATE name does not exist",
                                      __func__));
-      /* FIXME: Somehow check for dead players?  */
+      if (oldName.isDead ())
+        return state.Invalid (error ("%s: NAME_UPDATE name is dead", __func__));
 
       /* This is an internal consistency check.  If everything is fine,
          the input coins from the UTXO database should match the
@@ -451,8 +444,13 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
                                    " hash mismatch"));
   }
 
-  /* FIXME: Check that the name is not a living player.  Maybe that's
-     already done in the move checker, though.  */
+  /* If the name exists already, check that it is dead.  This is redundant
+     with the move validator, which also checks spawns against
+     the players in the game state.  But the extra check won't hurt.  */
+  CNameData oldName;
+  if (view.GetName (name, oldName) && !oldName.isDead ())
+    return state.Invalid (error ("%s: NAME_FIRSTUPDATE on a living name",
+                                 __func__));
 
   /* We don't have to specifically check that miners don't create blocks with
      conflicting NAME_FIRSTUPDATE's, since the mining's CCoinsViewCache

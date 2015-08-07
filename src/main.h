@@ -36,6 +36,7 @@ class CInv;
 class CScriptCheck;
 class CTxInUndo;
 class CTxMemPool;
+class CTxUndo;
 class CValidationInterface;
 class CValidationState;
 
@@ -319,6 +320,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
                  std::vector<CScriptCheck> *pvChecks = NULL);
 
 /** Apply the effects of this transaction on the UTXO set represented by view */
+void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCache &inputs, CTxUndo &txundo, int nHeight);
 void UpdateCoins(const CTransaction& tx, CValidationState &state, CCoinsViewCache &inputs, int nHeight);
 
 /** Context-independent validity checks */

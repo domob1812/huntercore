@@ -28,32 +28,40 @@
  * for name_show and also name_list.
  * @param name The name.
  * @param value The name's value.
+ * @param dead Whether or not the name is dead.
  * @param outp The last update's outpoint.
  * @param addr The name's address script.
  * @param height The name's last update height.
  * @return A JSON object to return.
  */
 UniValue
-getNameInfo (const valtype& name, const valtype& value, const COutPoint& outp,
+getNameInfo (const valtype& name, const valtype& value,
+             bool dead, const COutPoint& outp,
              const CScript& addr, int height)
 {
   UniValue obj(UniValue::VOBJ);
   obj.push_back (Pair ("name", ValtypeToString (name)));
-  obj.push_back (Pair ("value", ValtypeToString (value)));
+  if (!dead)
+    obj.push_back (Pair ("value", ValtypeToString (value)));
+  obj.push_back (Pair ("dead", dead));
   obj.push_back (Pair ("height", height));
   obj.push_back (Pair ("txid", outp.hash.GetHex ()));
-  obj.push_back (Pair ("vout", static_cast<int> (outp.n)));
+  if (!dead)
+    obj.push_back (Pair ("vout", static_cast<int> (outp.n)));
 
   /* Try to extract the address.  May fail if we can't parse the script
      as a "standard" script.  */
-  CTxDestination dest;
-  CBitcoinAddress addrParsed;
-  std::string addrStr;
-  if (ExtractDestination (addr, dest) && addrParsed.Set (dest))
-    addrStr = addrParsed.ToString ();
-  else
-    addrStr = "<nonstandard>";
-  obj.push_back (Pair ("address", addrStr));
+  if (!dead)
+    {
+      CTxDestination dest;
+      CBitcoinAddress addrParsed;
+      std::string addrStr;
+      if (ExtractDestination (addr, dest) && addrParsed.Set (dest))
+        addrStr = addrParsed.ToString ();
+      else
+        addrStr = "<nonstandard>";
+      obj.push_back (Pair ("address", addrStr));
+    }
 
   return obj;
 }
@@ -67,7 +75,8 @@ getNameInfo (const valtype& name, const valtype& value, const COutPoint& outp,
 UniValue
 getNameInfo (const valtype& name, const CNameData& data)
 {
-  return getNameInfo (name, data.getValue (), data.getUpdateOutpoint (),
+  return getNameInfo (name, data.getValue (), data.isDead (),
+                      data.getUpdateOutpoint (),
                       data.getAddress (), data.getHeight ());
 }
 
@@ -89,6 +98,8 @@ getNameInfoHelp (const std::string& indent, const std::string& trailing)
       << "(string) the name's current value" << std::endl;
   res << indent << "  \"height\": xxxxx,         "
       << "(numeric) the name's last update height" << std::endl;
+  res << indent << "  \"dead\": xxxxx,           "
+      << "(logical) whether the player is dead" << std::endl;
   res << indent << "  \"txid\": xxxxx,           "
       << "(string) the name's last update tx" << std::endl;
   res << indent << "  \"address\": xxxxx,        "

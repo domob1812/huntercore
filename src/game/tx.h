@@ -18,8 +18,11 @@
 
 #include <vector>
 
+class CBlockUndo;
 class CCoinsView;
+class CCoinsViewCache;
 class CTransaction;
+class CValidationState;
 class StepResult;
 
 /**
@@ -29,5 +32,13 @@ class StepResult;
 bool CreateGameTransactions (const CCoinsView& view,
                              const StepResult& stepResult,
                              std::vector<CTransaction>& vGameTx);
+
+/**
+ * Apply game transactions to the coins view and name db.
+ */
+void ApplyGameTransactions (const std::vector<CTransaction>& vGameTx,
+                            const StepResult& stepResult, unsigned nHeight,
+                            CValidationState& state, CCoinsViewCache& view,
+                            CBlockUndo& undo);
 
 #endif

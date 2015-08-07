@@ -2037,13 +2037,8 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     std::vector<CTransaction> vGameTx;
     if (!CreateGameTransactions (view, stepResult, vGameTx))
         return state.Error ("ConnectBlock: failed to create game tx");
-    for (unsigned i = 0; i < vGameTx.size (); ++i)
-      {
-        blockundo.vtxundo.push_back (CTxUndo ());
-        UpdateCoins (vGameTx[i], state, view, blockundo.vtxundo.back (),
-                     pindex->nHeight);
-      }
-    /* FIXME: Set killed players to "dead".  */
+    ApplyGameTransactions (vGameTx, stepResult, pindex->nHeight,
+                           state, view, blockundo);
 
     /* TODO: Should we update pindex->nTx to include the game tx?  Not sure
        if we want the game tx to be part of that and, in particular, also

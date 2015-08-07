@@ -17,10 +17,13 @@
 
 #include "base58.h"
 #include "coins.h"
+#include "consensus/validation.h"
 #include "game/state.h"
+#include "../main.h"
 #include "names/common.h"
 #include "primitives/transaction.h"
 #include "script/standard.h"
+#include "undo.h"
 #include "util.h"
 
 #include <boost/foreach.hpp>
@@ -209,4 +212,43 @@ CreateGameTransactions (const CCoinsView& view, const StepResult& stepResult,
     }
 
   return true;
+}
+
+void
+ApplyGameTransactions (const std::vector<CTransaction>& vGameTx,
+                       const StepResult& stepResult, unsigned nHeight,
+                       CValidationState& state, CCoinsViewCache& view,
+                       CBlockUndo& undo)
+{
+  for (unsigned i = 0; i < vGameTx.size (); ++i)
+    {
+      undo.vtxundo.push_back (CTxUndo ());
+      UpdateCoins (vGameTx[i], state, view, undo.vtxundo.back (), nHeight);
+    }
+
+  /* Update name db for killed players.  */
+  const PlayerSet& victims = stepResult.GetKilledPlayers ();
+  if (!victims.empty ())
+    {
+      assert (!vGameTx.empty ());
+      const CTransaction& txKills = vGameTx.front ();
+      assert (txKills.vout.empty ());
+      assert (txKills.vin.size () == victims.size ());
+
+      BOOST_FOREACH(const PlayerID& name, victims)
+        {
+          const valtype& vchName = ValtypeFromString (name);
+          if (fDebug)
+            LogPrintf ("Killing player at height %d: %s\n",
+                       nHeight, name.c_str ());
+
+          CNameTxUndo opUndo;
+          opUndo.fromOldState (vchName, view);
+          undo.vnameundo.push_back (opUndo);
+
+          CNameData data;
+          data.setDead (nHeight, txKills.GetHash ());
+          view.SetName (vchName, data, false);
+        }
+    }
 }

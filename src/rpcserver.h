@@ -174,7 +174,7 @@ extern void EnsureWalletIsUnlocked();
 extern void SendMoneyToScript(const CScript& scriptPubKey, const CTxIn* withInput, CAmount nValue, bool fSubtractFeeFromAmount, CWalletTx& wtxNew);
 
 extern void AddRawTxNameOperation(CMutableTransaction& tx, const UniValue& obj);
-extern UniValue getNameInfo(const valtype& name, const valtype& value, const COutPoint& outp, const CScript& addr, int height);
+extern UniValue getNameInfo(const valtype& name, const valtype& value, bool dead, const COutPoint& outp, const CScript& addr, int height);
 extern UniValue getNameInfo(const valtype& name, const CNameData& data);
 extern std::string getNameInfoHelp(const std::string& indent, const std::string& trailing);
 

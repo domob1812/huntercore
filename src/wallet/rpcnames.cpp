@@ -122,8 +122,9 @@ name_list (const UniValue& params, bool fHelp)
       if (mit != mapHeights.end () && mit->second > pindex->nHeight)
         continue;
 
+      /* FIXME: Handle dead players.  */
       UniValue obj
-        = getNameInfo (name, nameOp.getOpValue (),
+        = getNameInfo (name, nameOp.getOpValue (), false,
                        COutPoint (tx.GetHash (), nOut),
                        nameOp.getAddress (), pindex->nHeight);
 

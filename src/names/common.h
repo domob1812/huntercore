@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Daniel Kraft
+// Copyright (c) 2014-2015 Daniel Kraft
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -9,6 +9,7 @@
 #include "primitives/transaction.h"
 #include "script/script.h"
 #include "serialize.h"
+#include "uint256.h"
 
 #include <map>
 #include <set>
@@ -133,6 +134,33 @@ public:
   getAddress () const
   {
     return addr;
+  }
+
+  /**
+   * Check whether this data corresponds to a dead player.  When a player is
+   * killed, the game tx sets its value.  This is not a valid name value
+   * otherwise in Huntercoin, since it must be a JSON object to be accepted
+   * through move parsing.
+   * @return True iff this data means the name is dead.
+   */
+  inline bool
+  isDead () const
+  {
+    return value.empty ();
+  }
+
+  /**
+   * Set to "dead" value with the given tx hash and height.
+   * @param h The height.
+   * @param tx The tx hash of the killing game tx.
+   */
+  inline void
+  setDead (unsigned h, const uint256& tx)
+  {
+    value.clear ();
+    nHeight = h;
+    prevout = COutPoint(tx, 0);
+    addr.clear ();
   }
 
   /**

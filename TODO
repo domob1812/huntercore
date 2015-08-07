@@ -1,8 +1,6 @@
-* add "dead" flag to CNameData, handle killing (and reviving on undo) of players
-
 * checks for creating dead/not-dead players
 
-* undo for game transactions
+* undo for game transactions, including reviving of players
 
 * add game tx for -txindex and store hashes somewhere (CBlockIndex?)
 
@@ -11,6 +9,8 @@
 * name_register style names + RPC command
 
 * BLOCKCHAIN SHOULD FULLY SYNC!
+
+* test and fix wallet handling; name_list, display of game tx, and so on
 
 * invalidate moves from mempool when the game state changes
 

@@ -1,8 +1,8 @@
-* undo for game transactions, including reviving of players
-
-* add game tx for -txindex and store hashes somewhere (CBlockIndex?)
-
 * JSON decoding for game tx
+
+* extend getblock for dual-algo and game tx, store game tx hashes somewhere
+
+* undo for game transactions, including reviving of players
 
 * name_register style names + RPC command
 

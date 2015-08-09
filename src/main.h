@@ -269,16 +269,23 @@ struct CDiskTxPos : public CDiskBlockPos
 {
     unsigned int nTxOffset; // after header
 
+    /** True if the tx stored is a game tx.  */
+    bool fGameTx;
+
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(*(CDiskBlockPos*)this);
         READWRITE(VARINT(nTxOffset));
+        READWRITE(fGameTx);
     }
 
-    CDiskTxPos(const CDiskBlockPos &blockIn, unsigned int nTxOffsetIn) : CDiskBlockPos(blockIn.nFile, blockIn.nPos), nTxOffset(nTxOffsetIn) {
-    }
+    CDiskTxPos(const CDiskBlockPos &blockIn, unsigned int nTxOffsetIn,
+               bool fGameTxIn)
+      : CDiskBlockPos(blockIn.nFile, blockIn.nPos),
+        nTxOffset(nTxOffsetIn), fGameTx(fGameTxIn)
+    {}
 
     CDiskTxPos() {
         SetNull();
@@ -287,6 +294,7 @@ struct CDiskTxPos : public CDiskBlockPos
     void SetNull() {
         CDiskBlockPos::SetNull();
         nTxOffset = 0;
+        fGameTx = false;
     }
 };
 

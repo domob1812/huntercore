@@ -1055,11 +1055,28 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
             try {
                 file >> header;
                 fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
-                file >> txOut;
+                if (!postx.fGameTx)
+                    file >> txOut;
             } catch (const std::exception& e) {
                 return error("%s: Deserialize or I/O error - %s", __func__, e.what());
             }
             hashBlock = header.GetHash();
+
+            /* Read also the undo file for a game tx.  Note that we have
+               to read the header first in this case as well, so that
+               we can set hashBlock.  */
+            if (postx.fGameTx) {
+                CAutoFile undo(OpenUndoFile(postx, true), SER_DISK, CLIENT_VERSION);
+                if (undo.IsNull())
+                    return error("%s: OpenUndoFile failed", __func__);
+                try {
+                    fseek(undo.Get(), postx.nTxOffset, SEEK_CUR);
+                    undo >> txOut;
+                } catch (const std::exception& e) {
+                    return error("%s: Deserialize or I/O error - %s", __func__, e.what());
+                }
+            }
+
             if (txOut.GetHash() != hash)
                 return error("%s: txid mismatch", __func__);
             return true;
@@ -1077,6 +1094,11 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
         if (nHeight > 0)
             pindexSlow = chainActive[nHeight];
     }
+
+    /* Note that this won't work for game transactions.  For them,
+       the tx index is the only chance.  */
+    /* TODO: Fix this if important.  We could read also the undo file
+       and go over the game tx.  */
 
     if (pindexSlow) {
         CBlock block;
@@ -1952,10 +1974,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     CAmount nFees = 0;
     int nInputs = 0;
     unsigned int nSigOps = 0;
-    CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));
+    CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()), false);
     std::vector<std::pair<uint256, CDiskTxPos> > vPos;
-    vPos.reserve(block.vtx.size());
-    blockundo.vtxundo.reserve(block.vtx.size() - 1);
+    /* Reserve also space for up to two game tx.  */
+    vPos.reserve(block.vtx.size() + 2);
+    blockundo.vtxundo.reserve(block.vtx.size() - 1 + 2);
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
         const CTransaction &tx = block.vtx[i];
@@ -2068,6 +2091,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     {
         if (pindex->GetUndoPos().IsNull()) {
             CDiskBlockPos pos;
+            blockundo.vgametx = vGameTx;
             if (!FindUndoPos(state, pindex->nFile, pos, ::GetSerializeSize(blockundo, SER_DISK, CLIENT_VERSION) + 40))
                 return error("ConnectBlock(): FindUndoPos failed");
             if (!UndoWriteToDisk(blockundo, pos, pindex->pprev->GetBlockHash(), chainparams.MessageStart()))
@@ -2081,6 +2105,21 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
         pindex->RaiseValidity(BLOCK_VALID_SCRIPTS);
         setDirtyBlockIndex.insert(pindex);
     }
+
+    /* Find disk positions for game tx in the undo file.  */
+    if (fTxIndex && !isGenesis)
+      {
+        assert (!pindex->GetUndoPos ().IsNull ());
+        const unsigned initialOffset = GetSizeOfCompactSize (vGameTx.size ());
+        CDiskTxPos pos(pindex->GetUndoPos (), initialOffset, true);
+        for (unsigned i = 0; i < vGameTx.size (); ++i)
+          {
+            const CTransaction& tx = vGameTx[i];
+            assert (tx.IsGameTx ());
+            vPos.push_back (std::make_pair (tx.GetHash (), pos));
+            pos.nTxOffset += ::GetSerializeSize (tx, SER_DISK, CLIENT_VERSION);
+          }
+      }
 
     if (fTxIndex)
         if (!pblocktree->WriteTxIndex(vPos))

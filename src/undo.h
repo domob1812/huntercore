@@ -80,10 +80,22 @@ public:
     /** Undo information for expired name coins.  */
     std::vector<CTxInUndo> vexpired;
 
+    /**
+     * Store game transactions.  They are not on disk anywhere else and
+     * required to perform the undo.  Their position on disk in the undo
+     * file is also used for looking up game tx.
+     */
+    std::vector<CTransaction> vgametx;
+
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+
+        /* Store the vgametx first.  This allows us to compute the appropriate
+           offsets most easily.  */
+        READWRITE(vgametx);
+
         READWRITE(vtxundo);
         READWRITE(vnameundo);
         READWRITE(vexpired);

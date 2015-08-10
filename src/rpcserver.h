@@ -178,6 +178,8 @@ extern UniValue getNameInfo(const valtype& name, const valtype& value, bool dead
 extern UniValue getNameInfo(const valtype& name, const CNameData& data);
 extern std::string getNameInfoHelp(const std::string& indent, const std::string& trailing);
 
+extern UniValue GameInputToJSON(const CScript& scriptSig);
+
 extern UniValue getconnectioncount(const UniValue& params, bool fHelp); // in rpcnet.cpp
 extern UniValue getpeerinfo(const UniValue& params, bool fHelp);
 extern UniValue ping(const UniValue& params, bool fHelp);

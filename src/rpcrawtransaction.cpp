@@ -112,8 +112,14 @@ void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry)
         if (tx.IsCoinBase())
             in.push_back(Pair("coinbase", HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));
         else {
-            in.push_back(Pair("txid", txin.prevout.hash.GetHex()));
-            in.push_back(Pair("vout", (int64_t)txin.prevout.n));
+            if (tx.IsGameTx()) {
+                const UniValue gametx = GameInputToJSON(txin.scriptSig);
+                in.push_back(Pair("gametx", gametx));
+            }
+            else {
+                in.push_back(Pair("txid", txin.prevout.hash.GetHex()));
+                in.push_back(Pair("vout", (int64_t)txin.prevout.n));
+            }
             UniValue o(UniValue::VOBJ);
             o.push_back(Pair("asm", ScriptToAsmStr(txin.scriptSig, true)));
             o.push_back(Pair("hex", HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));

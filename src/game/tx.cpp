@@ -28,41 +28,6 @@
 
 #include <boost/foreach.hpp>
 
-// Opcodes for scriptSig that acts as coinbase for game-generated transactions.
-// They serve merely for information purposes, so the client can know why it got this transaction.
-// In the future, for some really complex transactions, this data can be encoded in scriptPubKey
-// followed by OP_DROPs.
-enum
-{
-
-    // Syntax (scriptSig):
-    //     victim GAMEOP_KILLED_BY killer1 killer2 ... killerN
-    // Player can be killed simultaneously by multiple other players.
-    // If N = 0, player was killed for staying too long in spawn area.
-    GAMEOP_KILLED_BY = 1,
-
-    // Syntax (scriptSig):
-    //     player GAMEOP_COLLECTED_BOUNTY characterIndex firstBlock lastBlock collectedFirstBlock collectedLastBlock
-    // vin.size() == vout.size(), they correspond to each other, i.e. a dummy input is used
-    // to hold info about the corresponding output in its scriptSig
-    // (alternatively we could add vout index to the scriptSig, to allow more complex transactions
-    // with arbitrary input assignments, or store it in scriptPubKey of the tx-out instead)
-    GAMEOP_COLLECTED_BOUNTY = 2,
-
-    // Syntax (scriptSig):
-    //     victim GAMEOP_KILLED_POISON
-    // Player was killed due to poisoning
-    GAMEOP_KILLED_POISON = 3,
-
-    // Syntax (scriptSig):
-    //     player GAMEOP_REFUND characterIndex height
-    // This is a tx to refund a player's coins after staying long
-    // in the spawn area.  characterIndex is usually 0, but keep it
-    // here for future extensibility.
-    GAMEOP_REFUND = 4,
-
-};
-
 bool
 CreateGameTransactions (const CCoinsView& view, const StepResult& stepResult,
                         std::vector<CTransaction>& vGameTx)

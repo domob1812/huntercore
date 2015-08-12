@@ -85,7 +85,8 @@ CGameDB::get (const uint256& hash, GameState& state)
          we can then go back up the chain without relying on chainActive.  */
 
       LOCK (cs_main);
-      GameState stateIn(Params ().GetConsensus ());
+      const CChainParams& chainparams = Params ();
+      GameState stateIn(chainparams.GetConsensus ());
 
       std::vector<const CBlockIndex*> needed;
       needed.push_back (mapBlockIndex[hash]);
@@ -107,7 +108,7 @@ CGameDB::get (const uint256& hash, GameState& state)
           assert (stateIn.nHeight + 1 == pindex->nHeight);
 
           CBlock block;
-          if (!ReadBlockFromDisk (block, pindex))
+          if (!ReadBlockFromDisk (block, pindex, chainparams.GetConsensus ()))
             return error ("%s: failed to read block from disk", __func__);
 
           CValidationState valid;
@@ -170,7 +171,7 @@ CGameDB::flush (bool saveAll)
 
   /* Go through everything and delete or store to disk.  */
   std::set<uint256> toErase;
-  CLevelDBBatch batch(db.GetObfuscateKey());
+  CDBBatch batch(&db.GetObfuscateKey());
   unsigned written = 0, discarded = 0;
   for (GameStateMap::iterator mi = cache.begin (); mi != cache.end (); ++mi)
     {
@@ -203,14 +204,15 @@ CGameDB::flush (bool saveAll)
   /* TODO: Possibly not do this always.  We could do it for saveAll only,
      or with an explicit call.  Depends on how long this usually takes.  */
   discarded = 0;
-  std::auto_ptr<leveldb::Iterator> pcursor(db.NewIterator ());
+  std::auto_ptr<CDBIterator> pcursor(db.NewIterator ());
   for (pcursor->SeekToFirst (); pcursor->Valid (); pcursor->Next ())
     {
-      const leveldb::Slice slKey = pcursor->key ();
-      CDataStream ssKey(slKey.data (), slKey.data () + slKey.size (),
-                        SER_DISK, CLIENT_VERSION);
       uint256 key;
-      ssKey >> key;
+      if (!pcursor->GetKey (key))
+        {
+          error ("failed to fetch DB key");
+          return;
+        }
 
       /* Check first if this is in our keep-in-memory list.  If it is
          and we want to "save all", keep it.  */

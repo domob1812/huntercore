@@ -1,5 +1,3 @@
-* extend getblock for dual-algo and game tx, store game tx hashes somewhere
-
 * undo for game transactions, including reviving of players
 
 * name_register style names + RPC command
@@ -17,6 +15,8 @@
 * make sure miners take their taxes
 
 * reenable and update tests regtests
+
+* add REST functions for accessing game state info
 
 * fully get rid of name database?
 

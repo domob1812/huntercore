@@ -1244,6 +1244,24 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
     return ReadBlockOrHeader(block, pindex, consensusParams);
 }
 
+bool ReadBlockFromDisk(CBlock& block, std::vector<CTransaction>& vGameTx, const CBlockIndex* pindex, const Consensus::Params& consensusParams)
+{
+    if (!ReadBlockFromDisk(block, pindex, consensusParams))
+        return false;
+
+    /* Read also the game tx array from the undo file.  */
+    CAutoFile undo(OpenUndoFile(pindex->GetUndoPos(), true), SER_DISK, CLIENT_VERSION);
+    if (undo.IsNull())
+        return error("%s: OpenUndoFile failed", __func__);
+    try {
+        undo >> vGameTx;
+    } catch (const std::exception& e) {
+        return error("%s: Deserialize or I/O error - %s", __func__, e.what());
+    }
+
+    return true;
+}
+
 bool ReadBlockHeaderFromDisk(CBlockHeader& block, const CBlockIndex* pindex, const Consensus::Params& consensusParams)
 {
     return ReadBlockOrHeader(block, pindex, consensusParams);

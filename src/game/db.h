@@ -16,7 +16,7 @@
 #ifndef BITCOIN_GAME_DB
 #define BITCOIN_GAME_DB
 
-#include "leveldbwrapper.h"
+#include "dbwrapper.h"
 #include "sync.h"
 #include "uint256.h"
 
@@ -74,8 +74,8 @@ private:
      */
     unsigned maxInMemory;
 
-    /** The backing LevelDB.  */
-    CLevelDBWrapper db;
+    /** The backing DB.  */
+    CDBWrapper db;
 
     typedef std::map<uint256, GameState*> GameStateMap;
     /** In-memory store of the last few block states.  */

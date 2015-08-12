@@ -99,6 +99,23 @@ static UniValue AuxpowToJSON(const CAuxPow& auxpow)
     return result;
 }
 
+static UniValue TxArrayToJSON(const std::vector<CTransaction>& vtx, bool txDetails)
+{
+    UniValue txs(UniValue::VARR);
+    BOOST_FOREACH(const CTransaction& tx, vtx)
+    {
+        if(txDetails)
+        {
+            UniValue objTx(UniValue::VOBJ);
+            TxToJSON(tx, uint256(), objTx);
+            txs.push_back(objTx);
+        }
+        else
+            txs.push_back(tx.GetHash().GetHex());
+    }
+    return txs;
+}
+
 UniValue blockheaderToJSON(const CBlockIndex* blockindex)
 {
     UniValue result(UniValue::VOBJ);
@@ -125,7 +142,7 @@ UniValue blockheaderToJSON(const CBlockIndex* blockindex)
     return result;
 }
 
-UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool txDetails = false)
+UniValue blockToJSON(const CBlock& block, const std::vector<CTransaction>& vGameTx, const CBlockIndex* blockindex, bool txDetails = false)
 {
     UniValue result(UniValue::VOBJ);
     result.push_back(Pair("hash", block.GetHash().GetHex()));
@@ -139,19 +156,8 @@ UniValue blockToJSON(const CBlock& block, const CBlockIndex* blockindex, bool tx
     result.push_back(Pair("version", block.nVersion.GetFullVersion()));
     result.push_back(Pair("algo", block.nVersion.GetAlgo()));
     result.push_back(Pair("merkleroot", block.hashMerkleRoot.GetHex()));
-    UniValue txs(UniValue::VARR);
-    BOOST_FOREACH(const CTransaction&tx, block.vtx)
-    {
-        if(txDetails)
-        {
-            UniValue objTx(UniValue::VOBJ);
-            TxToJSON(tx, uint256(), objTx);
-            txs.push_back(objTx);
-        }
-        else
-            txs.push_back(tx.GetHash().GetHex());
-    }
-    result.push_back(Pair("tx", txs));
+    result.push_back(Pair("tx", TxArrayToJSON(block.vtx, txDetails)));
+    result.push_back(Pair("gametx", TxArrayToJSON(vGameTx, txDetails)));
     result.push_back(Pair("time", block.GetBlockTime()));
     result.push_back(Pair("nonce", (uint64_t)block.nNonce));
     result.push_back(Pair("bits", strprintf("%08x", block.nBits)));
@@ -446,12 +452,13 @@ UniValue getblock(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
 
     CBlock block;
+    std::vector<CTransaction> vGameTx;
     CBlockIndex* pblockindex = mapBlockIndex[hash];
 
     if (fHavePruned && !(pblockindex->nStatus & BLOCK_HAVE_DATA) && pblockindex->nTx > 0)
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Block not available (pruned data)");
 
-    if(!ReadBlockFromDisk(block, pblockindex, Params().GetConsensus()))
+    if(!ReadBlockFromDisk(block, vGameTx, pblockindex, Params().GetConsensus()))
         throw JSONRPCError(RPC_INTERNAL_ERROR, "Can't read block from disk");
 
     if (!fVerbose)
@@ -462,7 +469,7 @@ UniValue getblock(const UniValue& params, bool fHelp)
         return strHex;
     }
 
-    return blockToJSON(block, pblockindex);
+    return blockToJSON(block, vGameTx, pblockindex);
 }
 
 UniValue gettxoutsetinfo(const UniValue& params, bool fHelp)

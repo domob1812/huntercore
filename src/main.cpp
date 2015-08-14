@@ -1698,8 +1698,14 @@ bool ApplyTxInUndo(const CTxInUndo& undo, CCoinsViewCache& view, const COutPoint
 {
     bool fClean = true;
 
+    /* Special case for Huntercoin:  Since the genesis output is spendable,
+       it may happen that we actually have nHeight=0 while the tx
+       does not yet exist (namely for the tx spending the genesis
+       output).  Check for this case.  */
+    const bool isGenesis = (out.hash == Params().GenesisBlock().hashMerkleRoot);
+
     CCoinsModifier coins = view.ModifyCoins(out.hash);
-    if (undo.nHeight != 0) {
+    if (undo.nHeight != 0 || isGenesis) {
         // undo data contains height: this is the last output of the prevout tx being spent
         if (!coins->IsPruned())
             fClean = fClean && error("%s: undo data overwriting existing transaction", __func__);
@@ -1736,12 +1742,16 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
     if (!UndoReadFromDisk(blockUndo, pos, pindex->pprev->GetBlockHash()))
         return error("DisconnectBlock(): failure reading undo data");
 
-    if (blockUndo.vtxundo.size() + 1 != block.vtx.size())
+    if (blockUndo.vtxundo.size() + 1 != block.vtx.size() + blockUndo.vgametx.size())
         return error("DisconnectBlock(): block and undo data inconsistent");
 
     // undo transactions in reverse order
-    for (int i = block.vtx.size() - 1; i >= 0; i--) {
-        const CTransaction &tx = block.vtx[i];
+    std::vector<CTransaction> txToUndo;
+    txToUndo.insert (txToUndo.end (), block.vtx.begin (), block.vtx.end ());
+    txToUndo.insert (txToUndo.end (), blockUndo.vgametx.begin (),
+                     blockUndo.vgametx.end ());
+    for (int i = txToUndo.size () - 1; i >= 0; --i) {
+        const CTransaction &tx = txToUndo[i];
         uint256 hash = tx.GetHash();
 
         // Check that all outputs are available and match the outputs in the block itself
@@ -1770,16 +1780,22 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
         outs->Clear();
         }
 
-        // restore inputs
-        if (i > 0) { // not coinbases
+        /* Restore inputs.  The coinbase does not have a corresponding
+           txundo, but game tx have.  The inputs for bounty collections
+           are empty, though, so make sure to handle that.  */
+        if (i > 0 && !tx.IsBountyTx()) {
             const CTxUndo &txundo = blockUndo.vtxundo[i-1];
             if (txundo.vprevout.size() != tx.vin.size())
                 return error("DisconnectBlock(): transaction and undo data inconsistent");
             for (unsigned int j = tx.vin.size(); j-- > 0;) {
                 const COutPoint &out = tx.vin[j].prevout;
+                assert (!out.IsNull());
                 const CTxInUndo &undo = txundo.vprevout[j];
                 if (!ApplyTxInUndo(undo, view, out))
+                    {
+                    LogPrintf ("%d %s\n", j, tx.GetHash().GetHex().c_str());
                     fClean = false;
+                    }
             }
         }
     }

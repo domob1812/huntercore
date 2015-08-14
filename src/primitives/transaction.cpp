@@ -140,6 +140,21 @@ unsigned int CTransaction::CalculateModifiedSize(unsigned int nTxSize) const
     return nTxSize;
 }
 
+bool CTransaction::IsBountyTx() const
+{
+    /* Bounty transactions are game tx with the same number of inputs
+       and outputs, but where all inputs have null prevout.  */
+
+    if (!IsGameTx() || vin.size() != vout.size())
+        return false;
+
+    for (unsigned i = 0; i < vin.size(); ++i)
+        if (!vin[i].prevout.IsNull())
+            return false;
+
+    return true;
+}
+
 std::string CTransaction::ToString() const
 {
     std::string str;

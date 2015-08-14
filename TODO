@@ -4,6 +4,8 @@
 
 * test and fix wallet handling; name_list, display of game tx, and so on
 
+* update maturity checks in wallet for game tx; also test Qt?
+
 * invalidate moves from mempool when the game state changes
 
 * update fee and IsStandard policies
@@ -15,6 +17,8 @@
 * reenable and update tests regtests
 
 * add REST functions for accessing game state info
+
+* "fix" game state cache for -checkblocks
 
 * fully get rid of name database?
 

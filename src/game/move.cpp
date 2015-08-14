@@ -424,7 +424,8 @@ PerformStep (const CBlock& block, const GameState& stateIn,
   StepData step(stateIn);
   BOOST_FOREACH (const CTransaction& tx, block.vtx)
     if (!step.addTransaction (tx, pview, valid))
-      return false;
+      return error ("%s: tx %s not accepted",
+                    __func__, tx.GetHash ().GetHex ().c_str());
   step.newHash = block.GetHash ();
 
   if (!PerformStep (stateIn, step, stateOut, res))

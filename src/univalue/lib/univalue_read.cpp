@@ -190,6 +190,12 @@ enum jtokentype getJsonToken(string& tokenVal, unsigned int& consumed,
                 case 'r':  valStr += "\r"; break;
                 case 't':  valStr += "\t"; break;
 
+                /* Special rule:  This is apparently not a real JSON
+                   escape sequence, but it appears in chat messages in the
+                   Huntercoin chain.  So it was, presumably, accepted
+                   by json_spirit and the old client.  Support it.  */
+                case '\'': valStr += "'"; break;
+
                 case 'u': {
                     unsigned int codepoint;
                     if (hatoui(raw + 1, raw + 1 + 4, codepoint) !=

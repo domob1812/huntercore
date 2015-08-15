@@ -333,13 +333,27 @@ BOOST_AUTO_TEST_CASE(univalue_readwrite)
     /* Also check reading of raw characters.  They can not be written back
        in an invariant way, thus this is an extra test.  This is used
        for some chat messages in the Huntercoin blockchain.  */
-    static const char* jsonUnicode = "[\"abc\xaa\"]";
+    const char* jsonUnicode = "[\"abc\xaa\"]";
     BOOST_CHECK(!v.read(jsonUnicode));
     BOOST_CHECK(v.read(jsonUnicode, false));
     BOOST_CHECK(v.isArray() && v.size() == 1);
     correctValue = "abc";
     correctValue.push_back(static_cast<char> (0xaa));
     BOOST_CHECK_EQUAL(v[0].get_str(), correctValue);
+
+    /* Allow to escape ' inside of chat messages.  */
+    jsonUnicode = "[\"snailman\\\'s\"]";
+    BOOST_CHECK(!v.read(jsonUnicode));
+    BOOST_CHECK(v.read(jsonUnicode, false));
+    BOOST_CHECK(v.isArray() && v.size() == 1);
+    BOOST_CHECK_EQUAL(v[0].get_str(), "snailman's");
+
+    /* Check that trailing garbage is allowed when parsing moves.  */
+    jsonUnicode = "[42] garbage";
+    BOOST_CHECK(!v.read(jsonUnicode));
+    BOOST_CHECK(v.read(jsonUnicode, false));
+    BOOST_CHECK(v.isArray() && v.size() == 1);
+    BOOST_CHECK_EQUAL(v[0].get_int(), 42);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

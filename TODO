@@ -23,3 +23,5 @@
 * fully get rid of name database?
 
 * re-instate checks for initial blockchain download?
+
+* disallow JSON obj followed by garbage in a move with softfork?

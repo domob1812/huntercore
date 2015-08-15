@@ -194,7 +194,11 @@ enum jtokentype getJsonToken(string& tokenVal, unsigned int& consumed,
                    escape sequence, but it appears in chat messages in the
                    Huntercoin chain.  So it was, presumably, accepted
                    by json_spirit and the old client.  Support it.  */
-                case '\'': valStr += "'"; break;
+                case '\'':
+                    if (fStrict)
+                        return JTOK_ERR;
+                    valStr += "'";
+                    break;
 
                 case 'u': {
                     unsigned int codepoint;
@@ -390,7 +394,7 @@ bool UniValue::read(const char *raw, bool fStrict)
 
     /* Check that nothing follows the initial construct (parsed above).  */
     tok = getJsonToken(tokenVal, consumed, raw, fStrict);
-    if (tok != JTOK_NONE)
+    if (fStrict && tok != JTOK_NONE)
         return false;
 
     return true;

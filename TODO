@@ -6,6 +6,10 @@
 
 * update maturity checks in wallet for game tx; also test Qt?
 
+* notify wallet about game tx when connecting/disconnecting blocks
+
+* make sure the wallet finds also game tx when rescanning
+
 * invalidate moves from mempool when the game state changes
 
 * update fee and IsStandard policies

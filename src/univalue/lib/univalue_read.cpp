@@ -171,13 +171,15 @@ enum jtokentype getJsonToken(string& tokenVal, unsigned int& consumed,
         string valStr;
 
         while (*raw) {
-            /* The Huntercoin blockchain contains some chat messages
-               with characters that have bit 8 set.  Since we have
-               raw as *signed* char, make sure to not tripple over them.  */
+            /* Since the Huntercoin chain contains some chat messages with
+               raw characters that fail this check, disable the test.  A tx
+               violating this rule is, e. g.,
+               14b11644bb4ec31aff229accd0e6add3e3f981a9b02d9aec765adca18c3a762f.
+            */
             if (fStrict && *raw < 0x20)
                 return JTOK_ERR;
 
-            else if (*raw == '\\') {
+            if (*raw == '\\') {
                 raw++;                        // skip backslash
 
                 switch (*raw) {

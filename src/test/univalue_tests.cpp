@@ -333,11 +333,11 @@ BOOST_AUTO_TEST_CASE(univalue_readwrite)
     /* Also check reading of raw characters.  They can not be written back
        in an invariant way, thus this is an extra test.  This is used
        for some chat messages in the Huntercoin blockchain.  */
-    const char* jsonUnicode = "[\"abc\xaa\"]";
+    const char* jsonUnicode = "[\"abc\n\xaa\"]";
     BOOST_CHECK(!v.read(jsonUnicode));
     BOOST_CHECK(v.read(jsonUnicode, false));
     BOOST_CHECK(v.isArray() && v.size() == 1);
-    correctValue = "abc";
+    correctValue = "abc\n";
     correctValue.push_back(static_cast<char> (0xaa));
     BOOST_CHECK_EQUAL(v[0].get_str(), correctValue);
 

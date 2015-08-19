@@ -110,19 +110,20 @@ enum jtokentype getJsonToken(string& tokenVal, unsigned int& consumed,
         // part 1: int
         string numStr;
 
-        const char *first = raw;
+        if (*raw == '-')
+          {
+            if (!isdigit (raw[1]))
+              return JTOK_ERR;
 
-        const char *firstDigit = first;
-        if (!isdigit(*firstDigit))
-            firstDigit++;
-        if ((*firstDigit == '0') && isdigit(firstDigit[1]))
-            return JTOK_ERR;
+            numStr += '-';
+            ++raw;
+          }
 
-        numStr += *raw;                       // copy first char
-        raw++;
-
-        if ((*first == '-') && (!isdigit(*raw)))
-            return JTOK_ERR;
+        /* Special rule for Huntercoin:  Allow leading zeros
+           on integer literals.  This is necessary to accept, e. g.,
+           b61a163c424ab8341477e596d3b9edf14d1cd41516d8b8110c084d5a28c5e99f.  */
+        while (raw[0] == '0' && isdigit (raw[1]))
+          ++raw;
 
         while ((*raw) && isdigit(*raw)) {     // copy digits
             numStr += *raw;

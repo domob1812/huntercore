@@ -356,5 +356,22 @@ BOOST_AUTO_TEST_CASE(univalue_readwrite)
     BOOST_CHECK_EQUAL(v[0].get_int(), 42);
 }
 
+/* Special tests for accepting various "wrong" constructs that appear
+   in the Huntercoin blockchain.  */
+
+static void
+testParsing (const char* input, const char* output)
+{
+  UniValue v;
+  BOOST_CHECK (v.read (input));
+  BOOST_CHECK_EQUAL (output, v.write ());
+}
+
+BOOST_AUTO_TEST_CASE(univalue_huc_special)
+{
+  testParsing ("[\"foo\\'s\"]", "[\"foo's\"]");
+  testParsing ("[026,45,-1,-05.5]", "[26,45,-1,-5.5]");
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 

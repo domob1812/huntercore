@@ -33,8 +33,7 @@ CreateGameTransactions (const CCoinsView& view, const StepResult& stepResult,
                         std::vector<CTransaction>& vGameTx)
 {
   vGameTx.clear ();
-  if (fDebug)
-    LogPrintf ("Constructing game transactions...\n");
+  LogPrint ("game", "Constructing game transactions...\n");
 
   /* Destroy name-coins of killed players.  */
 
@@ -51,9 +50,6 @@ CreateGameTransactions (const CCoinsView& view, const StepResult& stepResult,
       if (!view.GetName (vchName, data))
         return error ("Game engine killed a non-existing player %s",
                       victim.c_str ());
-
-      if (fDebug)
-        LogPrintf ("  killed: %s\n", victim.c_str ());
 
       CTxIn txin(data.getUpdateOutpoint ());
 
@@ -115,9 +111,8 @@ CreateGameTransactions (const CCoinsView& view, const StepResult& stepResult,
   if (!txKills.vin.empty ())
     {
       vGameTx.push_back (txKills);
-      if (fDebug)
-        LogPrintf ("Game tx for killed players: %s\n",
-                   txKills.GetHash ().GetHex ().c_str ());
+      LogPrint ("game", "Game tx for killed players: %s\n",
+                txKills.GetHash ().GetHex ().c_str ());
     }
 
   /* Pay bounties to the players who collected them.  The transaction
@@ -171,9 +166,8 @@ CreateGameTransactions (const CCoinsView& view, const StepResult& stepResult,
   if (!txBounties.vout.empty ())
     {
       vGameTx.push_back (txBounties);
-      if (fDebug)
-        LogPrintf ("Game tx for bounties: %s\n",
-                   txBounties.GetHash ().GetHex ().c_str ());
+      LogPrint ("game", "Game tx for bounties: %s\n",
+                txBounties.GetHash ().GetHex ().c_str ());
     }
 
   return true;
@@ -203,9 +197,8 @@ ApplyGameTransactions (const std::vector<CTransaction>& vGameTx,
       BOOST_FOREACH(const PlayerID& name, victims)
         {
           const valtype& vchName = ValtypeFromString (name);
-          if (fDebug)
-            LogPrintf ("Killing player at height %d: %s\n",
-                       nHeight, name.c_str ());
+          LogPrint ("names", "Killing player at height %d: %s\n",
+                    nHeight, name.c_str ());
 
           CNameTxUndo opUndo;
           opUndo.fromOldState (vchName, view);

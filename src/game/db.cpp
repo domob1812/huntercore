@@ -98,8 +98,8 @@ CGameDB::get (const uint256& hash, GameState& state)
           needed.push_back (pprev);
         }
 
-      LogPrintf ("%s: integrating game state from height %d to height %d\n",
-                 __func__, stateIn.nHeight, needed.front ()->nHeight);
+      LogPrint ("game", "Integrating game state from height %d to height %d.\n",
+                stateIn.nHeight, needed.front ()->nHeight);
 
       while (!needed.empty ())
         {
@@ -155,7 +155,7 @@ void
 CGameDB::flush (bool saveAll)
 {
   AssertLockHeld (cs_cache);
-  LogPrintf ("Flushing game db to disk...\n");
+  LogPrint ("game", "Flushing game db to disk...\n");
 
   /* Find blocks that we want to continue to hold in memory.  These are
      main-chain blocks with recent height.  */
@@ -196,7 +196,8 @@ CGameDB::flush (bool saveAll)
        i != toErase.end (); ++i)
     cache.erase (*i);
   assert (!saveAll || cache.empty ());
-  LogPrintf ("  wrote %u game states, discarded %u\n", written, discarded);
+  LogPrint ("game", "  wrote %u game states, discarded %u\n",
+            written, discarded);
 
   /* Purge unwanted elements from the database on disk.  They may have been
      stored due to the last shutdown and now be unwanted due to advancing
@@ -230,7 +231,7 @@ CGameDB::flush (bool saveAll)
           batch.Erase (key);
         }
     }
-  LogPrintf ("  pruning %u game states from disk\n", discarded);
+  LogPrint ("game", "  pruning %u game states from disk\n", discarded);
 
   /* Finalise by writing the database batch.  */
   const bool ok = db.WriteBatch (batch);

@@ -46,7 +46,7 @@ CNameScript::CNameScript (const CScript& script)
       break;
 
     case OP_NAME_FIRSTUPDATE:
-      if (args.size () != 3)
+      if (args.size () != 2 && args.size () != 3)
         return;
       break;
 

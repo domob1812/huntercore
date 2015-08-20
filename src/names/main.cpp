@@ -364,14 +364,22 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
     }
 
   /* Now that we have ruled out NAME_NEW, check that we have a previous
-     name input that is being updated.  */
+     name input that is being updated.  For Huntercoin, take the new-style
+     name registration into account.  */
 
   assert (nameOpOut.isAnyUpdate ());
-  if (nameIn == -1)
+  if (nameOpOut.getNameOp () == OP_NAME_FIRSTUPDATE
+        && nameOpOut.isNewStyleRegistration ())
+    {
+      if (nameIn != -1)
+        return state.Invalid (error ("%s: new-style registration with"
+                                     " name input", __func__));
+    }
+  else if (nameIn == -1)
     return state.Invalid (error ("CheckNameTransaction: update without"
                                  " previous name input"));
-  const valtype& name = nameOpOut.getOpName ();
 
+  const valtype& name = nameOpOut.getOpName ();
   if (name.size () > MAX_NAME_LENGTH)
     return state.Invalid (error ("CheckNameTransaction: name too long"));
   if (nameOpOut.getOpValue ().size () > MAX_VALUE_LENGTH)
@@ -413,36 +421,40 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
       return true;
     }
 
-  /* Finally, NAME_FIRSTUPDATE.  */
+  /* Finally, NAME_FIRSTUPDATE.  Checks only necessary for the old-style
+     name registration method.  */
 
   assert (nameOpOut.getNameOp () == OP_NAME_FIRSTUPDATE);
-  if (nameOpIn.getNameOp () != OP_NAME_NEW)
-    return state.Invalid (error ("CheckNameTransaction: NAME_FIRSTUPDATE"
-                                 " with non-NAME_NEW prev tx"));
-
-  /* Maturity of NAME_NEW is checked only if we're not adding
-     to the mempool.  */
-  if (!fMempool)
+  if (!nameOpOut.isNewStyleRegistration ())
     {
-      assert (static_cast<unsigned> (coinsIn.nHeight) != MEMPOOL_HEIGHT);
-      if (coinsIn.nHeight + MIN_FIRSTUPDATE_DEPTH > nHeight)
-        return state.Invalid (error ("CheckNameTransaction: NAME_NEW"
-                                     " is not mature for FIRST_UPDATE"));
+      if (nameOpIn.getNameOp () != OP_NAME_NEW)
+        return state.Invalid (error ("CheckNameTransaction: NAME_FIRSTUPDATE"
+                                     " with non-NAME_NEW prev tx"));
+
+      /* Maturity of NAME_NEW is checked only if we're not adding
+         to the mempool.  */
+      if (!fMempool)
+        {
+          assert (static_cast<unsigned> (coinsIn.nHeight) != MEMPOOL_HEIGHT);
+          if (coinsIn.nHeight + MIN_FIRSTUPDATE_DEPTH > nHeight)
+            return state.Invalid (error ("CheckNameTransaction: NAME_NEW"
+                                         " is not mature for FIRST_UPDATE"));
+        }
+
+      if (nameOpOut.getOpRand ().size () > 20)
+        return state.Invalid (error ("CheckNameTransaction: NAME_FIRSTUPDATE"
+                                     " rand too large, %d bytes",
+                                     nameOpOut.getOpRand ().size ()));
+
+      {
+        valtype toHash(nameOpOut.getOpRand ());
+        toHash.insert (toHash.end (), name.begin (), name.end ());
+        const uint160 hash = Hash160 (toHash);
+        if (hash != uint160 (nameOpIn.getOpHash ()))
+          return state.Invalid (error ("CheckNameTransaction: NAME_FIRSTUPDATE"
+                                       " hash mismatch"));
+      }
     }
-
-  if (nameOpOut.getOpRand ().size () > 20)
-    return state.Invalid (error ("CheckNameTransaction: NAME_FIRSTUPDATE"
-                                 " rand too large, %d bytes",
-                                 nameOpOut.getOpRand ().size ()));
-
-  {
-    valtype toHash(nameOpOut.getOpRand ());
-    toHash.insert (toHash.end (), name.begin (), name.end ());
-    const uint160 hash = Hash160 (toHash);
-    if (hash != uint160 (nameOpIn.getOpHash ()))
-      return state.Invalid (error ("CheckNameTransaction: NAME_FIRSTUPDATE"
-                                   " hash mismatch"));
-  }
 
   /* If the name exists already, check that it is dead.  This is redundant
      with the move validator, which also checks spawns against

@@ -1,10 +1,8 @@
-* name_register style names + RPC command
+* BLOCKCHAIN SHOULD FULLY SYNC!
 
 * game tx of block
   daee5bfbf798ee0987f42d8ff66ee850206b55d6acf93479306b2d16ae07fbf3
   not properly indexed?
-
-* BLOCKCHAIN SHOULD FULLY SYNC!
 
 * test and fix wallet handling; name_list, display of game tx, and so on
 
@@ -17,6 +15,8 @@
 * invalidate moves from mempool when the game state changes
 
 * update fee and IsStandard policies
+
+* name_register RPC command
 
 * dual-algo mining (difficulty in getinfo and co, choosing algo)
 

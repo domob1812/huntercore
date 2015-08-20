@@ -149,6 +149,8 @@ public:
     switch (op)
       {
       case OP_NAME_FIRSTUPDATE:
+        if (isNewStyleRegistration ())
+          return args[1];
         return args[2];
 
       case OP_NAME_UPDATE:
@@ -167,7 +169,7 @@ public:
   inline const valtype&
   getOpRand () const
   {
-    assert (op == OP_NAME_FIRSTUPDATE);
+    assert (op == OP_NAME_FIRSTUPDATE && !isNewStyleRegistration ());
     return args[1];
   }
 
@@ -181,6 +183,18 @@ public:
   {
     assert (op == OP_NAME_NEW);
     return args[0];
+  }
+
+  /**
+   * Return true if this script is a new-style registration (without
+   * preceding NAME_NEW).  This is only valid for OP_NAME_FIRSTUPDATE.
+   * @return True if it is new style.
+   */
+  inline bool
+  isNewStyleRegistration () const
+  {
+    assert (op == OP_NAME_FIRSTUPDATE);
+    return args.size () == 2;
   }
 
   /**

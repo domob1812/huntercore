@@ -57,11 +57,16 @@ void ScriptPubKeyToJSON(const CScript& scriptPubKey, UniValue& out, bool fInclud
         {
             const std::string name = ValtypeToString (nameOp.getOpName ());
             const std::string value = ValtypeToString (nameOp.getOpValue ());
+            const bool newStyle = nameOp.isNewStyleRegistration ();
 
-            jsonOp.push_back (Pair("op", "name_firstupdate"));
+            if (newStyle)
+              jsonOp.push_back (Pair("op", "name_register"));
+            else
+              jsonOp.push_back (Pair("op", "name_firstupdate"));
             jsonOp.push_back (Pair("name", name));
             jsonOp.push_back (Pair("value", value));
-            jsonOp.push_back (Pair("rand", HexStr (nameOp.getOpRand ())));
+            if (!newStyle)
+              jsonOp.push_back (Pair("rand", HexStr (nameOp.getOpRand ())));
             break;
         }
 

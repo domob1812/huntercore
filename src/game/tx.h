@@ -64,7 +64,7 @@ enum
  * Construct the game transactions corresponding to the given step result.
  * The coins view is used to look up names and their coins / addresses.
  */
-bool CreateGameTransactions (const CCoinsView& view,
+bool CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
                              const StepResult& stepResult,
                              std::vector<CTransaction>& vGameTx);
 

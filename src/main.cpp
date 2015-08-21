@@ -2092,7 +2092,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     /* Construct and handle game transactions.  */
     std::vector<CTransaction> vGameTx;
-    if (!CreateGameTransactions (view, stepResult, vGameTx))
+    if (!CreateGameTransactions (view, pindex->nHeight, stepResult, vGameTx))
         return state.Error ("ConnectBlock: failed to create game tx");
     ApplyGameTransactions (vGameTx, stepResult, pindex->nHeight,
                            state, view, blockundo);

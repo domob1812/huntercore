@@ -29,14 +29,15 @@
 #include <boost/foreach.hpp>
 
 bool
-CreateGameTransactions (const CCoinsView& view, const StepResult& stepResult,
+CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
+                        const StepResult& stepResult,
                         std::vector<CTransaction>& vGameTx)
 {
   vGameTx.clear ();
-  LogPrint ("game", "Constructing game transactions...\n");
 
   /* Destroy name-coins of killed players.  */
 
+  bool haveTxKills = false;
   CMutableTransaction txKills;
   txKills.SetGameTx ();
 
@@ -107,17 +108,19 @@ CreateGameTransactions (const CCoinsView& view, const StepResult& stepResult,
         }
 
       txKills.vin.push_back (txin);
+      haveTxKills = true;
     }
-  if (!txKills.vin.empty ())
+  if (haveTxKills)
     {
-      vGameTx.push_back (txKills);
-      LogPrint ("game", "Game tx for killed players: %s\n",
-                txKills.GetHash ().GetHex ().c_str ());
+      const CTransaction tx(txKills);
+      assert (tx.IsGameTx () && !tx.IsBountyTx ());
+      vGameTx.push_back (tx);
     }
 
   /* Pay bounties to the players who collected them.  The transaction
      inputs are just "dummy" containing informational messages.  */
 
+  bool haveTxBounties = false;
   CMutableTransaction txBounties;
   txBounties.SetGameTx ();
 
@@ -162,12 +165,25 @@ CreateGameTransactions (const CCoinsView& view, const StepResult& stepResult,
           << bounty.loot.collectedFirstBlock
           << bounty.loot.collectedLastBlock;
       txBounties.vin.push_back (txin);
+
+      haveTxBounties = true;
     }
-  if (!txBounties.vout.empty ())
+  if (haveTxBounties)
     {
-      vGameTx.push_back (txBounties);
-      LogPrint ("game", "Game tx for bounties: %s\n",
-                txBounties.GetHash ().GetHex ().c_str ());
+      const CTransaction tx(txBounties);
+      assert (tx.IsGameTx () && tx.IsBountyTx ());
+      vGameTx.push_back (tx);
+    }
+
+  /* Print log chatter.  */
+  if (haveTxKills || haveTxBounties)
+    {
+      LogPrint ("game", "Game transactions @%d:\n", nHeight);
+      if (haveTxKills)
+        LogPrint ("game", "  kills:    %s\n", txKills.GetHash ().ToString ());
+      if (haveTxBounties)
+        LogPrint ("game", "  bounties: %s\n",
+                  txBounties.GetHash ().ToString ());
     }
 
   return true;

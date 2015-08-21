@@ -45,6 +45,29 @@ public:
     ~CGameDB ();
 
     /**
+     * Set the "keep everything" flag.  This is used when verifying
+     * the chain state at level 4, which includes re-connecting
+     * a lot of "old" blocks.  During this operation, "keep everything"
+     * is turned on to avoid excessive recomputation.
+     * @param keep Value of the flag.
+     */
+    void setKeepEverything (bool keep)
+    {
+      /* This should only ever be called to actually change the state.
+         Otherwise we may end up "reverting" a change that was never made
+         later on.  If this is ever needed, introduce some kind of
+         "depth counter" or the like.  */
+      assert ((keep && !keepEverything) || (!keep && keepEverything));
+
+      keepEverything = keep;
+      if (!keepEverything)
+        {
+          LOCK (cs_cache);
+          attemptFlush ();
+        }
+    }
+
+    /**
      * Query for a game state by corresponding block hash.  The block
      * must be present in mapBlockIndex already.  If the game state is not
      * directly available, it is recomputed as necessary.
@@ -74,7 +97,10 @@ private:
      */
     unsigned maxInMemory;
 
-    /** The backing DB.  */
+    /** Temporarily disable flushing at all and keep everything.  */
+    bool keepEverything;
+
+    /** The backing LevelDB.  */
     CDBWrapper db;
 
     typedef std::map<uint256, GameState*> GameStateMap;
@@ -88,6 +114,16 @@ private:
      * readily available.
      */
     bool getFromCache (const uint256& hash, GameState& state) const;
+
+    /**
+     * Attempt to flush, which flushes if the cache is overly full.
+     */
+    void attemptFlush ()
+    {
+      AssertLockHeld (cs_cache);
+      if (!keepEverything && cache.size () > maxInMemory)
+        flush (false);
+    }
 
     /**
      * Flush the in-memory cache to disk.  The minimum in-memory blocks

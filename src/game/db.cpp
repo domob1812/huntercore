@@ -36,6 +36,7 @@ static const unsigned DB_CACHE_SIZE = (25 << 20);
 CGameDB::CGameDB (bool fWipe)
   : keepEveryNth(KEEP_EVERY_NTH),
     minInMemory(MIN_IN_MEMORY), maxInMemory(MAX_IN_MEMORY),
+    keepEverything(false),
     db(GetDataDir() / "gamestates", DB_CACHE_SIZE, false, fWipe),
     cache(), cs_cache()
 {
@@ -147,8 +148,7 @@ CGameDB::store (const uint256& hash, const GameState& state)
       cache.insert (std::make_pair (hash, s.release ()));
     }
 
-  if (cache.size () > maxInMemory)
-    flush (false);
+  attemptFlush ();
 }
 
 void

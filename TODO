@@ -26,7 +26,8 @@
 
 * add REST functions for accessing game state info
 
-* "fix" game state cache for -checkblocks
+* use estimate of real memory usage for game state cache and tune the
+  parameters in general
 
 * fully get rid of name database?
 

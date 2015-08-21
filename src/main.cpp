@@ -3613,6 +3613,29 @@ bool CVerifyDB::VerifyDB(CCoinsView *coinsview, int nCheckLevel, int nCheckDepth
     // check level 4: try reconnecting blocks
     if (nCheckLevel >= 4) {
         CBlockIndex *pindex = pindexState;
+
+        /* Disable flushing of the game state cache.  During
+           the connect operation, we need a lot of "old" game states
+           (i. e., behind chainActive) that would otherwise be discarded
+           and recomputed all the time.  Make sure to unset the flag
+           again on leaving.  */
+        struct SetGameCacheKeep
+        {
+            SetGameCacheKeep()
+            {
+                pgameDb->setKeepEverything(true);
+            }
+            ~SetGameCacheKeep()
+            {
+                pgameDb->setKeepEverything(false);
+            }
+        } setGameCacheKeep;
+
+        /* TODO: Instead of completely disabling flushing, we could
+           use a smarter policy that flushes only states that are no longer
+           needed.  I. e., those behind the last 2,000 block level that
+           is stored nevertheless.  */
+
         while (pindex != chainActive.Tip()) {
             boost::this_thread::interruption_point();
             uiInterface.ShowProgress(_("Verifying blocks..."), std::max(1, std::min(99, 100 - (int)(((double)(chainActive.Height() - pindex->nHeight)) / (double)nCheckDepth * 50))));

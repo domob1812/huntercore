@@ -340,37 +340,25 @@ BOOST_AUTO_TEST_CASE(univalue_readwrite)
     correctValue = "abc\n";
     correctValue.push_back(static_cast<char> (0xaa));
     BOOST_CHECK_EQUAL(v[0].get_str(), correctValue);
-
-    /* Allow to escape ' inside of chat messages.  */
-    jsonUnicode = "[\"snailman\\\'s\"]";
-    BOOST_CHECK(!v.read(jsonUnicode));
-    BOOST_CHECK(v.read(jsonUnicode, false));
-    BOOST_CHECK(v.isArray() && v.size() == 1);
-    BOOST_CHECK_EQUAL(v[0].get_str(), "snailman's");
-
-    /* Check that trailing garbage is allowed when parsing moves.  */
-    jsonUnicode = "[42] garbage";
-    BOOST_CHECK(!v.read(jsonUnicode));
-    BOOST_CHECK(v.read(jsonUnicode, false));
-    BOOST_CHECK(v.isArray() && v.size() == 1);
-    BOOST_CHECK_EQUAL(v[0].get_int(), 42);
 }
 
 /* Special tests for accepting various "wrong" constructs that appear
    in the Huntercoin blockchain.  */
 
 static void
-testParsing (const char* input, const char* output)
+testLenientParsing (const char* input, const char* output)
 {
   UniValue v;
-  BOOST_CHECK (v.read (input));
+  BOOST_CHECK (!v.read (input));
+  BOOST_CHECK (v.read (input, false));
   BOOST_CHECK_EQUAL (output, v.write ());
 }
 
 BOOST_AUTO_TEST_CASE(univalue_huc_special)
 {
-  testParsing ("[\"foo\\'s\"]", "[\"foo's\"]");
-  testParsing ("[026,45,-1,-05.5]", "[26,45,-1,-5.5]");
+  testLenientParsing ("[\"foo\\'s\"]", "[\"foo's\"]");
+  testLenientParsing ("[026,45,-1,-05.5]", "[26,45,-1,-5.5]");
+  testLenientParsing ("[42] garbage", "[42]");
 }
 
 BOOST_AUTO_TEST_SUITE_END()

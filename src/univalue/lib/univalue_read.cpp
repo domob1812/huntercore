@@ -123,7 +123,11 @@ enum jtokentype getJsonToken(string& tokenVal, unsigned int& consumed,
            on integer literals.  This is necessary to accept, e. g.,
            b61a163c424ab8341477e596d3b9edf14d1cd41516d8b8110c084d5a28c5e99f.  */
         while (raw[0] == '0' && isdigit (raw[1]))
-          ++raw;
+          {
+            if (fStrict)
+              return JTOK_ERR;
+            ++raw;
+          }
 
         while ((*raw) && isdigit(*raw)) {     // copy digits
             numStr += *raw;

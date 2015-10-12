@@ -26,6 +26,11 @@
 #include <vector>
 #include <memory>
 
+/* Define prefix for database keys.  We only index by block hash, but still
+   need them so we can tell game states apart from the obfuscation key that
+   is also in the database.  */
+static const char DB_GAMESTATE = 'g';
+
 /* Define some configuration parameters.  */
 /* TODO: Make them CLI options.  */
 static const unsigned KEEP_EVERY_NTH = 2000;
@@ -37,7 +42,7 @@ CGameDB::CGameDB (bool fWipe)
   : keepEveryNth(KEEP_EVERY_NTH),
     minInMemory(MIN_IN_MEMORY), maxInMemory(MAX_IN_MEMORY),
     keepEverything(false),
-    db(GetDataDir() / "gamestates", DB_CACHE_SIZE, false, fWipe),
+    db(GetDataDir() / "gamestates", DB_CACHE_SIZE, false, fWipe, true),
     cache(), cs_cache()
 {
   // Nothing else to do.
@@ -64,7 +69,7 @@ CGameDB::getFromCache (const uint256& hash, GameState& state) const
       }
   }
 
-  if (!db.Read (hash, state))
+  if (!db.Read (std::make_pair (DB_GAMESTATE, hash), state))
     return false;
 
   assert (hash == state.hashBlock);
@@ -183,7 +188,7 @@ CGameDB::flush (bool saveAll)
       const CBlockIndex* pindex = mapBlockIndex[mi->first];
       if (pindex->nHeight % keepEveryNth == 0 || keepThis)
         {
-          batch.Write (mi->first, *mi->second);
+          batch.Write (std::make_pair (DB_GAMESTATE, mi->first), *mi->second);
           ++written;
         }
       else
@@ -208,27 +213,24 @@ CGameDB::flush (bool saveAll)
   std::auto_ptr<CDBIterator> pcursor(db.NewIterator ());
   for (pcursor->SeekToFirst (); pcursor->Valid (); pcursor->Next ())
     {
-      uint256 key;
-      if (!pcursor->GetKey (key))
-        {
-          error ("failed to fetch DB key");
-          return;
-        }
+      std::pair<char, uint256> key;
+      if (!pcursor->GetKey (key) || key.first != DB_GAMESTATE)
+        continue;
 
       /* Check first if this is in our keep-in-memory list.  If it is
          and we want to "save all", keep it.  */
-      const bool keepThis = (keepInMemory.count (key) > 0);
+      const bool keepThis = (keepInMemory.count (key.second) > 0);
       if (saveAll && keepThis)
         continue;
 
       /* Otherwise, check for block height condition and delete if
          this is not a state we want to keep.  */
       LOCK (cs_main);
-      const CBlockIndex* pindex = mapBlockIndex[key];
+      const CBlockIndex* pindex = mapBlockIndex[key.second];
       if (pindex->nHeight % keepEveryNth != 0)
         {
           ++discarded;
-          batch.Erase (key);
+          batch.Erase (std::make_pair (DB_GAMESTATE, key.second));
         }
     }
   LogPrint ("game", "  pruning %u game states from disk\n", discarded);

@@ -47,10 +47,10 @@ static bool AppInitRawTx(int argc, char* argv[])
     if (argc<2 || mapArgs.count("-?") || mapArgs.count("-h") || mapArgs.count("-help"))
     {
         // First part of help message is specific to this utility
-        std::string strUsage = _("Namecoin Core namecoin-tx utility version") + " " + FormatFullVersion() + "\n\n" +
+        std::string strUsage = _("Huntercoin Core huntercoin-tx utility version") + " " + FormatFullVersion() + "\n\n" +
             _("Usage:") + "\n" +
-              "  namecoin-tx [options] <hex-tx> [commands]  " + _("Update hex-encoded namecoin transaction") + "\n" +
-              "  namecoin-tx [options] -create [commands]   " + _("Create hex-encoded namecoin transaction") + "\n" +
+              "  huntercoin-tx [options] <hex-tx> [commands]  " + _("Update hex-encoded huntercoin transaction") + "\n" +
+              "  huntercoin-tx [options] -create [commands]   " + _("Create hex-encoded huntercoin transaction") + "\n" +
               "\n";
 
         fprintf(stdout, "%s", strUsage.c_str());

@@ -211,11 +211,19 @@ CGameDB::flush (bool saveAll)
      or with an explicit call.  Depends on how long this usually takes.  */
   discarded = 0;
   std::auto_ptr<CDBIterator> pcursor(db.NewIterator ());
-  for (pcursor->SeekToFirst (); pcursor->Valid (); pcursor->Next ())
+  for (pcursor->Seek (DB_GAMESTATE); pcursor->Valid (); pcursor->Next ())
     {
+      boost::this_thread::interruption_point();
+      char chType;
+      if (!pcursor->GetKey(chType) || chType != DB_GAMESTATE)
+        break;
+
       std::pair<char, uint256> key;
       if (!pcursor->GetKey (key) || key.first != DB_GAMESTATE)
-        continue;
+        {
+          error ("%s: failed to read game state key", __func__);
+          break;
+        }
 
       /* Check first if this is in our keep-in-memory list.  If it is
          and we want to "save all", keep it.  */
@@ -230,7 +238,7 @@ CGameDB::flush (bool saveAll)
       if (pindex->nHeight % keepEveryNth != 0)
         {
           ++discarded;
-          batch.Erase (std::make_pair (DB_GAMESTATE, key.second));
+          batch.Erase (key);
         }
     }
   LogPrint ("game", "  pruning %u game states from disk\n", discarded);

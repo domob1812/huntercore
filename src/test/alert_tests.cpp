@@ -202,21 +202,31 @@ BOOST_AUTO_TEST_CASE(PartitionAlert)
 {
     // Test PartitionCheck
     CCriticalSection csDummy;
-    CBlockIndex indexDummy[100];
+    CBlockIndex indexDummy[1000];
     CChainParams& params = Params(CBaseChainParams::MAIN);
     int64_t nPowTargetSpacing = params.GetConsensus().nPowTargetSpacing;
+
+    /* Fix dual-algo effect on target spacing!  Note that we still want
+       to pass the original nPowTargetSpacing to the PartitionCheck,
+       as the NUM_ALGOS are already corrected there.  */
+    const int64_t realTargetSpacing = nPowTargetSpacing / NUM_ALGOS;
+
+    /* Another thing we have to fix for the changed target spacing
+       is the number of blocks used at all.  Bitcoin has 100 here,
+       we use 1,000.  This is necessary since the window at which
+       PartitionCheck looks is based on *time* and not number of blocks.  */
 
     // Generate fake blockchain timestamps relative to
     // an arbitrary time:
     int64_t now = 1427379054;
     SetMockTime(now);
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 1000; i++)
     {
         indexDummy[i].phashBlock = NULL;
         if (i == 0) indexDummy[i].pprev = NULL;
         else indexDummy[i].pprev = &indexDummy[i-1];
         indexDummy[i].nHeight = i;
-        indexDummy[i].nTime = now - (100-i)*nPowTargetSpacing;
+        indexDummy[i].nTime = now - (1000-i)*realTargetSpacing;
         // Other members don't matter, the partition check code doesn't
         // use them
     }
@@ -225,13 +235,13 @@ BOOST_AUTO_TEST_CASE(PartitionAlert)
 
     // Test 1: chain with blocks every nPowTargetSpacing seconds,
     // as normal, no worries:
-    PartitionCheck(falseFunc, csDummy, &indexDummy[99], nPowTargetSpacing);
+    PartitionCheck(falseFunc, csDummy, &indexDummy[999], nPowTargetSpacing);
     BOOST_CHECK_MESSAGE(strMiscWarning.empty(), strMiscWarning);
 
     // Test 2: go 3.5 hours without a block, expect a warning:
     now += 3*60*60+30*60;
     SetMockTime(now);
-    PartitionCheck(falseFunc, csDummy, &indexDummy[99], nPowTargetSpacing);
+    PartitionCheck(falseFunc, csDummy, &indexDummy[999], nPowTargetSpacing);
     BOOST_CHECK(!strMiscWarning.empty());
     BOOST_TEST_MESSAGE(std::string("Got alert text: ")+strMiscWarning);
     strMiscWarning = "";
@@ -240,16 +250,16 @@ BOOST_AUTO_TEST_CASE(PartitionAlert)
     // code:
     now += 60*10;
     SetMockTime(now);
-    PartitionCheck(falseFunc, csDummy, &indexDummy[99], nPowTargetSpacing);
+    PartitionCheck(falseFunc, csDummy, &indexDummy[999], nPowTargetSpacing);
     BOOST_CHECK(strMiscWarning.empty());
 
     // Test 4: get 2.5 times as many blocks as expected:
     now += 60*60*24; // Pretend it is a day later
     SetMockTime(now);
-    int64_t quickSpacing = nPowTargetSpacing*2/5;
-    for (int i = 0; i < 100; i++) // Tweak chain timestamps:
-        indexDummy[i].nTime = now - (100-i)*quickSpacing;
-    PartitionCheck(falseFunc, csDummy, &indexDummy[99], nPowTargetSpacing);
+    int64_t quickSpacing = realTargetSpacing*2/5;
+    for (int i = 0; i < 1000; i++) // Tweak chain timestamps:
+        indexDummy[i].nTime = now - (1000-i)*quickSpacing;
+    PartitionCheck(falseFunc, csDummy, &indexDummy[999], nPowTargetSpacing);
     BOOST_CHECK(!strMiscWarning.empty());
     BOOST_TEST_MESSAGE(std::string("Got alert text: ")+strMiscWarning);
     strMiscWarning = "";

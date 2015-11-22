@@ -95,7 +95,10 @@ CGameDB::get (const uint256& hash, GameState& state)
       GameState stateIn(chainparams.GetConsensus ());
 
       std::vector<const CBlockIndex*> needed;
-      needed.push_back (mapBlockIndex[hash]);
+      const BlockMap::const_iterator mi = mapBlockIndex.find (hash);
+      if (mi == mapBlockIndex.end ())
+        return error ("%s: block hash not found", __func__);
+      needed.push_back (mi->second);
       while (needed.back ()->pprev)
         {
           const CBlockIndex* pprev = needed.back ()->pprev;
@@ -169,12 +172,10 @@ CGameDB::flush (bool saveAll)
     LOCK (cs_main);
 
     const CBlockIndex* pindex = chainActive.Tip ();
-    if (pindex)
-      {
-        const int minHeight = pindex->nHeight - minInMemory;
-        for (; pindex && pindex->nHeight > minHeight; pindex = pindex->pprev)
-          keepInMemory.insert (*pindex->phashBlock);
-      }
+    assert (pindex);
+    const int minHeight = pindex->nHeight - minInMemory;
+    for (; pindex && pindex->nHeight > minHeight; pindex = pindex->pprev)
+      keepInMemory.insert (*pindex->phashBlock);
   }
 
   /* Go through everything and delete or store to disk.  */
@@ -183,13 +184,28 @@ CGameDB::flush (bool saveAll)
   unsigned written = 0, discarded = 0;
   for (GameStateMap::iterator mi = cache.begin (); mi != cache.end (); ++mi)
     {
-      const bool keepThis = (keepInMemory.count (mi->first) > 0);
+      bool keepThis = (keepInMemory.count (mi->first) > 0);
       if (!saveAll && keepThis)
         continue;
 
       LOCK (cs_main);
-      const CBlockIndex* pindex = mapBlockIndex[mi->first];
-      if (keepThis || (pindex && pindex->nHeight % keepEveryNth == 0))
+      bool write = keepThis;
+
+      /* It can happen that cache contains blocks that are not in mapBlockIndex.
+         This is the case if they were added to the cache through ConnectBlock
+         called from TestBlockValidity and mining (or testing).  If this is
+         not the case and the block is part of mapBlockIndex, we can look
+         at the block's height and keep it if the height is divisible
+         by KEEP_EVERY_NTH.  */
+      const BlockMap::const_iterator bmi = mapBlockIndex.find (mi->first);
+      if (!write && bmi != mapBlockIndex.end ())
+        {
+          const CBlockIndex* pindex = bmi->second;
+          assert (pindex);
+          write = (pindex->nHeight % keepEveryNth == 0);
+        }
+
+      if (write)
         {
           batch.Write (std::make_pair (DB_GAMESTATE, mi->first), *mi->second);
           ++written;
@@ -237,8 +253,11 @@ CGameDB::flush (bool saveAll)
       /* Otherwise, check for block height condition and delete if
          this is not a state we want to keep.  */
       LOCK (cs_main);
-      const CBlockIndex* pindex = mapBlockIndex[key.second];
-      if (!pindex || pindex->nHeight % keepEveryNth != 0)
+      const BlockMap::const_iterator bmi = mapBlockIndex.find (key.second);
+      assert (bmi != mapBlockIndex.end ());
+      const CBlockIndex* pindex = bmi->second;
+      assert (pindex);
+      if (pindex->nHeight % keepEveryNth != 0)
         {
           ++discarded;
           batch.Erase (key);

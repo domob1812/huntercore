@@ -85,8 +85,13 @@ TestingSetup::~TestingSetup()
         delete pwalletMain;
         pwalletMain = NULL;
 #endif
+        {
+          /* The lock here is necessary to ensure the right lock order
+             when flushing the game DB (apparently).  */
+          LOCK(cs_main);
+          delete pgameDb;
+        }
         UnloadBlockIndex();
-        delete pgameDb;
         delete pcoinsTip;
         delete pcoinsdbview;
         delete pblocktree;

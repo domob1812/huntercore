@@ -3859,6 +3859,11 @@ void static CheckBlockIndex(const Consensus::Params& consensusParams)
         return;
     }
 
+    // Verify that all entries are non-NULL.
+    for (BlockMap::const_iterator it = mapBlockIndex.begin();
+         it != mapBlockIndex.end(); ++it)
+        assert(it->second);
+
     // Build forward-pointing map of the entire block tree.
     std::multimap<CBlockIndex*,CBlockIndex*> forward;
     for (BlockMap::iterator it = mapBlockIndex.begin(); it != mapBlockIndex.end(); it++) {

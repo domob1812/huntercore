@@ -38,11 +38,11 @@ static const unsigned MIN_IN_MEMORY = 10;
 static const unsigned MAX_IN_MEMORY = 100;
 static const unsigned DB_CACHE_SIZE = (25 << 20);
 
-CGameDB::CGameDB (bool fWipe)
+CGameDB::CGameDB (bool fMemory, bool fWipe)
   : keepEveryNth(KEEP_EVERY_NTH),
     minInMemory(MIN_IN_MEMORY), maxInMemory(MAX_IN_MEMORY),
     keepEverything(false),
-    db(GetDataDir() / "gamestates", DB_CACHE_SIZE, false, fWipe, true),
+    db(GetDataDir() / "gamestates", DB_CACHE_SIZE, fMemory, fWipe, true),
     cache(), cs_cache()
 {
   // Nothing else to do.
@@ -169,9 +169,12 @@ CGameDB::flush (bool saveAll)
     LOCK (cs_main);
 
     const CBlockIndex* pindex = chainActive.Tip ();
-    const int minHeight = pindex->nHeight - minInMemory;
-    for (; pindex && pindex->nHeight > minHeight; pindex = pindex->pprev)
-      keepInMemory.insert (*pindex->phashBlock);
+    if (pindex)
+      {
+        const int minHeight = pindex->nHeight - minInMemory;
+        for (; pindex && pindex->nHeight > minHeight; pindex = pindex->pprev)
+          keepInMemory.insert (*pindex->phashBlock);
+      }
   }
 
   /* Go through everything and delete or store to disk.  */
@@ -186,7 +189,7 @@ CGameDB::flush (bool saveAll)
 
       LOCK (cs_main);
       const CBlockIndex* pindex = mapBlockIndex[mi->first];
-      if (pindex->nHeight % keepEveryNth == 0 || keepThis)
+      if (keepThis || (pindex && pindex->nHeight % keepEveryNth == 0))
         {
           batch.Write (std::make_pair (DB_GAMESTATE, mi->first), *mi->second);
           ++written;
@@ -235,7 +238,7 @@ CGameDB::flush (bool saveAll)
          this is not a state we want to keep.  */
       LOCK (cs_main);
       const CBlockIndex* pindex = mapBlockIndex[key.second];
-      if (pindex->nHeight % keepEveryNth != 0)
+      if (!pindex || pindex->nHeight % keepEveryNth != 0)
         {
           ++discarded;
           batch.Erase (key);

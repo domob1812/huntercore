@@ -41,7 +41,7 @@ class CGameDB
 
 public:
 
-    explicit CGameDB (bool fWipe);
+    explicit CGameDB (bool fMemory, bool fWipe);
     ~CGameDB ();
 
     /**

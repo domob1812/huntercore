@@ -9,6 +9,7 @@
 #include "chainparams.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
+#include "game/db.h"
 #include "key.h"
 #include "main.h"
 #include "miner.h"
@@ -60,6 +61,7 @@ TestingSetup::TestingSetup(const std::string& chainName) : BasicTestingSetup(cha
         pblocktree = new CBlockTreeDB(1 << 20, true);
         pcoinsdbview = new CCoinsViewDB(1 << 23, true);
         pcoinsTip = new CCoinsViewCache(pcoinsdbview);
+        pgameDb = new CGameDB(false, false);
         InitBlockIndex();
 #ifdef ENABLE_WALLET
         bool fFirstRun;
@@ -84,6 +86,7 @@ TestingSetup::~TestingSetup()
         pwalletMain = NULL;
 #endif
         UnloadBlockIndex();
+        delete pgameDb;
         delete pcoinsTip;
         delete pcoinsdbview;
         delete pblocktree;

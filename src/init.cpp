@@ -1282,7 +1282,7 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
                 pcoinsdbview = new CCoinsViewDB(nCoinDBCache, false, fReindex);
                 pcoinscatcher = new CCoinsViewErrorCatcher(pcoinsdbview);
                 pcoinsTip = new CCoinsViewCache(pcoinscatcher);
-                pgameDb = new CGameDB(fReindex);
+                pgameDb = new CGameDB(false, fReindex);
 
                 if (fReindex) {
                     pblocktree->WriteReindexing(true);

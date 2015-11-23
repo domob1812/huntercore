@@ -579,6 +579,13 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   BOOST_CHECK (CheckNameTransaction (mtx, 135999, viewUpd, state, 0));
   BOOST_CHECK (IsStandardTx (mtx, reason));
 
+  /* Check that a dead player is not allowed to be updated.  */
+  CCoinsViewCache viewDead(&view);
+  CNameData dataDead;
+  dataDead.setDead (150000, inUpdate);
+  viewDead.SetName (name1, dataDead, false);
+  BOOST_CHECK (!CheckNameTransaction (mtx, 155000, viewDead, state, 0));
+
   /* Check update of new-style FIRSTUPDATE output.  Note that this must
      be before the old-style FIRSTUPDATE test, since the following greedy test
      is based on mtx inputting the old-style FIRSTUPDATE output.  */
@@ -621,8 +628,6 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   viewNew.DeleteName (name1);
   BOOST_CHECK (!CheckNameTransaction (mtx, 110000, viewNew, state, 0));
 
-  /* FIXME: Check failure when the previous player is dead.  */
-
   /* ********************************** */
   /* Test NAME_FIRSTUPDATE validation.  */
 
@@ -643,7 +648,9 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   BOOST_CHECK (CheckNameTransaction (mtx, 100001, viewClean, state,
                                      SCRIPT_VERIFY_NAMES_MEMPOOL));
 
-  /* FIXME: Possibly check reregistration of a dead player?  */
+  /* Check for already existing player and re-registration after death.  */
+  BOOST_CHECK (!CheckNameTransaction (mtx, 155000, view, state, 0));
+  BOOST_CHECK (CheckNameTransaction (mtx, 155000, viewDead, state, 0));
 
   /* "Greedy" names.  */
   mtx.vout[1].nValue = COIN / 5;

@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Daniel Kraft
+// Copyright (c) 2014-2015 Daniel Kraft
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -230,6 +230,16 @@ public:
   static CScript buildNameFirstupdate (const CScript& addr, const valtype& name,
                                        const valtype& value,
                                        const valtype& rand);
+
+  /**
+   * Build a new-style NAME_FIRSTUPDATE transaction.
+   * @param addr The address script to append.
+   * @param name The name to register.
+   * @param value The value to set it to.
+   * @return The full NAME_FIRSTUPDATE (new-style) script.
+   */
+  static CScript buildNameRegister (const CScript& addr, const valtype& name,
+                                    const valtype& value);
 
   /**
    * Build a NAME_UPDATE transaction.

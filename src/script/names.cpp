@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Daniel Kraft
+// Copyright (c) 2014-2015 Daniel Kraft
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -79,6 +79,16 @@ CNameScript::buildNameFirstupdate (const CScript& addr, const valtype& name,
   CScript prefix;
   prefix << OP_NAME_FIRSTUPDATE << name << rand << value
          << OP_2DROP << OP_2DROP;
+
+  return prefix + addr;
+}
+
+CScript
+CNameScript::buildNameRegister (const CScript& addr, const valtype& name,
+                                const valtype& value)
+{
+  CScript prefix;
+  prefix << OP_NAME_FIRSTUPDATE << name << value << OP_2DROP << OP_DROP;
 
   return prefix + addr;
 }

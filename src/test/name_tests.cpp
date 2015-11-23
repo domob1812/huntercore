@@ -69,10 +69,21 @@ BOOST_AUTO_TEST_CASE (name_scripts)
   BOOST_CHECK (opFirstupdate.isNameOp ());
   BOOST_CHECK (opFirstupdate.getAddress () == addr);
   BOOST_CHECK (opFirstupdate.isAnyUpdate ());
+  BOOST_CHECK (!opFirstupdate.isNewStyleRegistration ());
   BOOST_CHECK (opFirstupdate.getNameOp () == OP_NAME_FIRSTUPDATE);
   BOOST_CHECK (opFirstupdate.getOpName () == name);
   BOOST_CHECK (opFirstupdate.getOpValue () == value);
   BOOST_CHECK (opFirstupdate.getOpRand () == rand);
+
+  script = CNameScript::buildNameRegister (addr, name, value);
+  const CNameScript opReg(script);
+  BOOST_CHECK (opReg.isNameOp ());
+  BOOST_CHECK (opReg.getAddress () == addr);
+  BOOST_CHECK (opReg.isAnyUpdate ());
+  BOOST_CHECK (opReg.isNewStyleRegistration ());
+  BOOST_CHECK (opReg.getNameOp () == OP_NAME_FIRSTUPDATE);
+  BOOST_CHECK (opReg.getOpName () == name);
+  BOOST_CHECK (opReg.getOpValue () == value);
 
   script = CNameScript::buildNameUpdate (addr, name, value);
   const CNameScript opUpdate(script);
@@ -477,11 +488,14 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   const CScript scrNew = CNameScript::buildNameNew (addr, hash);
   const CScript scrFirst = CNameScript::buildNameFirstupdate (addr, name1,
                                                               value, rand);
+  const CScript scrRegister = CNameScript::buildNameRegister (addr, name1,
+                                                              value);
   const CScript scrUpdate = CNameScript::buildNameUpdate (addr, name1, value);
 
   const uint256 inCoin = addTestCoin (addr, 1, view);
   const uint256 inNew = addTestCoin (scrNew, 100000, view);
   const uint256 inFirst = addTestCoin (scrFirst, 100000, view);
+  const uint256 inReg = addTestCoin (scrRegister, 100000, view);
   const uint256 inUpdate = addTestCoin (scrUpdate, 100000, view);
 
   CNameData data1;
@@ -549,7 +563,10 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
      that it fits to the current test.  One version has the NAME_FIRSTUPDATE
      as previous state of the name, and one has the NAME_UPDATE.  */
   CCoinsViewCache viewFirst(&view);
+  CCoinsViewCache viewReg(&view);
   CCoinsViewCache viewUpd(&view);
+  data1.fromScript (100000, COutPoint (inReg, 0), CNameScript (scrRegister));
+  viewReg.SetName (name1, data1, false);
   data1.fromScript (100000, COutPoint (inUpdate, 0), CNameScript (scrUpdate));
   viewUpd.SetName (name1, data1, false);
 
@@ -561,6 +578,13 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   mtx.vin.push_back (CTxIn (COutPoint (inUpdate, 0)));
   BOOST_CHECK (CheckNameTransaction (mtx, 135999, viewUpd, state, 0));
   BOOST_CHECK (IsStandardTx (mtx, reason));
+
+  /* Check update of new-style FIRSTUPDATE output.  Note that this must
+     be before the old-style FIRSTUPDATE test, since the following greedy test
+     is based on mtx inputting the old-style FIRSTUPDATE output.  */
+  mtx.vin.clear ();
+  mtx.vin.push_back (CTxIn (COutPoint (inReg, 0)));
+  BOOST_CHECK (CheckNameTransaction (mtx, 135999, viewReg, state, 0));
 
   /* Check update of FIRSTUPDATE output.  */
   mtx.vin.clear ();
@@ -642,7 +666,14 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   mtx.vin.push_back (CTxIn (COutPoint (inFirst, 0)));
   BOOST_CHECK (!CheckNameTransaction (mtx, 100002, viewClean, state, 0));
 
-  /* FIXME: Check "new-style" name registration!  */
+  /* New-style name registration.  */
+  mtx = CMutableTransaction (baseTx);
+  mtx.SetNamecoin ();
+  mtx.vout.push_back (CTxOut (COIN, scrRegister));
+  BOOST_CHECK (CheckNameTransaction (mtx, 100000, viewClean, state, 0));
+  BOOST_CHECK (CheckNameTransaction (mtx, 100002, viewClean, state, 0));
+  mtx.vin.push_back (CTxIn (COutPoint (inNew, 0)));
+  BOOST_CHECK (!CheckNameTransaction (mtx, 100002, viewClean, state, 0));
 }
 
 /* ************************************************************************** */

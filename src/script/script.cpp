@@ -132,7 +132,7 @@ const char* GetOpName(opcodetype opcode)
 
     // expanson
     case OP_NOP1                   : return "OP_NOP1";
-    case OP_NOP2                   : return "OP_NOP2";
+    case OP_CHECKLOCKTIMEVERIFY    : return "OP_CHECKLOCKTIMEVERIFY";
     case OP_NOP3                   : return "OP_NOP3";
     case OP_NOP4                   : return "OP_NOP4";
     case OP_NOP5                   : return "OP_NOP5";
@@ -207,9 +207,9 @@ bool CScript::IsPayToScriptHash(bool allowNames) const
     // Extra-fast test for pay-to-script-hash CScripts:
     if (!allowNames)
         return (this->size() == 23 &&
-                this->at(0) == OP_HASH160 &&
-                this->at(1) == 0x14 &&
-                this->at(22) == OP_EQUAL);
+                (*this)[0] == OP_HASH160 &&
+                (*this)[1] == 0x14 &&
+                (*this)[22] == OP_EQUAL);
 
     // Strip off a name prefix if present.
     const CNameScript nameOp(*this);

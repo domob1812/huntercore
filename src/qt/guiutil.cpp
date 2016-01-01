@@ -64,6 +64,10 @@
 #include <QUrlQuery>
 #endif
 
+#if QT_VERSION >= 0x50200
+#include <QFontDatabase>
+#endif
+
 #if BOOST_FILESYSTEM_VERSION >= 3
 static boost::filesystem::detail::utf8_codecvt_facet utf8;
 #endif
@@ -94,6 +98,9 @@ QString dateTimeStr(qint64 nTime)
 
 QFont fixedPitchFont()
 {
+#if QT_VERSION >= 0x50200
+    return QFontDatabase::systemFont(QFontDatabase::FixedFont);
+#else
     QFont font("Monospace");
 #if QT_VERSION >= 0x040800
     font.setStyleHint(QFont::Monospace);
@@ -101,6 +108,7 @@ QFont fixedPitchFont()
     font.setStyleHint(QFont::TypeWriter);
 #endif
     return font;
+#endif
 }
 
 void setupAddressWidget(QValidatedLineEdit *widget, QWidget *parent)
@@ -685,7 +693,10 @@ boost::filesystem::path static GetAutostartDir()
 
 boost::filesystem::path static GetAutostartFilePath()
 {
-    return GetAutostartDir() / "namecoin.desktop";
+    std::string chain = ChainNameFromCommandLine();
+    if (chain == CBaseChainParams::MAIN)
+        return GetAutostartDir() / "namecoin.desktop";
+    return GetAutostartDir() / strprintf("namecoin-%s.lnk", chain);
 }
 
 bool GetStartOnSystemStartup()
@@ -898,6 +909,9 @@ QString formatServicesStr(quint64 mask)
                 break;
             case NODE_GETUTXO:
                 strList.append("GETUTXO");
+                break;
+            case NODE_BLOOM:
+                strList.append("BLOOM");
                 break;
             default:
                 strList.append(QString("%1[%2]").arg("UNKNOWN").arg(check));

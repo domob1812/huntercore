@@ -40,4 +40,7 @@ static const int NO_BLOOM_VERSION = 2000000;
 //! Version when we switched to a size-based "headers" limit.
 static const int SIZE_HEADERS_LIMIT_VERSION = 2000000;
 
+//! "sendheaders" command and announcing blocks with headers starts with this version
+static const int SENDHEADERS_VERSION = 110012;
+
 #endif // BITCOIN_VERSION_H

@@ -1,42 +1,57 @@
-Bitcoin Core integration/staging tree
+Namecoin Core integration/staging tree
 =====================================
 
-[![Build Status](https://travis-ci.org/bitcoin/bitcoin.svg?branch=master)](https://travis-ci.org/bitcoin/bitcoin)
+[![Build Status](https://travis-ci.org/namecoin/namecoin-core.svg?branch=master)](https://travis-ci.org/namecoin/namecoin-core)
 
-https://www.bitcoin.org
+https://namecoin.org
 
-What is Bitcoin?
+What is Namecoin? 
 ----------------
 
-Bitcoin is an experimental new digital currency that enables instant payments to
-anyone, anywhere in the world. Bitcoin uses peer-to-peer technology to operate
-with no central authority: managing transactions and issuing money are carried
-out collectively by the network. Bitcoin Core is the name of open source
-software which enables the use of this currency.
+Namecoin is a decentralized open source information registration and transfer system based on the Bitcoin cryptocurrency.
 
-For more information, as well as an immediately useable, binary version of
-the Bitcoin Core software, see https://www.bitcoin.org/en/download.
+What does it do?
+----------------
+
+* Securely record and transfer arbitrary names (keys).
+* Attach a value (data) to the names (up to 520 bytes, more in the future).
+* Transact namecoins, the digital currency (ℕ, NMC).
+
+Namecoin was the first fork of Bitcoin and still is one of the most innovative altcoins. It was first to implement merged mining and a decentralized DNS. Namecoin squares Zooko's Triangle!
+
+What can it be used for?
+----------------
+
+* Protect free-speech rights online by making the web more resistant to censorship.
+* Access websites using the .bit domain (with TLS/SSL).
+* Store identity information such as email, GPG key, BTC address, TLS fingerprints, Bitmessage address, etc.
+* Human readable Tor .onion names/domains.
+* File signatures, Voting, bonds/stocks,/shares, web of trust, escrow and notary services (to be implemented).
+
+~~For more information, as well as an immediately useable, binary version of~~
+~~the Namecoin Core software, see https://namecoin.org/?p=download.~~
+Public binary downloads are not yet posted.
 
 License
 -------
 
-Bitcoin Core is released under the terms of the MIT license. See [COPYING](COPYING) for more
-information or see http://opensource.org/licenses/MIT.
+Namecoin Core is released under the terms of the MIT license. See [COPYING](COPYING) for more
+information or see https://opensource.org/licenses/MIT.
 
 Development Process
 -------------------
 
 The `master` branch is regularly built and tested, but is not guaranteed to be
-completely stable. [Tags](https://github.com/bitcoin/bitcoin/tags) are created
-regularly to indicate new official, stable release versions of Bitcoin Core.
+completely stable. [Tags](https://github.com/namecoin/namecoin-core/tags) are created
+regularly to indicate new official, stable release versions of Namecoin Core.
 
 The contribution workflow is described in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-The developer [mailing list](https://lists.linuxfoundation.org/mailman/listinfo/bitcoin-dev)
+The developer [forum](https://forum.namecoin.info/viewforum.php?f=4)
 should be used to discuss complicated or controversial changes before working
 on a patch set.
 
-Developer IRC can be found on Freenode at #bitcoin-core-dev.
+Developer IRC can be found on Freenode at #namecoin-dev.
 
 Testing
 -------
@@ -48,10 +63,11 @@ lots of money.
 
 ### Automated Testing
 
-Developers are strongly encouraged to write unit tests for new code, and to
-submit new unit tests for old code. Unit tests can be compiled and run (assuming they weren't disabled in configure) with: `make check`
+Developers are strongly encouraged to write [unit tests](/doc/unit-tests.md) for new code, and to
+submit new unit tests for old code. Unit tests can be compiled and run
+(assuming they weren't disabled in configure) with: `make check`
 
-There are also regression and integration tests of the RPC interface, written
+There are also [regression and integration tests](/qa) of the RPC interface, written
 in Python, that are run automatically on the build server.
 These tests can be run with: `qa/pull-tester/rpc-tests.py`
 
@@ -67,6 +83,8 @@ not straightforward.
 
 Translations
 ------------
+
+**Translation workflow is not yet set up for Namecoin Core.  For strings which are common to Bitcoin Core, see below.**
 
 Changes to translations as well as new translations can be submitted to
 [Bitcoin Core's Transifex page](https://www.transifex.com/projects/p/bitcoin/).

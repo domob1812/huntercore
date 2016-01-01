@@ -34,7 +34,6 @@ class TestManager(NodeConnCB):
     def __init__(self):
         NodeConnCB.__init__(self)
         self.log = logging.getLogger("BlockRelayTest")
-        self.create_callback_map()
 
     def add_new_connection(self, connection):
         self.connection = connection
@@ -79,7 +78,7 @@ class TestManager(NodeConnCB):
 class MaxBlocksInFlightTest(BitcoinTestFramework):
     def add_options(self, parser):
         parser.add_option("--testbinary", dest="testbinary",
-                          default=os.getenv("NAMECOIND", "namecoind"),
+                          default=os.getenv("BITCOIND", "namecoind"),
                           help="Binary to test max block requests behavior")
 
     def setup_chain(self):

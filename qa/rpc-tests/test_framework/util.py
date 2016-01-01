@@ -67,6 +67,9 @@ def check_json_precision():
     if satoshis != 2000000000000003:
         raise RuntimeError("JSON encode/decode loses precision")
 
+def count_bytes(hex_string):
+    return len(bytearray.fromhex(hex_string))
+
 def sync_blocks(rpc_connections, wait=1):
     """
     Wait until everybody has the same block count
@@ -104,6 +107,7 @@ def initialize_datadir(dirname, n):
         f.write("rpcpassword=rt\n");
         f.write("port="+str(p2p_port(n))+"\n");
         f.write("rpcport="+str(rpc_port(n))+"\n");
+        f.write("listenonion=0\n");
     return datadir
 
 def base_node_args(i):
@@ -143,7 +147,7 @@ def initialize_chain(test_dir):
         # Create cache directories, run bitcoinds:
         for i in range(4):
             datadir=initialize_datadir("cache", i)
-            args = [ os.getenv("NAMECOIND", "namecoind"), "-keypool=1", "-datadir="+datadir, "-discover=0" ]
+            args = [ os.getenv("NAMECOIND", "namecoind"), "-server", "-keypool=1", "-datadir="+datadir, "-discover=0" ]
             args.extend(base_node_args(i))
             if i > 0:
                 args.append("-connect=127.0.0.1:"+str(p2p_port(0)))
@@ -231,8 +235,9 @@ def start_node(i, dirname, extra_args=[], rpchost=None, timewait=None, binary=No
     datadir = os.path.join(dirname, "node"+str(i))
     if binary is None:
         binary = os.getenv("NAMECOIND", "namecoind")
-    args = [ binary, "-datadir="+datadir, "-keypool=1", "-discover=0", "-rest" ]
-    args.extend(extra_args)
+    # RPC tests still depend on free transactions
+    args = [ binary, "-datadir="+datadir, "-server", "-keypool=1", "-discover=0", "-rest", "-blockprioritysize=50000" ]
+    if extra_args is not None: args.extend(extra_args)
     args.extend(base_node_args(i))
     bitcoind_processes[i] = subprocess.Popen(args)
     devnull = open(os.devnull, "w")
@@ -419,3 +424,52 @@ def assert_raises(exc, fun, *args, **kwds):
         raise AssertionError("Unexpected exception raised: "+type(e).__name__)
     else:
         raise AssertionError("No exception raised")
+
+def satoshi_round(amount):
+    return  Decimal(amount).quantize(Decimal('0.00000001'), rounding=ROUND_DOWN)
+
+def create_confirmed_utxos(fee, node, count):
+    node.generate(int(0.5*count)+101)
+    utxos = node.listunspent()
+    iterations = count - len(utxos)
+    addr1 = node.getnewaddress()
+    addr2 = node.getnewaddress()
+    if iterations <= 0:
+        return utxos
+    for i in xrange(iterations):
+        t = utxos.pop()
+        inputs = []
+        inputs.append({ "txid" : t["txid"], "vout" : t["vout"]})
+        outputs = {}
+        send_value = t['amount'] - fee
+        outputs[addr1] = satoshi_round(send_value/2)
+        outputs[addr2] = satoshi_round(send_value/2)
+        raw_tx = node.createrawtransaction(inputs, outputs)
+        signed_tx = node.signrawtransaction(raw_tx)["hex"]
+        txid = node.sendrawtransaction(signed_tx)
+
+    while (node.getmempoolinfo()['size'] > 0):
+        node.generate(1)
+
+    utxos = node.listunspent()
+    assert(len(utxos) >= count)
+    return utxos
+
+def create_lots_of_big_transactions(node, txouts, utxos, fee):
+    addr = node.getnewaddress()
+    txids = []
+    for i in xrange(len(utxos)):
+        t = utxos.pop()
+        inputs = []
+        inputs.append({ "txid" : t["txid"], "vout" : t["vout"]})
+        outputs = {}
+        send_value = t['amount'] - fee
+        outputs[addr] = satoshi_round(send_value)
+        rawtx = node.createrawtransaction(inputs, outputs)
+        newtx = rawtx[0:92]
+        newtx = newtx + txouts
+        newtx = newtx + rawtx[94:]
+        signresult = node.signrawtransaction(newtx, None, None, "NONE")
+        txid = node.sendrawtransaction(signresult["hex"], True)
+        txids.append(txid)
+    return txids

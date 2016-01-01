@@ -36,6 +36,7 @@ MY_VERSION = 60001  # past bip-31 for ping/pong
 MY_SUBVERSION = "/python-mininode-tester:0.0.1/"
 
 MAX_INV_SZ = 50000
+MAX_BLOCK_SIZE = 1000000
 
 # Constants for the auxpow block version.
 VERSION_AUXPOW = (1 << 8)
@@ -765,8 +766,8 @@ class msg_inv(object):
 class msg_getdata(object):
     command = "getdata"
 
-    def __init__(self):
-        self.inv = []
+    def __init__(self, inv=None):
+        self.inv = inv if inv != None else []
 
     def deserialize(self, f):
         self.inv = deser_vector(f, CInv)
@@ -919,6 +920,20 @@ class msg_mempool(object):
     def __repr__(self):
         return "msg_mempool()"
 
+class msg_sendheaders(object):
+    command = "sendheaders"
+
+    def __init__(self):
+        pass
+
+    def deserialize(self, f):
+        pass
+
+    def serialize(self):
+        return ""
+
+    def __repr__(self):
+        return "msg_sendheaders()"
 
 # getheaders message has
 # number of entries
@@ -1004,32 +1019,21 @@ class NodeConnCB(object):
     def __init__(self):
         self.verack_received = False
 
-    # Derived classes should call this function once to set the message map
-    # which associates the derived classes' functions to incoming messages
-    def create_callback_map(self):
-        self.cbmap = {
-            "version": self.on_version,
-            "verack": self.on_verack,
-            "addr": self.on_addr,
-            "alert": self.on_alert,
-            "inv": self.on_inv,
-            "getdata": self.on_getdata,
-            "getblocks": self.on_getblocks,
-            "tx": self.on_tx,
-            "block": self.on_block,
-            "getaddr": self.on_getaddr,
-            "ping": self.on_ping,
-            "pong": self.on_pong,
-            "headers": self.on_headers,
-            "getheaders": self.on_getheaders,
-            "reject": self.on_reject,
-            "mempool": self.on_mempool
-        }
+    # Spin until verack message is received from the node.
+    # Tests may want to use this as a signal that the test can begin.
+    # This can be called from the testing thread, so it needs to acquire the
+    # global lock.
+    def wait_for_verack(self):
+        while True:
+            with mininode_lock:
+                if self.verack_received:
+                    return
+            time.sleep(0.05)
 
     def deliver(self, conn, message):
         with mininode_lock:
             try:
-                self.cbmap[message.command](conn, message)
+                getattr(self, 'on_' + message.command)(conn, message)
             except:
                 print "ERROR delivering %s (%s)" % (repr(message),
                                                     sys.exc_info()[0])
@@ -1098,7 +1102,7 @@ class NodeConn(asyncore.dispatcher):
         "regtest": "\xfa\xbf\xb5\xda"    # regtest
     }
 
-    def __init__(self, dstaddr, dstport, rpc, callback, net="regtest"):
+    def __init__(self, dstaddr, dstport, rpc, callback, net="regtest", services=1):
         asyncore.dispatcher.__init__(self, map=mininode_socket_map)
         self.log = logging.getLogger("NodeConn(%s:%d)" % (dstaddr, dstport))
         self.dstaddr = dstaddr
@@ -1116,6 +1120,7 @@ class NodeConn(asyncore.dispatcher):
 
         # stuff version msg into sendbuf
         vt = msg_version()
+        vt.nServices = services
         vt.addrTo.ip = self.dstaddr
         vt.addrTo.port = self.dstport
         vt.addrFrom.ip = "0.0.0.0"

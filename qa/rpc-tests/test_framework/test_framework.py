@@ -35,7 +35,7 @@ class BitcoinTestFramework(object):
     def run_test(self):
         for node in self.nodes:
             assert_equal(node.getblockcount(), 200)
-            assert_equal(node.getbalance(), 25*50)
+            assert_equal(node.getbalance(), 25)
 
     def add_options(self, parser):
         pass
@@ -110,11 +110,11 @@ class BitcoinTestFramework(object):
 
         parser = optparse.OptionParser(usage="%prog [options]")
         parser.add_option("--nocleanup", dest="nocleanup", default=False, action="store_true",
-                          help="Leave namecoinds and test.* datadir on exit or error")
+                          help="Leave huntercoinds and test.* datadir on exit or error")
         parser.add_option("--noshutdown", dest="noshutdown", default=False, action="store_true",
-                          help="Don't stop namecoinds after the test execution")
+                          help="Don't stop huntercoinds after the test execution")
         parser.add_option("--srcdir", dest="srcdir", default="../../src",
-                          help="Source directory containing namecoind/namecoin-cli (default: %default)")
+                          help="Source directory containing huntercoind/huntercoin-cli (default: %default)")
         parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="test"),
                           help="Root directory for datadirs")
         parser.add_option("--tracerpc", dest="trace_rpc", default=False, action="store_true",
@@ -162,7 +162,7 @@ class BitcoinTestFramework(object):
             stop_nodes(self.nodes)
             wait_bitcoinds()
         else:
-            print("Note: namecoinds were not stopped and may still be running")
+            print("Note: huntercoinds were not stopped and may still be running")
 
         if not self.options.nocleanup and not self.options.noshutdown:
             print("Cleaning up")
@@ -190,11 +190,11 @@ class ComparisonTestFramework(BitcoinTestFramework):
 
     def add_options(self, parser):
         parser.add_option("--testbinary", dest="testbinary",
-                          default=os.getenv("NAMECOIND", "namecoind"),
-                          help="namecoind binary to test")
+                          default=os.getenv("BITCOIND", "huntercoind"),
+                          help="huntercoind binary to test")
         parser.add_option("--refbinary", dest="refbinary",
-                          default=os.getenv("NAMECOIND", "namecoind"),
-                          help="namecoind binary to use for reference nodes (if any)")
+                          default=os.getenv("BITCOIND", "huntercoind"),
+                          help="huntercoind binary to use for reference nodes (if any)")
 
     def setup_chain(self):
         print "Initializing test directory "+self.options.tmpdir

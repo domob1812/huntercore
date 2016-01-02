@@ -101,7 +101,7 @@ def initialize_datadir(dirname, n):
     datadir = os.path.join(dirname, "node"+str(n))
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
-    with open(os.path.join(datadir, "namecoin.conf"), 'w') as f:
+    with open(os.path.join(datadir, "huntercoin.conf"), 'w') as f:
         f.write("regtest=1\n");
         f.write("rpcuser=rt\n");
         f.write("rpcpassword=rt\n");
@@ -130,7 +130,7 @@ def initialize_chain(test_dir):
     """
     Create (or copy from cache) a 200-block-long chain and
     4 wallets.
-    namecoind and namecoin-cli must be in search path.
+    huntercoind and huntercoin-cli must be in search path.
     """
 
     if (not os.path.isdir(os.path.join("cache","node0"))
@@ -147,17 +147,17 @@ def initialize_chain(test_dir):
         # Create cache directories, run bitcoinds:
         for i in range(4):
             datadir=initialize_datadir("cache", i)
-            args = [ os.getenv("NAMECOIND", "namecoind"), "-server", "-keypool=1", "-datadir="+datadir, "-discover=0" ]
+            args = [ os.getenv("BITCOIND", "huntercoind"), "-server", "-keypool=1", "-datadir="+datadir, "-discover=0" ]
             args.extend(base_node_args(i))
             if i > 0:
                 args.append("-connect=127.0.0.1:"+str(p2p_port(0)))
             bitcoind_processes[i] = subprocess.Popen(args)
             if os.getenv("PYTHON_DEBUG", ""):
-                print "initialize_chain: namecoind started, calling namecoin-cli -rpcwait getblockcount"
-            subprocess.check_call([ os.getenv("NAMECOINCLI", "namecoin-cli"), "-datadir="+datadir,
+                print "initialize_chain: huntercoind started, calling huntercoin-cli -rpcwait getblockcount"
+            subprocess.check_call([ os.getenv("BITCOINCLI", "huntercoin-cli"), "-datadir="+datadir,
                                     "-rpcwait", "getblockcount"], stdout=devnull)
             if os.getenv("PYTHON_DEBUG", ""):
-                print "initialize_chain: namecoin-cli -rpcwait getblockcount completed"
+                print "initialize_chain: huntercoin-cli -rpcwait getblockcount completed"
         devnull.close()
 
         rpcs = []
@@ -230,11 +230,11 @@ def _rpchost_to_args(rpchost):
 
 def start_node(i, dirname, extra_args=[], rpchost=None, timewait=None, binary=None):
     """
-    Start a namecoind and return RPC connection to it
+    Start a huntercoind and return RPC connection to it
     """
     datadir = os.path.join(dirname, "node"+str(i))
     if binary is None:
-        binary = os.getenv("NAMECOIND", "namecoind")
+        binary = os.getenv("BITCOIND", "huntercoind")
     # RPC tests still depend on free transactions
     args = [ binary, "-datadir="+datadir, "-server", "-keypool=1", "-discover=0", "-rest", "-blockprioritysize=50000" ]
     if extra_args is not None: args.extend(extra_args)
@@ -242,12 +242,12 @@ def start_node(i, dirname, extra_args=[], rpchost=None, timewait=None, binary=No
     bitcoind_processes[i] = subprocess.Popen(args)
     devnull = open(os.devnull, "w")
     if os.getenv("PYTHON_DEBUG", ""):
-        print "start_node: namecoind started, calling namecoin-cli -rpcwait getblockcount"
-    subprocess.check_call([ os.getenv("NAMECOINCLI", "namecoin-cli"), "-datadir="+datadir] +
+        print "start_node: huntercoind started, calling huntercoin-cli -rpcwait getblockcount"
+    subprocess.check_call([ os.getenv("BITCOINCLI", "huntercoin-cli"), "-datadir="+datadir] +
                           _rpchost_to_args(rpchost)  +
                           ["-rpcwait", "getblockcount"], stdout=devnull)
     if os.getenv("PYTHON_DEBUG", ""):
-        print "start_node: calling namecoin-cli -rpcwait getblockcount returned"
+        print "start_node: calling huntercoin-cli -rpcwait getblockcount returned"
     devnull.close()
     url = "http://rt:rt@%s:%d" % (rpchost or '127.0.0.1', rpc_port(i))
 
@@ -260,7 +260,7 @@ def start_node(i, dirname, extra_args=[], rpchost=None, timewait=None, binary=No
 
 def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
     """
-    Start multiple namecoinds, return RPC connections to them
+    Start multiple huntercoinds, return RPC connections to them
     """
     if extra_args is None: extra_args = [ [] for i in range(num_nodes) ]
     if binary is None: binary = [ None for i in range(num_nodes) ]

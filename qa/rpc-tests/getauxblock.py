@@ -32,7 +32,7 @@ class GetAuxBlockTest (BitcoinTestFramework):
     assert_equal (reversedTarget, blocktemplate['target'])
 
     # Verify data that can be found in another way.
-    assert_equal (auxblock['chainid'], 1)
+    assert_equal (auxblock['chainid'], 6)
     assert_equal (auxblock['height'], self.nodes[0].getblockcount () + 1)
     assert_equal (auxblock['previousblockhash'], self.nodes[0].getblockhash (auxblock['height'] - 1))
 
@@ -109,7 +109,7 @@ class GetAuxBlockTest (BitcoinTestFramework):
     assert_equal (t['category'], "immature")
     assert_equal (t['blockhash'], auxblock['hash'])
     assert t['generated']
-    assert t['amount'] >= Decimal ("25")
+    assert t['amount'] >= Decimal ("0.5")
     assert_equal (t['confirmations'], 1)
 
     # Verify the coinbase script.  Ensure that it includes the block height

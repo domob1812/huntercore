@@ -123,6 +123,7 @@ public:
         pchMessageStart[1] = 0xbe;
         pchMessageStart[2] = 0xb4;
         pchMessageStart[3] = 0xfe;
+        /* FIXME: Update alert key.  */
         vAlertPubKey = ParseHex("04d55568f5688898159fd01640f6c7ef2e63fef95376e8418244b4c7c4dd57110d8028f4086a092f2586dc09b36359e67e0717a0bec2a483c81aaf252377fc666a");
         nDefaultPort = 8398;
         nMaxTipAge = 24 * 60 * 60;
@@ -252,7 +253,6 @@ static CTestNetParams testNetParams;
 /**
  * Regression test
  */
-// FIXME: Update
 class CRegTestParams : public CChainParams {
 public:
     CRegTestParams() {
@@ -280,14 +280,13 @@ public:
         pchMessageStart[2] = 0xb5;
         pchMessageStart[3] = 0xda;
         nMaxTipAge = 24 * 60 * 60;
-        nDefaultPort = 18445;
+        nDefaultPort = 18498;
         nPruneAfterHeight = 1000;
 
         genesis = CreateTestnetGenesisBlock(1296688602, 2, 0x207fffff, 1, 50 * COIN);
         consensus.hashGenesisBlock = genesis.GetHash();
-        // FIXME: Enable once parameters are set.
-        //assert(consensus.hashGenesisBlock == uint256S("0x0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"));
-        //assert(genesis.hashMerkleRoot == uint256S("0x4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b"));
+        assert(consensus.hashGenesisBlock == uint256S("0x3867dcd08712d9b49de33d4ab145d57ad14a78c7843c51f8c5d782d5f102fb4a"));
+        assert(genesis.hashMerkleRoot == uint256S("0x71c88ed0560ee7d644deba07485c4eff571e3f86f9485692ed3966e4f0f3a59c"));
 
         vFixedSeeds.clear(); //! Regtest mode doesn't have any fixed seeds.
         vSeeds.clear();  //! Regtest mode doesn't have any DNS seeds.
@@ -300,14 +299,15 @@ public:
 
         checkpointData = (CCheckpointData){
             boost::assign::map_list_of
-            ( 0, uint256S("5287b3809b71433729402429b7d909a853cfac5ed40f09117b242c275e6b2d63")),
+            ( 0, uint256S("3867dcd08712d9b49de33d4ab145d57ad14a78c7843c51f8c5d782d5f102fb4a")),
             0,
             0,
             0
         };
-        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,111);
-        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196);
-        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,239);
+        base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,100);
+        base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196); // FIXME: Update.
+        base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,228);
+        /* FIXME: Update below.  */
         base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x35)(0x87)(0xCF).convert_to_container<std::vector<unsigned char> >();
         base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x35)(0x83)(0x94).convert_to_container<std::vector<unsigned char> >();
 

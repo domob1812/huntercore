@@ -109,8 +109,8 @@ class TestNode(NodeConnCB):
 class AcceptBlockTest(BitcoinTestFramework):
     def add_options(self, parser):
         parser.add_option("--testbinary", dest="testbinary",
-                          default=os.getenv("BITCOIND", "namecoind"),
-                          help="namecoind binary to test")
+                          default=os.getenv("BITCOIND", "huntercoind"),
+                          help="huntercoind binary to test")
 
     def setup_chain(self):
         initialize_chain_clean(self.options.tmpdir, 2)

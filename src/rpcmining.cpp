@@ -71,6 +71,40 @@ UniValue GetNetworkHashPS(int lookup, int height) {
     return (int64_t)(workDiff.getdouble() / timeDiff);
 }
 
+/* Decode an algorithm-selection parameter.  Throws error in case the algorithm
+   selected is invalid.  */
+PowAlgo
+DecodeAlgoParam (const UniValue& param)
+{
+  int val;
+
+  /* We have to accept both an integer (as it should be) and a string.
+     In the latter case, we convert manually.  This is necessary since we
+     cannot automatically convert in the client due to getauxblock's
+     "complex" interface.  */
+
+  if (param.isNum ())
+    val = param.get_int ();
+  else
+    {
+      const std::string& str = param.get_str ();
+      const UniValue convVal(UniValue::VNUM, str);
+      val = convVal.get_int ();
+    }
+
+  switch (val)
+    {
+    case ALGO_SHA256D:
+    case ALGO_SCRYPT:
+      return static_cast<PowAlgo> (val);
+
+    default:
+      throw JSONRPCError (RPC_INVALID_PARAMETER, "invalid algo selection");
+    }
+
+  assert (false);
+}
+
 UniValue getnetworkhashps(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() > 2)
@@ -114,18 +148,20 @@ UniValue getgenerate(const UniValue& params, bool fHelp)
 
 UniValue generate(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() < 1 || params.size() > 1)
+    if (fHelp || params.size() < 1 || params.size() > 2)
         throw runtime_error(
             "generate numblocks\n"
             "\nMine blocks immediately (before the RPC call returns)\n"
             "\nNote: this function can only be used on the regtest network\n"
             "\nArguments:\n"
             "1. numblocks    (numeric, required) How many blocks are generated immediately.\n"
+            "2. algo         (numeric, optional) Algorithm to use (default: SHA256D).\n"
             "\nResult\n"
             "[ blockhashes ]     (array) hashes of blocks generated\n"
             "\nExamples:\n"
             "\nGenerate 11 blocks\n"
             + HelpExampleCli("generate", "11")
+            + HelpExampleCli("generate", "11 1")
         );
 
     if (!Params().MineBlocksOnDemand())
@@ -135,6 +171,10 @@ UniValue generate(const UniValue& params, bool fHelp)
     int nHeightEnd = 0;
     int nHeight = 0;
     int nGenerate = params[0].get_int();
+
+    PowAlgo algo = ALGO_SHA256D;
+    if (params.size () >= 2)
+        algo = DecodeAlgoParam(params[1]);
 
     boost::shared_ptr<CReserveScript> coinbaseScript;
     GetMainSignals().ScriptForMining(coinbaseScript);
@@ -157,7 +197,7 @@ UniValue generate(const UniValue& params, bool fHelp)
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd)
     {
-        auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(Params(), coinbaseScript->reserveScript));
+        auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(Params(), algo, coinbaseScript->reserveScript));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         CBlock *pblock = &pblocktemplate->block;
@@ -165,8 +205,7 @@ UniValue generate(const UniValue& params, bool fHelp)
             LOCK(cs_main);
             IncrementExtraNonce(pblock, chainActive.Tip(), nExtraNonce);
         }
-        // FIXME: Allow choosing algo.
-        while (!CheckProofOfWork(pblock->GetHash(), pblock->nBits, ALGO_SHA256D, Params().GetConsensus())) {
+        while (!CheckProofOfWork(pblock->GetPowHash(algo), pblock->nBits, algo, Params().GetConsensus())) {
             // Yes, there is a chance every nonce could fail to satisfy the -regtest
             // target -- 1 in 2^(2^32). That ain't gonna happen.
             ++pblock->nNonce;
@@ -238,7 +277,7 @@ UniValue getmininginfo(const UniValue& params, bool fHelp)
             "  \"blocks\": nnn,             (numeric) The current block\n"
             "  \"currentblocksize\": nnn,   (numeric) The last block size\n"
             "  \"currentblocktx\": nnn,     (numeric) The last block transaction\n"
-            "  \"difficulty\": xxx.xxxxx    (numeric) The current difficulty\n"
+            "  \"difficulty_algo\": xxx.xxxxx (numeric) The current difficulty for algo\n"
             "  \"errors\": \"...\"          (string) Current errors\n"
             "  \"generate\": true|false     (boolean) If the generation is on or off (see getgenerate or setgenerate calls)\n"
             "  \"genproclimit\": n          (numeric) The processor limit for generation. -1 if no generation. (see getgenerate or setgenerate calls)\n"
@@ -258,7 +297,8 @@ UniValue getmininginfo(const UniValue& params, bool fHelp)
     obj.push_back(Pair("blocks",           (int)chainActive.Height()));
     obj.push_back(Pair("currentblocksize", (uint64_t)nLastBlockSize));
     obj.push_back(Pair("currentblocktx",   (uint64_t)nLastBlockTx));
-    obj.push_back(Pair("difficulty",       (double)GetDifficulty()));
+    obj.push_back(Pair("difficulty_sha256d", (double)GetDifficulty(ALGO_SHA256D)));
+    obj.push_back(Pair("difficulty_scrypt", (double)GetDifficulty(ALGO_SCRYPT)));
     obj.push_back(Pair("errors",           GetWarnings("statusbar")));
     obj.push_back(Pair("genproclimit",     (int)GetArg("-genproclimit", DEFAULT_GENERATE_THREADS)));
     obj.push_back(Pair("networkhashps",    getnetworkhashps(params, false)));
@@ -511,7 +551,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
             pblocktemplate = NULL;
         }
         CScript scriptDummy = CScript() << OP_TRUE;
-        pblocktemplate = CreateNewBlock(Params(), scriptDummy);
+        pblocktemplate = CreateNewBlock(Params(), ALGO_SHA256D, scriptDummy);
         if (!pblocktemplate)
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
 
@@ -805,30 +845,36 @@ UniValue estimatesmartpriority(const UniValue& params, bool fHelp)
 
 UniValue getauxblock(const UniValue& params, bool fHelp)
 {
-    if (fHelp || (params.size() != 0 && params.size() != 2))
+    if (fHelp || params.size() > 2)
         throw std::runtime_error(
-            "getauxblock (hash auxpow)\n"
+            "getauxblock (algo | hash auxpow)\n"
             "\nCreate or submit a merge-mined block.\n"
-            "\nWithout arguments, create a new block and return information\n"
-            "required to merge-mine it.  With arguments, submit a solved\n"
-            "auxpow for a previously returned block.\n"
-            "\nArguments:\n"
-            "1. \"hash\"    (string, optional) hash of the block to submit\n"
-            "2. \"auxpow\"  (string, optional) serialised auxpow found\n"
-            "\nResult (without arguments):\n"
+            "\nWith zero or one argument, create a new block and return\n"
+            "information required to merge-mine it.  The optional argument\n"
+            "determines the hashing algorithm (default: SHA256D).\n"
+            "\nWith two arguments, submit a solved auxpow for a previously\n"
+            "returned block.\n"
+            "\nArguments first form:\n"
+            "1. \"algo\"    (numeric, optional) algorithm for the block\n"
+            "\nArguments second form:\n"
+            "1. \"hash\"    (string, required) hash of the block to submit\n"
+            "2. \"auxpow\"  (string, required) serialised auxpow found\n"
+            "\nResult first form:\n"
             "{\n"
             "  \"hash\"               (string) hash of the created block\n"
             "  \"chainid\"            (numeric) chain ID for this block\n"
+            "  \"algo\"               (numeric) algorithm for the block\n"
             "  \"previousblockhash\"  (string) hash of the previous block\n"
             "  \"coinbasevalue\"      (numeric) value of the block's coinbase\n"
             "  \"bits\"               (string) compressed target of the block\n"
             "  \"height\"             (numeric) height of the block\n"
             "  \"_target\"            (string) target in reversed byte order, deprecated\n"
             "}\n"
-            "\nResult (with arguments):\n"
+            "\nResult second form:\n"
             "xxxxx        (boolean) whether the submitted block was correct\n"
             "\nExamples:\n"
             + HelpExampleCli("getauxblock", "")
+            + HelpExampleCli("getauxblock", "1")
             + HelpExampleCli("getauxblock", "\"hash\" \"serialised auxpow\"")
             + HelpExampleRpc("getauxblock", "")
             );
@@ -861,8 +907,12 @@ UniValue getauxblock(const UniValue& params, bool fHelp)
     static std::vector<CBlockTemplate*> vNewBlockTemplate;
 
     /* Create a new block?  */
-    if (params.size() == 0)
+    if (params.size() < 2)
     {
+        PowAlgo algo = ALGO_SHA256D;
+        if (params.size () >= 1)
+          algo = DecodeAlgoParam (params[0]);
+
         static unsigned nTransactionsUpdatedLast;
         static const CBlockIndex* pindexPrev = NULL;
         static uint64_t nStart;
@@ -870,9 +920,13 @@ UniValue getauxblock(const UniValue& params, bool fHelp)
         static unsigned nExtraNonce = 0;
 
         // Update block
+        /* TODO: One could keep a block for each algo ready so that
+           we don't recreate it when the algo parameter is changed.
+           Not sure how much impact this has on practical mining operations.  */
         {
         LOCK(cs_main);
         if (pindexPrev != chainActive.Tip()
+            || pblocktemplate->block.nVersion.GetAlgo() != algo
             || (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast
                 && GetTime() - nStart > 60))
         {
@@ -886,7 +940,7 @@ UniValue getauxblock(const UniValue& params, bool fHelp)
             }
 
             // Create new block with nonce = 0 and extraNonce = 1
-            pblocktemplate = CreateNewBlock(Params(), coinbaseScript->reserveScript);
+            pblocktemplate = CreateNewBlock(Params(), algo, coinbaseScript->reserveScript);
             if (!pblocktemplate)
                 throw JSONRPCError(RPC_OUT_OF_MEMORY, "out of memory");
 
@@ -917,6 +971,7 @@ UniValue getauxblock(const UniValue& params, bool fHelp)
         UniValue result(UniValue::VOBJ);
         result.push_back(Pair("hash", block.GetHash().GetHex()));
         result.push_back(Pair("chainid", block.nVersion.GetChainId()));
+        result.push_back(Pair("algo", block.nVersion.GetAlgo()));
         result.push_back(Pair("previousblockhash", block.hashPrevBlock.GetHex()));
         result.push_back(Pair("coinbasevalue", (int64_t)block.vtx[0].vout[0].nValue));
         result.push_back(Pair("bits", strprintf("%08x", block.nBits)));

@@ -108,6 +108,7 @@ testScripts = [
 
     # auxpow tests
     'getauxblock.py',
+    'dualalgo.py',
 
     # name tests
     'name_expiration.py',

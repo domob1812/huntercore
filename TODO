@@ -1,3 +1,7 @@
+* fix name RPC commands
+
+* name_register RPC command
+
 * extend unit tests for HUC-specific stuff
 
 * game tx of block
@@ -20,13 +24,9 @@
 
 * update fee and IsStandard policies
 
-* name_register RPC command
-
-* dual-algo mining (difficulty in getinfo and co, choosing algo)
-
 * make sure miners take their taxes
 
-* reenable and update regtests
+* write regtests and update failing existing ones
 
 * add REST functions for accessing game state info
 

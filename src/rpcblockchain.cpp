@@ -60,6 +60,21 @@ double GetDifficulty(const CBlockIndex* blockindex)
     return dDiff;
 }
 
+double GetDifficulty(PowAlgo algo)
+{
+    const CBlockIndex* pindex = chainActive.Tip();
+    while (pindex)
+    {
+        if (pindex->nVersion.GetAlgo() == algo)
+            break;
+        pindex = pindex->pprev;
+    }
+
+    if (!pindex)
+        return 1.0;
+    return GetDifficulty(pindex);
+}
+
 static UniValue AuxpowToJSON(const CAuxPow& auxpow)
 {
     UniValue tx(UniValue::VOBJ);
@@ -128,6 +143,7 @@ UniValue blockheaderToJSON(const CBlockIndex* blockindex)
     result.push_back(Pair("confirmations", confirmations));
     result.push_back(Pair("height", blockindex->nHeight));
     result.push_back(Pair("version", blockindex->nVersion.GetFullVersion()));
+    result.push_back(Pair("algo", blockindex->nVersion.GetAlgo()));
     result.push_back(Pair("merkleroot", blockindex->hashMerkleRoot.GetHex()));
     result.push_back(Pair("time", (int64_t)blockindex->nTime));
     result.push_back(Pair("mediantime", (int64_t)blockindex->GetMedianTimePast()));
@@ -214,19 +230,22 @@ UniValue getbestblockhash(const UniValue& params, bool fHelp)
 
 UniValue getdifficulty(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || params.size() != 1)
         throw runtime_error(
-            "getdifficulty\n"
+            "getdifficulty algo\n"
             "\nReturns the proof-of-work difficulty as a multiple of the minimum difficulty.\n"
+            "\nArguments:\n"
+            "1. \"algo\"  (numeric, required) algorithm to get difficulty for\n"
             "\nResult:\n"
             "n.nnn       (numeric) the proof-of-work difficulty as a multiple of the minimum difficulty.\n"
             "\nExamples:\n"
-            + HelpExampleCli("getdifficulty", "")
-            + HelpExampleRpc("getdifficulty", "")
+            + HelpExampleCli("getdifficulty", "0")
+            + HelpExampleCli("getdifficulty", "1")
+            + HelpExampleRpc("getdifficulty", "0")
         );
 
     LOCK(cs_main);
-    return GetDifficulty();
+    return GetDifficulty(DecodeAlgoParam(params[0]));
 }
 
 UniValue mempoolToJSON(bool fVerbose = false)
@@ -667,7 +686,7 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
             "  \"blocks\": xxxxxx,         (numeric) the current number of blocks processed in the server\n"
             "  \"headers\": xxxxxx,        (numeric) the current number of headers we have validated\n"
             "  \"bestblockhash\": \"...\", (string) the hash of the currently best block\n"
-            "  \"difficulty\": xxxxxx,     (numeric) the current difficulty\n"
+            "  \"difficulty_algo\": xxxxxx, (numeric) the current difficulty for algo\n"
             "  \"mediantime\": xxxxxx,     (numeric) median time for the current best block\n"
             "  \"verificationprogress\": xxxx, (numeric) estimate of verification progress [0..1]\n"
             "  \"chainwork\": \"xxxx\"     (string) total amount of work in active chain, in hexadecimal\n"
@@ -699,7 +718,8 @@ UniValue getblockchaininfo(const UniValue& params, bool fHelp)
     obj.push_back(Pair("blocks",                (int)chainActive.Height()));
     obj.push_back(Pair("headers",               pindexBestHeader ? pindexBestHeader->nHeight : -1));
     obj.push_back(Pair("bestblockhash",         chainActive.Tip()->GetBlockHash().GetHex()));
-    obj.push_back(Pair("difficulty",            (double)GetDifficulty()));
+    obj.push_back(Pair("difficulty_sha256d",    (double)GetDifficulty(ALGO_SHA256D)));
+    obj.push_back(Pair("difficulty_scrypt",     (double)GetDifficulty(ALGO_SCRYPT)));
     obj.push_back(Pair("mediantime",            (int64_t)chainActive.Tip()->GetMedianTimePast()));
     obj.push_back(Pair("verificationprogress",  Checkpoints::GuessVerificationProgress(Params().Checkpoints(), chainActive.Tip())));
     obj.push_back(Pair("chainwork",             chainActive.Tip()->nChainWork.GetHex()));

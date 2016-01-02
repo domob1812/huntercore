@@ -64,18 +64,14 @@ int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParam
     if (nOldTime < nNewTime)
         pblock->nTime = nNewTime;
 
-    // FIXME: Probably we need to change the difficulty now as well,
-    // since the time changed.
-    // Updating time can change work required on testnet:
-    /*
-    if (consensusParams.AllowMinDifficultyBlocks(pblock->GetBlockTime()))
-        pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, consensusParams);
-    */
+    /* Difficulty retargetting depends on the block time, so update
+       the difficulty now.  */
+    pblock->nBits = GetNextWorkRequired(pindexPrev, pblock, consensusParams);
 
     return nNewTime - nOldTime;
 }
 
-CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& scriptPubKeyIn)
+CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, PowAlgo algo, const CScript& scriptPubKeyIn)
 {
     // Create new block
     auto_ptr<CBlockTemplate> pblocktemplate(new CBlockTemplate());
@@ -84,6 +80,7 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
     CBlock *pblock = &pblocktemplate->block; // pointer for convenience
 
     /* Initialise the block version.  */
+    pblock->nVersion.SetAlgo(algo);
     pblock->nVersion.SetBaseVersion(CBlockHeader::CURRENT_VERSION);
 
     // -regtest only: allow overriding block.nVersion with
@@ -461,7 +458,10 @@ void static BitcoinMiner(const CChainParams& chainparams)
             unsigned int nTransactionsUpdatedLast = mempool.GetTransactionsUpdated();
             CBlockIndex* pindexPrev = chainActive.Tip();
 
-            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(chainparams, coinbaseScript->reserveScript));
+            /* We always use SHA256D as algo.  Choosing the algo is only
+               implemented for "generate" (regtesting) and "getauxblock".
+               "setgenerate" (built-in miner) is obsolete.  */
+            auto_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(chainparams, ALGO_SHA256D, coinbaseScript->reserveScript));
             if (!pblocktemplate.get())
             {
                 LogPrintf("Error in BitcoinMiner: Keypool ran out, please call keypoolrefill before restarting the mining thread\n");

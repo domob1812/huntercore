@@ -33,11 +33,13 @@ class GetAuxBlockTest (BitcoinTestFramework):
 
     # Verify data that can be found in another way.
     assert_equal (auxblock['chainid'], 6)
+    assert_equal (auxblock['algo'], 0)
     assert_equal (auxblock['height'], self.nodes[0].getblockcount () + 1)
     assert_equal (auxblock['previousblockhash'], self.nodes[0].getblockhash (auxblock['height'] - 1))
 
     # Calling again should give the same block.
-    auxblock2 = self.nodes[0].getauxblock ()
+    # Try using the (default) algo parameter.
+    auxblock2 = self.nodes[0].getauxblock (0)
     assert_equal (auxblock2, auxblock)
 
     # If we receive a new block, the old hash will be replaced.

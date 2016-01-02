@@ -7,6 +7,7 @@
 #define BITCOIN_RPCSERVER_H
 
 #include "amount.h"
+#include "consensus/params.h"
 #include "rpcprotocol.h"
 #include "script/script.h"
 #include "uint256.h"
@@ -164,7 +165,8 @@ extern std::vector<unsigned char> ParseHexO(const UniValue& o, std::string strKe
 extern int64_t nWalletUnlockTime;
 extern CAmount AmountFromValue(const UniValue& value);
 extern UniValue ValueFromAmount(const CAmount& amount);
-extern double GetDifficulty(const CBlockIndex* blockindex = NULL);
+extern double GetDifficulty(const CBlockIndex* blockindex);
+extern double GetDifficulty(PowAlgo algo);
 extern std::string HelpRequiringPassphrase();
 extern std::string HelpExampleCli(const std::string& methodname, const std::string& args);
 extern std::string HelpExampleRpc(const std::string& methodname, const std::string& args);
@@ -178,6 +180,7 @@ extern UniValue getNameInfo(const valtype& name, const valtype& value, bool dead
 extern UniValue getNameInfo(const valtype& name, const CNameData& data);
 extern std::string getNameInfoHelp(const std::string& indent, const std::string& trailing);
 
+extern PowAlgo DecodeAlgoParam(const UniValue& param);
 extern UniValue GameInputToJSON(const CScript& scriptSig);
 
 extern UniValue getconnectioncount(const UniValue& params, bool fHelp); // in rpcnet.cpp

@@ -1,6 +1,8 @@
-* fix name RPC commands
+* basic regtests for name registration and update (in game context)
 
 * name_register RPC command
+
+* think about what to do with atomic name trading
 
 * extend unit tests for HUC-specific stuff
 
@@ -9,8 +11,6 @@
   not properly indexed?
 
 * apply (possibly upstream?) fix for redundant getheaders requests
-
-* fix "name_checkdb" - height data mismatch?
 
 * test and fix wallet handling; name_list, display of game tx, and so on
 

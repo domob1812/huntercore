@@ -4,6 +4,9 @@
 
 #include "base58.h"
 #include "coins.h"
+#include "game/db.h"
+#include "game/move.h"
+#include "game/state.h"
 #include "init.h"
 #include "main.h"
 #include "names/common.h"
@@ -45,6 +48,27 @@ getNamePrevout (const uint256& txid, CTxOut& txOut, CTxIn& txIn)
       }
 
   return false;
+}
+
+/**
+ * Compute required game fee for a certain move.
+ * @param name The name that is updated.
+ * @param value The value encoding the move.
+ * @return The required game fee for that move.
+ */
+static CAmount
+GetRequiredGameFee (const valtype& name, const valtype& value)
+{
+  Move m;
+  const bool ok = m.Parse (ValtypeToString (name), ValtypeToString (value));
+  if (!ok)
+    throw JSONRPCError (RPC_INVALID_PARAMETER, "invalid move");
+
+  {
+    LOCK (cs_main);
+    return m.MinimumGameFee (Params ().GetConsensus (),
+                             chainActive.Height () + 1);
+  }
 }
 
 /* ************************************************************************** */
@@ -195,7 +219,7 @@ name_new (const UniValue& params, bool fHelp)
   const CScript newScript = CNameScript::buildNameNew (addrName, hash);
 
   CWalletTx wtx;
-  SendMoneyToScript (newScript, NULL, NAME_LOCKED_AMOUNT, false, wtx);
+  SendMoneyToScript (newScript, NULL, NAMENEW_COIN_AMOUNT, false, wtx);
 
   keyName.KeepKey ();
 
@@ -265,8 +289,7 @@ name_firstupdate (const UniValue& params, bool fHelp)
   {
     LOCK (cs_main);
     CNameData oldData;
-    /* FIXME: Possibly check for non-dead player.  */
-    if (pcoinsTip->GetName (name, oldData))
+    if (pcoinsTip->GetName (name, oldData) && !oldData.isDead ())
       throw JSONRPCError (RPC_TRANSACTION_ERROR, "this name is already active");
   }
 
@@ -316,9 +339,10 @@ name_firstupdate (const UniValue& params, bool fHelp)
 
   const CScript nameScript
     = CNameScript::buildNameFirstupdate (addrName, name, value, rand);
+  const CAmount amount = GetRequiredGameFee (name, value);
 
   CWalletTx wtx;
-  SendMoneyToScript (nameScript, &txIn, NAME_LOCKED_AMOUNT, false, wtx);
+  SendMoneyToScript (nameScript, &txIn, amount, false, wtx);
 
   if (usedKey)
     keyName.KeepKey ();
@@ -372,12 +396,14 @@ name_update (const UniValue& params, bool fHelp)
   }
 
   CNameData oldData;
+  GameState gameState(Params ().GetConsensus ());
   {
     LOCK (cs_main);
-    /* FIXME: POssibly check for death.  */
-    if (!pcoinsTip->GetName (name, oldData))
+    if (!pcoinsTip->GetName (name, oldData) || oldData.isDead ())
       throw JSONRPCError (RPC_TRANSACTION_ERROR,
                           "this name can not be updated");
+    if (!pgameDb->get (pcoinsTip->GetBestBlock (), gameState))
+      throw JSONRPCError (RPC_INTERNAL_ERROR, "failed to load game state");
   }
 
   const COutPoint outp = oldData.getUpdateOutpoint ();
@@ -412,8 +438,16 @@ name_update (const UniValue& params, bool fHelp)
   const CScript nameScript
     = CNameScript::buildNameUpdate (addrName, name, value);
 
+  /* Find amount locked in the name and add required game fee.  */
+  const PlayerStateMap::const_iterator mi = gameState.players.find (nameStr);
+  if (mi == gameState.players.end ())
+    throw JSONRPCError (RPC_INTERNAL_ERROR,
+                        "failed to find player in game state");
+  CAmount amount = mi->second.lockedCoins;
+  amount += GetRequiredGameFee (name, value);
+
   CWalletTx wtx;
-  SendMoneyToScript (nameScript, &txIn, NAME_LOCKED_AMOUNT, false, wtx);
+  SendMoneyToScript (nameScript, &txIn, amount, false, wtx);
 
   if (usedKey)
     keyName.KeepKey ();

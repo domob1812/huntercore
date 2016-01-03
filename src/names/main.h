@@ -28,8 +28,8 @@ static const unsigned MAX_VALUE_LENGTH = 4095;
 static const unsigned MAX_NAME_LENGTH = 10;
 static const unsigned MIN_FIRSTUPDATE_DEPTH = 2;
 
-/** The amount of coins to lock in created transactions.  */
-static const CAmount NAME_LOCKED_AMOUNT = COIN / 100;
+/** Amount to lock (at least for minimum) in name_new.  */
+static const CAmount NAMENEW_COIN_AMOUNT = COIN / 5;
 
 /* ************************************************************************** */
 /* CNameTxUndo.  */

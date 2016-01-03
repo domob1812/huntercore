@@ -17,8 +17,6 @@
 #include "util.h"
 #include "utilstrencodings.h"
 
-static const CAmount NAMENEW_COIN_AMOUNT = COIN / 5;
-
 /* ************************************************************************** */
 /* CNameTxUndo.  */
 
@@ -548,7 +546,7 @@ CheckNameDB (bool disconnect)
     }
 
   pcoinsTip->Flush ();
-  const bool ok = pcoinsTip->ValidateNameDB ();
+  const bool ok = pcoinsTip->ValidateNameDB (*pgameDb);
 
   if (!ok)
     {

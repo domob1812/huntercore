@@ -55,9 +55,6 @@ struct Move
     // Move must be empty before Parse and cannot be reused after Parse
     bool Parse(const PlayerID &player, const std::string &json);
 
-    // Returns true if move is initialized (i.e. was parsed successfully)
-    //operator bool() { return !player.empty(); }
-
     /**
      * Return the minimum required "game fee" for this move.  The params
      * and block height are used to decide about fork states.

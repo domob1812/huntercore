@@ -42,7 +42,7 @@ public:
     CNameIterator* IterateNames() const;
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names);
     bool GetStats(CCoinsStats &stats) const;
-    bool ValidateNameDB() const;
+    bool ValidateNameDB(CGameDB& gameDb) const;
 };
 
 /** Access to the block database (blocks/index/) */

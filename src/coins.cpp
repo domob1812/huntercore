@@ -63,7 +63,7 @@ bool CCoinsView::GetNameHistory(const valtype &name, CNameHistory &data) const {
 CNameIterator* CCoinsView::IterateNames() const { assert (false); }
 bool CCoinsView::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names) { return false; }
 bool CCoinsView::GetStats(CCoinsStats &stats) const { return false; }
-bool CCoinsView::ValidateNameDB() const { return false; }
+bool CCoinsView::ValidateNameDB(CGameDB& gameDb) const { return false; }
 
 
 CCoinsViewBacked::CCoinsViewBacked(CCoinsView *viewIn) : base(viewIn) { }
@@ -76,7 +76,7 @@ CNameIterator* CCoinsViewBacked::IterateNames() const { return base->IterateName
 void CCoinsViewBacked::SetBackend(CCoinsView &viewIn) { base = &viewIn; }
 bool CCoinsViewBacked::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names) { return base->BatchWrite(mapCoins, hashBlock, names); }
 bool CCoinsViewBacked::GetStats(CCoinsStats &stats) const { return base->GetStats(stats); }
-bool CCoinsViewBacked::ValidateNameDB() const { return base->ValidateNameDB(); }
+bool CCoinsViewBacked::ValidateNameDB(CGameDB& gameDb) const { return base->ValidateNameDB(gameDb); }
 
 CCoinsKeyHasher::CCoinsKeyHasher() : salt(GetRandHash()) {}
 

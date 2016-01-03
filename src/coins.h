@@ -19,6 +19,7 @@
 #include <boost/foreach.hpp>
 #include <boost/unordered_map.hpp>
 
+class CGameDB;
 class CTxInUndo;
 
 /** 
@@ -358,7 +359,7 @@ public:
     virtual bool GetStats(CCoinsStats &stats) const;
 
     // Validate the name database.
-    virtual bool ValidateNameDB() const;
+    virtual bool ValidateNameDB(CGameDB& gameDb) const;
 
     //! As we use CCoinsViews polymorphically, have a virtual destructor
     virtual ~CCoinsView() {}
@@ -382,7 +383,7 @@ public:
     void SetBackend(CCoinsView &viewIn);
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names);
     bool GetStats(CCoinsStats &stats) const;
-    bool ValidateNameDB() const;
+    bool ValidateNameDB(CGameDB& gameDb) const;
 };
 
 

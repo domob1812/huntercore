@@ -7,6 +7,8 @@
 
 #include "chain.h"
 #include "chainparams.h"
+#include "game/db.h"
+#include "game/state.h"
 #include "hash.h"
 #include "main.h"
 #include "pow.h"
@@ -226,8 +228,15 @@ bool CBlockTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBlockF
     return WriteBatch(batch, true);
 }
 
-bool CCoinsViewDB::ValidateNameDB() const
+bool CCoinsViewDB::ValidateNameDB(CGameDB& gameDb) const
 {
+    /* Skip for genesis block, since there is no game state available yet
+       (test would fail below).  There's not really anything to verify
+       for the genesis block anyway.  */
+    const uint256 blockHash = GetBestBlock();
+    if (blockHash.IsNull())
+        return true;
+
     /* It seems that there are no "const iterators" for LevelDB.  Since we
        only need read operations on it, use a const-cast to get around
        that restriction.  */
@@ -238,11 +247,10 @@ bool CCoinsViewDB::ValidateNameDB() const
        things to memory.  We later use that to check
        everything against each other.  */
 
-    std::map<valtype, unsigned> nameHeightsIndex;
-    std::map<valtype, unsigned> nameHeightsData;
+    std::set<valtype> namesTotal;
     std::set<valtype> namesInDB;
-    std::set<valtype> namesInUTXO;
     std::set<valtype> namesWithHistory;
+    std::map<valtype, CAmount> namesInUTXO;
 
     for (; pcursor->Valid(); pcursor->Next())
     {
@@ -269,7 +277,8 @@ bool CCoinsViewDB::ValidateNameDB() const
                         if (namesInUTXO.count(name) > 0)
                             return error("%s : name %s duplicated in UTXO set",
                                          __func__, ValtypeToString(name).c_str());
-                        namesInUTXO.insert(nameOp.getOpName());
+                        namesInUTXO.insert(std::make_pair(nameOp.getOpName(),
+                                                          txout.nValue));
                     }
                 }
             break;
@@ -286,14 +295,14 @@ bool CCoinsViewDB::ValidateNameDB() const
             if (!pcursor->GetValue(data))
                 return error("%s : failed to read name value", __func__);
 
-            if (nameHeightsData.count(name) > 0)
+            if (namesTotal.count(name) > 0)
                 return error("%s : name %s duplicated in name index",
                              __func__, ValtypeToString(name).c_str());
-            nameHeightsData.insert(std::make_pair(name, data.getHeight()));
+            namesTotal.insert(name);
             
-            /* FIXME: Possibly check for dead players?  */
             assert(namesInDB.count(name) == 0);
-            namesInDB.insert(name);
+            if (!data.isDead ())
+                namesInDB.insert(name);
             break;
         }
 
@@ -317,26 +326,40 @@ bool CCoinsViewDB::ValidateNameDB() const
         }
     }
 
+    std::map<valtype, CAmount> namesInGame;
+    GameState state(Params().GetConsensus());
+    if (!gameDb.get(blockHash, state))
+        return error("%s : failed to read game state", __func__);
+    for (PlayerStateMap::const_iterator mi = state.players.begin();
+         mi != state.players.end(); ++mi)
+    {
+        const valtype cur = ValtypeFromString(mi->first);
+        if (namesInGame.count(cur) > 0)
+            return error("%s : name %s is duplicate in the game state",
+                         __func__, mi->first.c_str());
+        namesInGame.insert(std::make_pair(cur, mi->second.lockedCoins));
+    }
+
     /* Now verify the collected data.  */
 
-    assert (nameHeightsData.size() >= namesInDB.size());
+    assert (namesTotal.size() >= namesInDB.size());
 
-    if (nameHeightsIndex != nameHeightsData)
-        return error("%s : name height data mismatch", __func__);
+    if (namesInGame != namesInUTXO)
+        return error("%s : game state and name DB mismatch", __func__);
 
     BOOST_FOREACH(const valtype& name, namesInDB)
         if (namesInUTXO.count(name) == 0)
             return error("%s : name '%s' in DB but not UTXO set",
                          __func__, ValtypeToString(name).c_str());
-    BOOST_FOREACH(const valtype& name, namesInUTXO)
-        if (namesInDB.count(name) == 0)
+    BOOST_FOREACH(const PAIRTYPE(valtype, CAmount)& pair, namesInUTXO)
+        if (namesInDB.count(pair.first) == 0)
             return error("%s : name '%s' in UTXO set but not DB",
-                         __func__, ValtypeToString(name).c_str());
+                         __func__, ValtypeToString(pair.first).c_str());
 
     if (fNameHistory)
     {
         BOOST_FOREACH(const valtype& name, namesWithHistory)
-            if (nameHeightsData.count(name) == 0)
+            if (namesTotal.count(name) == 0)
                 return error("%s : history entry for name '%s' not in main DB",
                              __func__, ValtypeToString(name).c_str());
     } else if (!namesWithHistory.empty ())
@@ -344,7 +367,7 @@ bool CCoinsViewDB::ValidateNameDB() const
                      " -namehistory not set", __func__);
 
     LogPrintf("Checked name database, %u living player names, %u total.\n",
-              namesInDB.size(), nameHeightsData.size());
+              namesInDB.size(), namesTotal.size());
     LogPrintf("Names with history: %u\n", namesWithHistory.size());
 
     return true;

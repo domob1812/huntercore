@@ -153,7 +153,9 @@ AddRawTxNameOperation (CMutableTransaction& tx, const UniValue& obj)
      doesn't depend on the chainstate at all.  */
 
   const CScript outScript = CNameScript::buildNameUpdate (addr, name, value);
-  tx.vout.push_back (CTxOut (NAME_LOCKED_AMOUNT, outScript));
+  /* FIXME: This amount is not correct for Huntercoin.  Think about
+     how to fix it, or change interface of atomic trading?  */
+  tx.vout.push_back (CTxOut (COIN, outScript));
 }
 
 /* ************************************************************************** */
@@ -538,5 +540,5 @@ name_checkdb (const UniValue& params, bool fHelp)
 
   LOCK (cs_main);
   pcoinsTip->Flush ();
-  return pcoinsTip->ValidateNameDB ();
+  return pcoinsTip->ValidateNameDB (*pgameDb);
 }

@@ -111,15 +111,18 @@ testScripts = [
     'dualalgo.py',
 
     # name tests
-    'name_expiration.py',
-    'name_list.py',
-    'name_multisig.py',
-    'name_pending.py',
-    'name_rawtx.py',
-    'name_registration.py',
-    'name_reorg.py',
-    'name_scanning.py',
-    'name_wallet.py',
+    #'name_expiration.py',
+    #'name_list.py',
+    #'name_multisig.py',
+    #'name_pending.py',
+    #'name_rawtx.py',
+    #'name_registration.py',
+    #'name_reorg.py',
+    #'name_scanning.py',
+    #'name_wallet.py',
+
+    # game tests
+    'game_basicnames.py',
 ]
 testScriptsExt = [
     'bip65-cltv.py',

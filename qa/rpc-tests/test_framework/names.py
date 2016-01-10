@@ -35,27 +35,26 @@ class NameTestFramework (BitcoinTestFramework):
     self.nodes[ind].generate (blocks)
     self.sync_all ('blocks')
 
-  def checkName (self, ind, name, value, expiresIn, expired):
+  def checkName (self, ind, name, value, dead):
     """
     Query a name with name_show and check that certain data fields
     match the expectations.  Returns the full JSON object.
     """
 
     data = self.nodes[ind].name_show (name)
-    self.checkNameData (data, name, value, expiresIn, expired)
+    self.checkNameData (data, name, value, dead)
 
     return data
 
-  def checkNameData (self, data, name, value, expiresIn, expired):
+  def checkNameData (self, data, name, value, dead):
     """
     Check a name info object against expected data.
     """
 
     assert_equal (data['name'], name)
-    assert_equal (data['value'], value)
-    if (expiresIn is not None):
-      assert_equal (data['expires_in'], expiresIn)
-    assert_equal (data['expired'], expired)
+    if not dead:
+      assert_equal (data['value'], value)
+    assert_equal (data['dead'], dead)
 
   def checkNameHistory (self, ind, name, values):
     """

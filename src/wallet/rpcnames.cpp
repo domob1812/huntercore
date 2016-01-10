@@ -197,6 +197,8 @@ name_new (const UniValue& params, bool fHelp)
   const valtype name = ValtypeFromString (nameStr);
   if (name.size () > MAX_NAME_LENGTH)
     throw JSONRPCError (RPC_INVALID_PARAMETER, "the name is too long");
+  if (!Move::IsValidPlayerName (nameStr))
+    throw JSONRPCError (RPC_INVALID_PARAMETER, "the name is not valid");
 
   valtype rand(20);
   GetRandBytes (&rand[0], rand.size ());
@@ -267,6 +269,8 @@ name_firstupdate (const UniValue& params, bool fHelp)
   const valtype name = ValtypeFromString (nameStr);
   if (name.size () > MAX_NAME_LENGTH)
     throw JSONRPCError (RPC_INVALID_PARAMETER, "the name is too long");
+  if (!Move::IsValidPlayerName (nameStr))
+    throw JSONRPCError (RPC_INVALID_PARAMETER, "the name is not valid");
 
   const valtype rand = ParseHexV (params[1], "rand");
   if (rand.size () > 20)

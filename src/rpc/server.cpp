@@ -1,9 +1,9 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2014 The Bitcoin Core developers
+// Copyright (c) 2009-2015 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "rpcserver.h"
+#include "rpc/server.h"
 
 #include "base58.h"
 #include "init.h"
@@ -33,7 +33,7 @@ static bool fRPCInWarmup = true;
 static std::string rpcWarmupStatus("RPC server started");
 static CCriticalSection cs_rpcWarmup;
 /* Timer-creating functions */
-static std::vector<RPCTimerInterface*> timerInterfaces;
+static RPCTimerInterface* timerInterface = NULL;
 /* Map of name to timer.
  * @note Can be changed to std::unique_ptr when C++11 */
 static std::map<std::string, boost::shared_ptr<RPCTimerBase> > deadlineTimers;
@@ -310,9 +310,6 @@ static const CRPCCommand vRPCCommands[] =
     { "rawtransactions",    "getrawtransaction",      &getrawtransaction,      true  },
     { "rawtransactions",    "sendrawtransaction",     &sendrawtransaction,     false },
     { "rawtransactions",    "signrawtransaction",     &signrawtransaction,     false }, /* uses wallet if enabled */
-#ifdef ENABLE_WALLET
-    { "rawtransactions",    "fundrawtransaction",     &fundrawtransaction,     false },
-#endif
 
     /* Utility functions */
     { "util",               "createmultisig",         &createmultisig,         true  },
@@ -327,9 +324,6 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",             "invalidateblock",        &invalidateblock,        true  },
     { "hidden",             "reconsiderblock",        &reconsiderblock,        true  },
     { "hidden",             "setmocktime",            &setmocktime,            true  },
-#ifdef ENABLE_WALLET
-    { "hidden",             "resendwallettransactions", &resendwallettransactions, true},
-#endif
 
     /* Namecoin functions */
     { "namecoin",           "name_show",              &name_show,              true },
@@ -337,62 +331,11 @@ static const CRPCCommand vRPCCommands[] =
     { "namecoin",           "name_scan",              &name_scan,              true },
     { "namecoin",           "name_filter",            &name_filter,            true },
     { "namecoin",           "name_pending",           &name_pending,           true  },
-    { "namecoin",           "name_checkdb",           &name_checkdb,           true },
-#ifdef ENABLE_WALLET
-    { "namecoin",           "name_list",              &name_list,              true },
-    { "namecoin",           "name_new",               &name_new,               false },
-    { "namecoin",           "name_firstupdate",       &name_firstupdate,       false },
-    { "namecoin",           "name_update",            &name_update,            false },
-    { "namecoin",           "sendtoname",             &sendtoname,             false },
-#endif // ENABLE_WALLET
+    { "namecoin",           "name_checkdb",           &name_checkdb,           false },
 
     /* Game functions */
     { "game",               "game_getplayerstate",    &game_getplayerstate,    true },
     { "game",               "game_getstate",          &game_getstate,          true },
-
-#ifdef ENABLE_WALLET
-    /* Wallet */
-    { "wallet",             "addmultisigaddress",     &addmultisigaddress,     true  },
-    { "wallet",             "backupwallet",           &backupwallet,           true  },
-    { "wallet",             "dumpprivkey",            &dumpprivkey,            true  },
-    { "wallet",             "dumpwallet",             &dumpwallet,             true  },
-    { "wallet",             "encryptwallet",          &encryptwallet,          true  },
-    { "wallet",             "getaccountaddress",      &getaccountaddress,      true  },
-    { "wallet",             "getaccount",             &getaccount,             true  },
-    { "wallet",             "getaddressesbyaccount",  &getaddressesbyaccount,  true  },
-    { "wallet",             "getbalance",             &getbalance,             false },
-    { "wallet",             "getnewaddress",          &getnewaddress,          true  },
-    { "wallet",             "getrawchangeaddress",    &getrawchangeaddress,    true  },
-    { "wallet",             "getreceivedbyaccount",   &getreceivedbyaccount,   false },
-    { "wallet",             "getreceivedbyaddress",   &getreceivedbyaddress,   false },
-    { "wallet",             "gettransaction",         &gettransaction,         false },
-    { "wallet",             "getunconfirmedbalance",  &getunconfirmedbalance,  false },
-    { "wallet",             "getwalletinfo",          &getwalletinfo,          false },
-    { "wallet",             "importprivkey",          &importprivkey,          true  },
-    { "wallet",             "importwallet",           &importwallet,           true  },
-    { "wallet",             "importaddress",          &importaddress,          true  },
-    { "wallet",             "importpubkey",           &importpubkey,           true  },
-    { "wallet",             "keypoolrefill",          &keypoolrefill,          true  },
-    { "wallet",             "listaccounts",           &listaccounts,           false },
-    { "wallet",             "listaddressgroupings",   &listaddressgroupings,   false },
-    { "wallet",             "listlockunspent",        &listlockunspent,        false },
-    { "wallet",             "listreceivedbyaccount",  &listreceivedbyaccount,  false },
-    { "wallet",             "listreceivedbyaddress",  &listreceivedbyaddress,  false },
-    { "wallet",             "listsinceblock",         &listsinceblock,         false },
-    { "wallet",             "listtransactions",       &listtransactions,       false },
-    { "wallet",             "listunspent",            &listunspent,            false },
-    { "wallet",             "lockunspent",            &lockunspent,            true  },
-    { "wallet",             "move",                   &movecmd,                false },
-    { "wallet",             "sendfrom",               &sendfrom,               false },
-    { "wallet",             "sendmany",               &sendmany,               false },
-    { "wallet",             "sendtoaddress",          &sendtoaddress,          false },
-    { "wallet",             "setaccount",             &setaccount,             true  },
-    { "wallet",             "settxfee",               &settxfee,               true  },
-    { "wallet",             "signmessage",            &signmessage,            true  },
-    { "wallet",             "walletlock",             &walletlock,             true  },
-    { "wallet",             "walletpassphrasechange", &walletpassphrasechange, true  },
-    { "wallet",             "walletpassphrase",       &walletpassphrase,       true  },
-#endif // ENABLE_WALLET
 };
 
 CRPCTable::CRPCTable()
@@ -413,6 +356,20 @@ const CRPCCommand *CRPCTable::operator[](const std::string &name) const
     if (it == mapCommands.end())
         return NULL;
     return (*it).second;
+}
+
+bool CRPCTable::appendCommand(const std::string& name, const CRPCCommand* pcmd)
+{
+    if (IsRPCRunning())
+        return false;
+
+    // don't allow overwriting for now
+    map<string, const CRPCCommand*>::const_iterator it = mapCommands.find(name);
+    if (it != mapCommands.end())
+        return false;
+
+    mapCommands[name] = pcmd;
+    return true;
 }
 
 bool StartRPC()
@@ -566,26 +523,30 @@ std::string HelpExampleRpc(const std::string& methodname, const std::string& arg
         "\"method\": \"" + methodname + "\", \"params\": [" + args + "] }' -H 'content-type: text/plain;' http://127.0.0.1:8336/\n";
 }
 
-void RPCRegisterTimerInterface(RPCTimerInterface *iface)
+void RPCSetTimerInterfaceIfUnset(RPCTimerInterface *iface)
 {
-    timerInterfaces.push_back(iface);
+    if (!timerInterface)
+        timerInterface = iface;
 }
 
-void RPCUnregisterTimerInterface(RPCTimerInterface *iface)
+void RPCSetTimerInterface(RPCTimerInterface *iface)
 {
-    std::vector<RPCTimerInterface*>::iterator i = std::find(timerInterfaces.begin(), timerInterfaces.end(), iface);
-    assert(i != timerInterfaces.end());
-    timerInterfaces.erase(i);
+    timerInterface = iface;
+}
+
+void RPCUnsetTimerInterface(RPCTimerInterface *iface)
+{
+    if (timerInterface == iface)
+        timerInterface = NULL;
 }
 
 void RPCRunLater(const std::string& name, boost::function<void(void)> func, int64_t nSeconds)
 {
-    if (timerInterfaces.empty())
+    if (!timerInterface)
         throw JSONRPCError(RPC_INTERNAL_ERROR, "No timer handler registered for RPC");
     deadlineTimers.erase(name);
-    RPCTimerInterface* timerInterface = timerInterfaces[0];
     LogPrint("rpc", "queue run of timer %s in %i seconds (using %s)\n", name, nSeconds, timerInterface->Name());
     deadlineTimers.insert(std::make_pair(name, boost::shared_ptr<RPCTimerBase>(timerInterface->NewTimer(func, nSeconds*1000))));
 }
 
-const CRPCTable tableRPC;
+CRPCTable tableRPC;

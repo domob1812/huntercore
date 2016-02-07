@@ -1,14 +1,11 @@
 *.tar.gz
 
 *.exe
-src/bitcoind
-src/bitcoin-cli
-src/bitcoin-tx
 src/huntercoind
 src/huntercoin-cli
 src/huntercoin-tx
-src/test/test_bitcoin
-src/qt/test/test_bitcoin-qt
+src/test/test_huntercoin
+src/qt/test/test_huntercoin-qt
 
 # autoreconf
 Makefile.in

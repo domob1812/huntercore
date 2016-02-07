@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2014 The Bitcoin Core developers
+// Copyright (c) 2009-2015 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -260,7 +260,6 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, PowAlgo algo, co
 
                         const CNameScript op(coins.vout[prevout.n].scriptPubKey);
                         if (op.isNameOp() && op.getNameOp() == OP_NAME_NEW) {
-
                             const unsigned newHeight = pindexPrev->nHeight + 1;
                             if (coins.nHeight + MIN_FIRSTUPDATE_DEPTH > newHeight)
                                 immatureNew = true;

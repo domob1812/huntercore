@@ -17,7 +17,7 @@
 
 #include "game/map.h"
 #include "game/move.h"
-#include "rpcserver.h"
+#include "rpc/server.h"
 #include "util.h"
 #include "utilstrencodings.h"
 

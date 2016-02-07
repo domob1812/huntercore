@@ -11,22 +11,8 @@ from test_framework.util import *
 class MempoolLimitTest(BitcoinTestFramework):
 
     def __init__(self):
-        # Some pre-processing to create a bunch of OP_RETURN txouts to insert into transactions we create
-        # So we have big transactions (and therefore can't fit very many into each block)
-        # create one script_pubkey
-        script_pubkey = "6a4d0200" #OP_RETURN OP_PUSH2 512 bytes
-        for i in xrange (512):
-            script_pubkey = script_pubkey + "01"
-        # concatenate 128 txouts of above script_pubkey which we'll insert before the txout for change
-        self.txouts = "81"
-        for k in xrange(128):
-            # add txout value
-            self.txouts = self.txouts + "0000000000000000"
-            # add length of script_pubkey
-            self.txouts = self.txouts + "fd0402"
-            # add script_pubkey
-            self.txouts = self.txouts + script_pubkey
-                    
+        self.txouts = gen_return_txouts()
+
     def setup_network(self):
         self.nodes = []
         self.nodes.append(start_node(0, self.options.tmpdir, ["-maxmempool=5", "-spendzeroconfchange=0", "-debug"]))
@@ -47,7 +33,9 @@ class MempoolLimitTest(BitcoinTestFramework):
         inputs = [{ "txid" : us0["txid"], "vout" : us0["vout"]}]
         outputs = {self.nodes[0].getnewaddress() : 0.001}
         tx = self.nodes[0].createrawtransaction(inputs, outputs)
+        self.nodes[0].settxfee(self.relayfee) # specifically fund this tx with low fee
         txF = self.nodes[0].fundrawtransaction(tx)
+        self.nodes[0].settxfee(0) # return to automatic fee selection
         txFS = self.nodes[0].signrawtransaction(txF['hex'])
         txid = self.nodes[0].sendrawtransaction(txFS['hex'])
         self.nodes[0].lockunspent(True, [us0])
@@ -60,7 +48,7 @@ class MempoolLimitTest(BitcoinTestFramework):
 
         # by now, the tx should be evicted, check confirmation state
         assert(txid not in self.nodes[0].getrawmempool())
-        txdata = self.nodes[0].gettransaction(txid);
+        txdata = self.nodes[0].gettransaction(txid)
         assert(txdata['confirmations'] ==  0) #confirmation should still be 0
 
 if __name__ == '__main__':

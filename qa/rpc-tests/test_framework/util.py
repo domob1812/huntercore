@@ -1,4 +1,4 @@
-# Copyright (c) 2014 The Bitcoin Core developers
+# Copyright (c) 2014-2015 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #
@@ -22,6 +22,26 @@ from .authproxy import AuthServiceProxy, JSONRPCException
 
 COVERAGE_DIR = None
 
+#Set Mocktime default to OFF.
+#MOCKTIME is only needed for scripts that use the
+#cached version of the blockchain.  If the cached
+#version of the blockchain is used without MOCKTIME
+#then the mempools will not sync due to IBD.
+MOCKTIME = 0
+
+def enable_mocktime():
+    #For backwared compatibility of the python scripts
+    #with previous versions of the cache, set MOCKTIME 
+    #to Jan 1, 2014 + (201 * 10 * 60)
+    global MOCKTIME
+    MOCKTIME = 1388534400 + (201 * 10 * 60)
+
+def disable_mocktime():
+    global MOCKTIME
+    MOCKTIME = 0
+
+def get_mocktime():
+    return MOCKTIME
 
 def enable_coverage(dirname):
     """Maintain a log of which RPC calls are made during testing."""
@@ -102,12 +122,12 @@ def initialize_datadir(dirname, n):
     if not os.path.isdir(datadir):
         os.makedirs(datadir)
     with open(os.path.join(datadir, "huntercoin.conf"), 'w') as f:
-        f.write("regtest=1\n");
-        f.write("rpcuser=rt\n");
-        f.write("rpcpassword=rt\n");
-        f.write("port="+str(p2p_port(n))+"\n");
-        f.write("rpcport="+str(rpc_port(n))+"\n");
-        f.write("listenonion=0\n");
+        f.write("regtest=1\n")
+        f.write("rpcuser=rt\n")
+        f.write("rpcpassword=rt\n")
+        f.write("port="+str(p2p_port(n))+"\n")
+        f.write("rpcport="+str(rpc_port(n))+"\n")
+        f.write("listenonion=0\n")
     return datadir
 
 def base_node_args(i):
@@ -172,9 +192,10 @@ def initialize_chain(test_dir):
 
         # Create a 200-block-long chain; each of the 4 nodes
         # gets 25 mature blocks and 25 immature.
-        # blocks are created with timestamps 10 minutes apart, starting
-        # at 1 Jan 2014
-        block_time = 1388534400
+        # blocks are created with timestamps 10 minutes apart
+        # starting from 2010 minutes in the past
+        enable_mocktime()
+        block_time = get_mocktime() - (201 * 10 * 60)
         for i in range(2):
             for peer in range(4):
                 for j in range(25):
@@ -187,6 +208,7 @@ def initialize_chain(test_dir):
         # Shut them down, and clean up cache directories:
         stop_nodes(rpcs)
         wait_bitcoinds()
+        disable_mocktime()
         for i in range(4):
             os.remove(log_filename("cache", i, "debug.log"))
             os.remove(log_filename("cache", i, "db.log"))
@@ -235,8 +257,7 @@ def start_node(i, dirname, extra_args=[], rpchost=None, timewait=None, binary=No
     datadir = os.path.join(dirname, "node"+str(i))
     if binary is None:
         binary = os.getenv("BITCOIND", "huntercoind")
-    # RPC tests still depend on free transactions
-    args = [ binary, "-datadir="+datadir, "-server", "-keypool=1", "-discover=0", "-rest", "-blockprioritysize=50000" ]
+    args = [ binary, "-datadir="+datadir, "-server", "-keypool=1", "-discover=0", "-rest", "-mocktime="+str(get_mocktime()) ]
     if extra_args is not None: args.extend(extra_args)
     args.extend(base_node_args(i))
     bitcoind_processes[i] = subprocess.Popen(args)
@@ -425,6 +446,23 @@ def assert_raises(exc, fun, *args, **kwds):
     else:
         raise AssertionError("No exception raised")
 
+def assert_is_hex_string(string):
+    try:
+        int(string, 16)
+    except Exception as e:
+        raise AssertionError(
+            "Couldn't interpret %r as hexadecimal; raised: %s" % (string, e))
+
+def assert_is_hash_string(string, length=64):
+    if not isinstance(string, basestring):
+        raise AssertionError("Expected a string, got type %r" % type(string))
+    elif length and len(string) != length:
+        raise AssertionError(
+            "String of length %d expected; got %d" % (length, len(string)))
+    elif not re.match('[abcdef0-9]+$', string):
+        raise AssertionError(
+            "String %r contains invalid characters for a hash." % string)
+
 def satoshi_round(amount):
     return  Decimal(amount).quantize(Decimal('0.00000001'), rounding=ROUND_DOWN)
 
@@ -454,6 +492,24 @@ def create_confirmed_utxos(fee, node, count):
     utxos = node.listunspent()
     assert(len(utxos) >= count)
     return utxos
+
+def gen_return_txouts():
+    # Some pre-processing to create a bunch of OP_RETURN txouts to insert into transactions we create
+    # So we have big transactions (and therefore can't fit very many into each block)
+    # create one script_pubkey
+    script_pubkey = "6a4d0200" #OP_RETURN OP_PUSH2 512 bytes
+    for i in xrange (512):
+        script_pubkey = script_pubkey + "01"
+    # concatenate 128 txouts of above script_pubkey which we'll insert before the txout for change
+    txouts = "81"
+    for k in xrange(128):
+        # add txout value
+        txouts = txouts + "0000000000000000"
+        # add length of script_pubkey
+        txouts = txouts + "fd0402"
+        # add script_pubkey
+        txouts = txouts + script_pubkey
+    return txouts
 
 def create_lots_of_big_transactions(node, txouts, utxos, fee):
     addr = node.getnewaddress()

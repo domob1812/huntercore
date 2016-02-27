@@ -2568,6 +2568,7 @@ const CRPCCommand vWalletRPCCommands[] =
     { "namecoin",           "name_new",                 &name_new,                 false },
     { "namecoin",           "name_firstupdate",         &name_firstupdate,         false },
     { "namecoin",           "name_update",              &name_update,              false },
+    { "namecoin",           "name_register",            &name_register,            false },
     { "namecoin",           "sendtoname",               &sendtoname,               false },
 };
 

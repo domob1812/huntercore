@@ -470,6 +470,97 @@ name_update (const UniValue& params, bool fHelp)
 /* ************************************************************************** */
 
 UniValue
+name_register (const UniValue& params, bool fHelp)
+{
+  if (!EnsureWalletIsAvailable (fHelp))
+    return NullUniValue;
+
+  if (fHelp || params.size () < 2 || params.size () > 3)
+    throw std::runtime_error (
+        "name_register \"name\" \"value\" (\"toaddress\")\n"
+        "\nRegister a new player name according to the 'new-style rules'.\n"
+        + HelpRequiringPassphrase () +
+        "\nArguments:\n"
+        "1. \"name\"          (string, required) the name to register\n"
+        "2. \"value\"         (string, required) value for the name\n"
+        "3. \"toaddress\"     (string, optional) address to send the name to\n"
+        "\nResult:\n"
+        "\"txid\"             (string) the name_firstupdate's txid\n"
+        "\nExamples:\n"
+        + HelpExampleCli ("name_register", "\"myname\", \"my-value\"")
+        + HelpExampleCli ("name_register", "\"myname\", \"my-value\", \"NEX4nME5p3iyNK3gFh4FUeUriHXxEFemo9\"")
+        + HelpExampleRpc ("name_register", "\"myname\", \"my-value\"")
+      );
+
+  const std::string nameStr = params[0].get_str ();
+  const valtype name = ValtypeFromString (nameStr);
+  if (name.size () > MAX_NAME_LENGTH)
+    throw JSONRPCError (RPC_INVALID_PARAMETER, "the name is too long");
+  if (!Move::IsValidPlayerName (nameStr))
+    throw JSONRPCError (RPC_INVALID_PARAMETER, "the name is not valid");
+
+  const std::string valueStr = params[1].get_str ();
+  const valtype value = ValtypeFromString (valueStr);
+  if (value.size () > MAX_VALUE_LENGTH)
+    throw JSONRPCError (RPC_INVALID_PARAMETER, "the value is too long");
+
+  {
+    LOCK (mempool.cs);
+    if (mempool.registersName (name))
+      throw JSONRPCError (RPC_TRANSACTION_ERROR,
+                          "this name is already being registered");
+  }
+
+  {
+    LOCK (cs_main);
+    CNameData oldData;
+    if (pcoinsTip->GetName (name, oldData) && !oldData.isDead ())
+      throw JSONRPCError (RPC_TRANSACTION_ERROR,
+                          "this name is already active");
+  }
+
+  /* No more locking required, similarly to name_new.  */
+
+  EnsureWalletIsUnlocked ();
+
+  CReserveKey keyName(pwalletMain);
+  CPubKey pubKeyReserve;
+  const bool ok = keyName.GetReservedKey (pubKeyReserve);
+  assert (ok);
+  bool usedKey = false;
+
+  CScript addrName;
+  if (params.size () >= 3)
+    {
+      keyName.ReturnKey ();
+      const CBitcoinAddress toAddress(params[2].get_str ());
+      if (!toAddress.IsValid ())
+        throw JSONRPCError (RPC_INVALID_ADDRESS_OR_KEY, "invalid address");
+
+      addrName = GetScriptForDestination (toAddress.Get ());
+    }
+  else
+    {
+      usedKey = true;
+      addrName = GetScriptForDestination (pubKeyReserve.GetID ());
+    }
+
+  const CScript nameScript
+    = CNameScript::buildNameRegister (addrName, name, value);
+  const CAmount amount = GetRequiredGameFee (name, value);
+
+  CWalletTx wtx;
+  SendMoneyToScript (nameScript, NULL, amount, false, wtx);
+
+  if (usedKey)
+    keyName.KeepKey ();
+
+  return wtx.GetHash ().GetHex ();
+}
+
+/* ************************************************************************** */
+
+UniValue
 sendtoname (const UniValue& params, bool fHelp)
 {
   if (!EnsureWalletIsAvailable (fHelp))

@@ -98,5 +98,14 @@ class GameBasicNamesTest (NameTestFramework):
     state = self.nodes[2].game_getstate ()
     assert_equal (state['players'], {testname: dat})
 
+    # Also perform a new-style name_register registration.
+    self.nodes[1].name_register ("newstyle", '{"color":1}')
+    self.generate (0, 1)
+    self.checkName (2, "newstyle", '{"color":1}', False)
+    dat = self.nodes[2].game_getplayerstate ("newstyle")
+    state = self.nodes[2].game_getstate ()
+    assert_equal (len (state['players']), 2)
+    assert_equal (state['players']['newstyle'], dat)
+
 if __name__ == '__main__':
   GameBasicNamesTest ().main ()

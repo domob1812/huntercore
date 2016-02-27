@@ -15,8 +15,11 @@ static const int COINBASE_MATURITY = 100;
 /** Maturity for game rewards.  */
 static const int GAMETX_MATURITY = 100;
 
-/** Flags for LockTime() */
+/** Flags for nSequence and nLockTime locks */
 enum {
+    /* Interpret sequence numbers as relative lock-time constraints. */
+    LOCKTIME_VERIFY_SEQUENCE = (1 << 0),
+
     /* Use GetMedianTimePast() instead of nTime for end point timestamp. */
     LOCKTIME_MEDIAN_TIME_PAST = (1 << 1),
 };

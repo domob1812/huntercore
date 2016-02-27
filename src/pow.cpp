@@ -9,7 +9,6 @@
 #include "chain.h"
 #include "primitives/block.h"
 #include "uint256.h"
-#include "util.h"
 
 static const CBlockIndex*
 GetLastBlockIndex(const CBlockIndex* pindex, PowAlgo algo)
@@ -109,11 +108,11 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, PowAlgo algo, const Cons
 
     // Check range
     if (fNegative || bnTarget == 0 || fOverflow || bnTarget > UintToArith256(params.powLimit[algo]))
-        return error("CheckProofOfWork(): nBits below minimum work");
+        return false;
 
     // Check proof of work matches claimed amount
     if (UintToArith256(hash) > bnTarget)
-        return error("CheckProofOfWork(): hash doesn't match nBits");
+        return false;
 
     return true;
 }

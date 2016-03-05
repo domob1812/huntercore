@@ -8,11 +8,22 @@
 #include "policy/policy.h"
 
 #include "main.h"
+#include "script/names.h"
 #include "tinyformat.h"
 #include "util.h"
 #include "utilstrencodings.h"
 
 #include <boost/foreach.hpp>
+
+/* Minimum mandatory fee for name_update transactions.  Transactions with
+   a lower fee are valid but non-standard, to enforce protection against
+   transaction spam in the blockchain.  If the transaction would require
+   a larger fee due to the usual fee rules, then this is still true.  */
+static const CAmount NAME_UPDATE_MIN_FEE = COIN / 100;
+/* Fee per (full) 100 characters name length for name_update.  This is in
+   addition to the NAME_UPDATE_MIN_FEE.  If the ordinary fee due to
+   transaction size is larger, the latter will be used instead.  */
+static const CAmount NAME_UPDATE_LEN_FEE = COIN / 500;
 
     /**
      * Check transaction inputs to mitigate two
@@ -150,4 +161,26 @@ bool AreInputsStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs)
     }
 
     return true;
+}
+
+CAmount
+GetHuntercoinMinFee (const CTransaction& tx)
+{
+  if (!tx.IsNamecoin ())
+    return 0;
+
+  CAmount res = 0;
+  BOOST_FOREACH(const CTxOut& txout, tx.vout)
+    {
+      const CNameScript nameOp(txout.scriptPubKey);
+      if (nameOp.isNameOp () && nameOp.getNameOp () == OP_NAME_UPDATE)
+        {
+          const valtype& value = nameOp.getOpValue ();
+          const CAmount cur = NAME_UPDATE_MIN_FEE
+                                + NAME_UPDATE_LEN_FEE * (value.size () / 100);
+          res = std::max (res, cur);
+        }
+    }
+
+  return res;
 }

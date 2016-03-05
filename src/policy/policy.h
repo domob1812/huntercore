@@ -6,6 +6,7 @@
 #ifndef BITCOIN_POLICY_POLICY_H
 #define BITCOIN_POLICY_POLICY_H
 
+#include "amount.h"
 #include "consensus/consensus.h"
 #include "script/interpreter.h"
 #include "script/standard.h"
@@ -62,5 +63,13 @@ bool IsStandardTx(const CTransaction& tx, std::string& reason);
      * @return True if all inputs (scriptSigs) use only standard transaction forms
      */
 bool AreInputsStandard(const CTransaction& tx, const CCoinsViewCache& mapInputs);
+
+/**
+ * Compute the Huntercoin-specific minimum fee for a transaction (if any).
+ * This includes the name_update fees.
+ * @param tx The transaction in question.
+ * @return Minimum fee from this policy point-of-view.
+ */
+CAmount GetHuntercoinMinFee (const CTransaction& tx);
 
 #endif // BITCOIN_POLICY_POLICY_H

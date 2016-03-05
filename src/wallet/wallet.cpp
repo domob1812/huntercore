@@ -2269,8 +2269,13 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend,
 
                 dPriority = wtxNew.ComputePriority(dPriority, nBytes);
 
+                // Compute minimum Huntercoin fee.
+                const CAmount minHucFee = GetHuntercoinMinFee (txNew);
+
                 // Can we complete this as a free transaction?
-                if (fSendFreeTransactions && nBytes <= MAX_FREE_TRANSACTION_CREATE_SIZE)
+                if (fSendFreeTransactions
+                      && nBytes <= MAX_FREE_TRANSACTION_CREATE_SIZE
+                      && minHucFee == 0)
                 {
                     // Not enough fee: enough priority?
                     double dPriorityNeeded = mempool.estimateSmartPriority(nTxConfirmTarget);
@@ -2280,6 +2285,7 @@ bool CWallet::CreateTransaction(const vector<CRecipient>& vecSend,
                 }
 
                 CAmount nFeeNeeded = GetMinimumFee(nBytes, nTxConfirmTarget, mempool);
+                nFeeNeeded = std::max (nFeeNeeded, minHucFee);
                 if (coinControl && nFeeNeeded > 0 && coinControl->nMinimumTotalFee > nFeeNeeded) {
                     nFeeNeeded = coinControl->nMinimumTotalFee;
                 }

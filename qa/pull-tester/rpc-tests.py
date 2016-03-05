@@ -124,6 +124,7 @@ testScripts = [
 
     # game tests
     'game_basicnames.py',
+    'game_feepolicy.py',
 ]
 testScriptsExt = [
     'bip65-cltv.py',

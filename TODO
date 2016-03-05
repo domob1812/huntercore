@@ -18,8 +18,6 @@
 
 * invalidate moves from mempool when the game state changes
 
-* update fee and IsStandard policies
-
 * make sure miners take their taxes
 
 * write regtests and update failing existing ones
@@ -28,6 +26,8 @@
 
 * use estimate of real memory usage for game state cache and tune the
   parameters in general
+
+* re-introduce tagging?
 
 * fully get rid of name database?
 

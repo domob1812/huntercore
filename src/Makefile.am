@@ -112,6 +112,7 @@ BITCOIN_CORE_H = \
   game/db.h \
   game/map.h \
   game/move.h \
+  game/movecreator.h \
   game/state.h \
   game/tx.h \
   httprpc.h \
@@ -192,6 +193,7 @@ libbitcoin_server_a_SOURCES = \
   game/db.cpp \
   game/map.cpp \
   game/move.cpp \
+  game/movecreator.cpp \
   game/state.cpp \
   game/tx.cpp \
   httprpc.cpp \

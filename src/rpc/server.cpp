@@ -336,6 +336,7 @@ static const CRPCCommand vRPCCommands[] =
     /* Game functions */
     { "game",               "game_getplayerstate",    &game_getplayerstate,    true },
     { "game",               "game_getstate",          &game_getstate,          true },
+    { "game",               "game_getpath",           &game_getpath,           true },
 };
 
 CRPCTable::CRPCTable()

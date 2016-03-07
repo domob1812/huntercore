@@ -16,6 +16,7 @@
 #include "chainparams.h"
 #include "game/common.h"
 #include "game/db.h"
+#include "game/movecreator.h"
 #include "game/state.h"
 #include "game/tx.h"
 #include "main.h"
@@ -198,4 +199,56 @@ game_getstate (const UniValue& params, bool fHelp)
     throw JSONRPCError (RPC_DATABASE_ERROR, "Failed to fetch game state");
 
   return state.ToJsonValue ();
+}
+
+/* ************************************************************************** */
+
+UniValue
+game_getpath (const UniValue& params, bool fHelp)
+{
+  if (fHelp || params.size () != 2)
+    throw std::runtime_error (
+        "game_getpath [fromX,fromY] [toX,toY]\n"
+        "\nReturn a set of way points that travels in a shortest path"
+        " between the given coordinates.\n"
+        "\nArguments:\n"
+        "1. \"from\"    (int array, required) starting coordinate\n"
+        "1. \"to\"      (int array, required) target coordinate\n"
+        "\nResult:\n"
+        "[              (json array of integers)\n"
+        "   x1, y1,\n"
+        "   x2, y2,\n"
+        "   ...\n"
+        "]\n"
+        "\nExamples:\n"
+        + HelpExampleCli ("game_getpath", "[0,0] [100,100]")
+        + HelpExampleCli ("game_getpath", "[0,0] [100,100]")
+        + HelpExampleRpc ("game_getpath", "[0,0] [100,100]")
+      );
+
+  if (!params[0].isArray () || !params[1].isArray ())
+    throw std::runtime_error ("arguments must be arrays");
+  if (params[0].size () != 2 || params[1].size () != 2)
+    throw std::runtime_error ("invalid coordinates given");
+
+  const Coord fromC(params[0][0].get_int (), params[0][1].get_int ());
+  const Coord toC(params[1][0].get_int (), params[1][1].get_int ());
+
+  const std::vector<Coord> path = FindPath (fromC, toC);
+
+  UniValue res(UniValue::VARR);
+  bool first = true;
+  BOOST_FOREACH(const Coord& c, path)
+    {
+      if (first)
+        {
+          first = false;
+          continue;
+        }
+
+      res.push_back (c.x);
+      res.push_back (c.y);
+    }
+
+  return res;
 }

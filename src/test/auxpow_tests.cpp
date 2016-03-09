@@ -115,8 +115,7 @@ public:
 CAuxpowBuilder::CAuxpowBuilder (int baseVersion, int chainId)
   : auxpowChainIndex(-1)
 {
-  parentBlock.nVersion.SetBaseVersion(baseVersion);
-  parentBlock.nVersion.SetChainId(chainId);
+  parentBlock.nVersion.SetBaseVersion(baseVersion, chainId);
 }
 
 void
@@ -377,8 +376,7 @@ BOOST_AUTO_TEST_CASE (auxpow_pow)
   mineBlock (block, true);
   BOOST_CHECK (!CheckProofOfWork (block, params));
 
-  block.nVersion.SetBaseVersion (2);
-  block.nVersion.SetChainId (params.nAuxpowChainId[ALGO_SHA256D]);
+  block.nVersion.SetBaseVersion (2, params.nAuxpowChainId[ALGO_SHA256D]);
   mineBlock (block, true);
   BOOST_CHECK (CheckProofOfWork (block, params));
 

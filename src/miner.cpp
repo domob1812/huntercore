@@ -80,13 +80,13 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, PowAlgo algo, co
     CBlock *pblock = &pblocktemplate->block; // pointer for convenience
 
     /* Initialise the block version.  */
-    pblock->nVersion.SetAlgo(algo);
-    pblock->nVersion.SetBaseVersion(CBlockHeader::CURRENT_VERSION);
+    const int32_t nChainId = chainparams.GetConsensus ().nAuxpowChainId[algo];
+    pblock->nVersion.SetBaseVersion(CBlockHeader::CURRENT_VERSION, nChainId);
 
     // -regtest only: allow overriding block.nVersion with
     // -blockversion=N to test forking scenarios
     if (chainparams.MineBlocksOnDemand())
-        pblock->nVersion.SetBaseVersion(GetArg("-blockversion", pblock->nVersion.GetBaseVersion()));
+        pblock->nVersion.SetBaseVersion(GetArg("-blockversion", pblock->nVersion.GetBaseVersion()), nChainId);
 
     // Create coinbase tx
     CMutableTransaction txNew;
@@ -159,10 +159,10 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, PowAlgo algo, co
             std::make_heap(vecPriority.begin(), vecPriority.end(), pricomparer);
         }
 
-        CTxMemPool::indexed_transaction_set::nth_index<3>::type::iterator mi = mempool.mapTx.get<3>().begin();
+        CTxMemPool::indexed_transaction_set::index<mining_score>::type::iterator mi = mempool.mapTx.get<mining_score>().begin();
         CTxMemPool::txiter iter;
 
-        while (mi != mempool.mapTx.get<3>().end() || !clearedTxs.empty())
+        while (mi != mempool.mapTx.get<mining_score>().end() || !clearedTxs.empty())
         {
             bool priorityTx = false;
             if (fPriorityBlock && !vecPriority.empty()) { // add a tx from priority queue to fill the blockprioritysize

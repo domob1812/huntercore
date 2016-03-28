@@ -2,10 +2,6 @@
 
 * extend unit tests for HUC-specific stuff
 
-* game tx of block
-  daee5bfbf798ee0987f42d8ff66ee850206b55d6acf93479306b2d16ae07fbf3
-  not properly indexed?
-
 * apply (possibly upstream?) fix for redundant getheaders requests
 
 * test and fix wallet handling; name_list, display of game tx, and so on

@@ -1426,9 +1426,10 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
             CBlockHeader header;
             try {
                 file >> header;
-                fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
-                if (!postx.fGameTx)
+                if (!postx.IsGameTx()) {
+                    fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
                     file >> txOut;
+                }
             } catch (const std::exception& e) {
                 return error("%s: Deserialize or I/O error - %s", __func__, e.what());
             }
@@ -1437,12 +1438,12 @@ bool GetTransaction(const uint256 &hash, CTransaction &txOut, const Consensus::P
             /* Read also the undo file for a game tx.  Note that we have
                to read the header first in this case as well, so that
                we can set hashBlock.  */
-            if (postx.fGameTx) {
-                CAutoFile undo(OpenUndoFile(postx, true), SER_DISK, CLIENT_VERSION);
+            if (postx.IsGameTx()) {
+                CAutoFile undo(OpenUndoFile(postx.GetGamePos(), true),
+                               SER_DISK, CLIENT_VERSION);
                 if (undo.IsNull())
                     return error("%s: OpenUndoFile failed", __func__);
                 try {
-                    fseek(undo.Get(), postx.nTxOffset, SEEK_CUR);
                     undo >> txOut;
                 } catch (const std::exception& e) {
                     return error("%s: Deserialize or I/O error - %s", __func__, e.what());
@@ -2384,7 +2385,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     CAmount nFees = 0;
     int nInputs = 0;
     unsigned int nSigOps = 0;
-    CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()), false);
+    CDiskTxPos pos(pindex->GetBlockPos(), GetSizeOfCompactSize(block.vtx.size()));
     std::vector<std::pair<uint256, CDiskTxPos> > vPos;
     /* Reserve also space for up to two game tx.  */
     vPos.reserve(block.vtx.size() + 2);
@@ -2533,14 +2534,15 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if (fTxIndex && !isGenesis)
       {
         assert (!pindex->GetUndoPos ().IsNull ());
-        const unsigned initialOffset = GetSizeOfCompactSize (vGameTx.size ());
-        CDiskTxPos pos(pindex->GetUndoPos (), initialOffset, true);
+        int gameTxOffset = pindex->GetUndoPos().nPos;
+        gameTxOffset += GetSizeOfCompactSize (vGameTx.size ());
+        CDiskTxPos pos(pindex->GetBlockPos (), -gameTxOffset);
         for (unsigned i = 0; i < vGameTx.size (); ++i)
           {
             const CTransaction& tx = vGameTx[i];
-            assert (tx.IsGameTx ());
+            assert (tx.IsGameTx () && pos.IsGameTx ());
             vPos.push_back (std::make_pair (tx.GetHash (), pos));
-            pos.nTxOffset += ::GetSerializeSize (tx, SER_DISK, CLIENT_VERSION);
+            pos.nTxOffset -= ::GetSerializeSize (tx, SER_DISK, CLIENT_VERSION);
           }
       }
 

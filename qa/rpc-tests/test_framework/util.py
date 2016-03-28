@@ -139,10 +139,11 @@ def base_node_args(i):
 
     # We choose nodes 1 and 2 to keep -namehistory, because this allows
     # us to test both nodes with it and without it in both split
-    # network parts (0/1 vs 2/3).
+    # network parts (0/1 vs 2/3).  The same goes with -txindex, in case
+    # it is used by some of the tests.
 
     if i == 1 or i == 2:
-        return ["-namehistory"]
+        return ["-namehistory", "-txindex"]
 
     return []
 

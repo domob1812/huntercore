@@ -123,15 +123,21 @@ class Hunter:
     if self.moving:
       self.eta = pathlen (self.pos, hunterData['wp'])
 
-  def move (self, target):
-    path = self.rpcNode.game_getpath (self.pos, target)
+  def _setInBatch (self, key, val):
     if not self.node in self.tester.batched:
       self.tester.batched[self.node] = {}
     if not self.name in self.tester.batched[self.node]:
       self.tester.batched[self.node][self.name] = {}
     if not str (self.ind) in self.tester.batched[self.node][self.name]:
       self.tester.batched[self.node][self.name][str (self.ind)] = {}
-    self.tester.batched[self.node][self.name][str (self.ind)]['wp'] = path
+    self.tester.batched[self.node][self.name][str (self.ind)][key] = val
+
+  def move (self, target):
+    path = self.rpcNode.game_getpath (self.pos, target)
+    self._setInBatch ('wp', path)
+
+  def destruct (self):
+    self._setInBatch ('destruct', True)
 
 def distLInf (a, b):
   """

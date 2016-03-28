@@ -317,24 +317,25 @@ struct CNodeStateStats {
 
 struct CDiskTxPos : public CDiskBlockPos
 {
-    unsigned int nTxOffset; // after header
-
-    /** True if the tx stored is a game tx.  */
-    bool fGameTx;
+    /**
+     * If positive, this is the offset after the block header at which the
+     * given tx starts in the block file.  For game transactions, the value is
+     * negative and contains (in magnitude) the offset (nPos + nTxOffset)
+     * at which the tx starts in the undo file.  This allows us to still use
+     * nPos in the block file to load the header in GetTransactions.
+     */
+    int nTxOffset;
 
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(*(CDiskBlockPos*)this);
-        READWRITE(VARINT(nTxOffset));
-        READWRITE(fGameTx);
+        READWRITE(nTxOffset);
     }
 
-    CDiskTxPos(const CDiskBlockPos &blockIn, unsigned int nTxOffsetIn,
-               bool fGameTxIn)
-      : CDiskBlockPos(blockIn.nFile, blockIn.nPos),
-        nTxOffset(nTxOffsetIn), fGameTx(fGameTxIn)
+    CDiskTxPos(const CDiskBlockPos &blockIn, int nTxOffsetIn)
+      : CDiskBlockPos(blockIn.nFile, blockIn.nPos), nTxOffset(nTxOffsetIn)
     {}
 
     CDiskTxPos() {
@@ -344,7 +345,15 @@ struct CDiskTxPos : public CDiskBlockPos
     void SetNull() {
         CDiskBlockPos::SetNull();
         nTxOffset = 0;
-        fGameTx = false;
+    }
+
+    inline bool IsGameTx() const {
+        return nTxOffset < 0;
+    }
+
+    inline CDiskBlockPos GetGamePos() const {
+        assert(IsGameTx());
+        return CDiskBlockPos(nFile, -nTxOffset);
     }
 };
 

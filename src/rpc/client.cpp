@@ -92,6 +92,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "importpubkey", 2 },
     { "verifychain", 0 },
     { "verifychain", 1 },
+    { "getstatsforheight", 0 },
     { "keypoolrefill", 0 },
     { "getrawmempool", 0 },
     { "estimatefee", 0 },

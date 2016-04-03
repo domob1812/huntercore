@@ -5,6 +5,8 @@
 
 #include "base58.h"
 #include "clientversion.h"
+#include "game/db.h"
+#include "game/state.h"
 #include "init.h"
 #include "main.h"
 #include "net.h"
@@ -396,4 +398,101 @@ UniValue setmocktime(const UniValue& params, bool fHelp)
     }
 
     return NullUniValue;
+}
+
+UniValue
+getstatsforheight (const UniValue& params, bool fHelp)
+{
+  if (fHelp || params.size() != 1)
+    throw runtime_error (
+      "getstatsforheight height\n"
+      "\nGet basic blockchain statistics about the block at height\n"
+      "\nArguments:\n"
+      "1. height  (integer, required) Block height for which to query\n"
+      "\nResult:\n"
+      "{\n"
+      "  \"blockhash\": xxxx, (string) The block's hash\n"
+      "  \"height\": xxxx,    (numeric) The block's height\n"
+      "  \"time\": xxx,       (numeric) The block time as UNIX timestamp\n"
+      "  \"size\": xxx,       (numeric) Size of the block in bytes\n"
+      "  \"transactions\": {  (object) Stats about transactions in the block\n"
+      "    \"currency\": xxx, (numeric) Number of currency transactions\n"
+      "    \"name\": xxx,     (numeric) Number of name transactions\n"
+      "    \"game\": xxx,     (numeric) Number of game transactions\n"
+      "  },\n"
+      "  \"game\": {          (object) Information about the game world\n"
+      "    \"players\": xxx,  (numeric) Number of active players on the map\n"
+      "    \"hunters\": xxx,  (numeric) Number of hunters on the map\n"
+      "  },\n"
+      "}\n"
+      "\nExamples:\n"
+      + HelpExampleCli("getstats", "12345")
+      + HelpExampleRpc("getstats", "12345")
+    );
+
+  LOCK(cs_main);
+
+  const int nHeight = params[0].get_int ();
+  if (nHeight < 0 || nHeight > chainActive.Height ())
+    throw JSONRPCError (RPC_INVALID_PARAMETER, "Block height out of range");
+
+  const CBlockIndex* pblockindex = chainActive[nHeight];
+  if (fHavePruned
+        && !(pblockindex->nStatus & BLOCK_HAVE_DATA) && pblockindex->nTx > 0)
+    throw JSONRPCError (RPC_INTERNAL_ERROR,
+                        "Block not available (pruned data)");
+
+  CBlock block;
+  std::vector<CTransaction> vGameTx;
+  if(!ReadBlockFromDisk (block, vGameTx, pblockindex,
+                         Params ().GetConsensus ()))
+    throw JSONRPCError (RPC_INTERNAL_ERROR, "Can't read block from disk");
+  const int nSize = GetSerializeSize (block, SER_NETWORK, PROTOCOL_VERSION);
+
+  UniValue transactions(UniValue::VOBJ);
+  unsigned nCurrencyTx = 0;
+  unsigned nNameTx = 0;
+  BOOST_FOREACH (const CTransaction& tx, block.vtx)
+    {
+      bool isNameTx = false;
+      BOOST_FOREACH (const CTxOut& txout, tx.vout)
+        {
+          const CNameScript op(txout.scriptPubKey);
+          if (op.isNameOp ())
+            {
+              isNameTx = true;
+              break;
+            }
+        }
+
+      if (isNameTx)
+        ++nNameTx;
+      else
+        ++nCurrencyTx;
+    }
+  assert (nNameTx + nCurrencyTx == block.vtx.size ());
+  transactions.push_back (Pair ("currency", static_cast<int> (nCurrencyTx)));
+  transactions.push_back (Pair ("name", static_cast<int> (nNameTx)));
+  transactions.push_back (Pair ("game", vGameTx.size ()));
+
+  GameState gameState(Params ().GetConsensus ());
+  if (!pgameDb->get (block.GetHash (), gameState))
+    throw JSONRPCError (RPC_DATABASE_ERROR, "Failed to fetch game state");
+  unsigned nHunters = 0;
+  BOOST_FOREACH (const PAIRTYPE(const PlayerID, PlayerState)& cur,
+                 gameState.players)
+    nHunters += cur.second.characters.size ();
+  UniValue game(UniValue::VOBJ);
+  game.push_back (Pair ("players", gameState.players.size ()));
+  game.push_back (Pair ("hunters", static_cast<int> (nHunters)));
+
+  UniValue ret(UniValue::VOBJ);
+  ret.push_back (Pair ("blockhash", block.GetHash ().GetHex ()));
+  ret.push_back (Pair ("height", nHeight));
+  ret.push_back (Pair ("time", static_cast<int> (block.nTime)));
+  ret.push_back (Pair ("size", nSize));
+  ret.push_back (Pair ("transactions", transactions));
+  ret.push_back (Pair ("game", game));
+
+  return ret;
 }

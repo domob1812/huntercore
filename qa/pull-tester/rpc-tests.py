@@ -106,6 +106,7 @@ testScripts = [
     'invalidblockrequest.py',
     'invalidtxrequest.py',
     'abandonconflict.py',
+    'getstatsforheight.py',
 
     # auxpow tests
     'getauxblock.py',

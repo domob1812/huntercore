@@ -36,6 +36,7 @@
 #include <QThread>
 #include <QTime>
 #include <QTimer>
+#include <QStringList>
 
 #if QT_VERSION < 0x050000
 #include <QUrl>
@@ -443,9 +444,23 @@ void RPCConsole::setClientModel(ClientModel *model)
         ui->clientVersion->setText(model->formatFullVersion());
         ui->clientUserAgent->setText(model->formatSubVersion());
         ui->clientName->setText(model->clientName());
-        ui->buildDate->setText(model->formatBuildDate());
+        ui->dataDir->setText(model->dataDir());
         ui->startupTime->setText(model->formatClientStartupTime());
         ui->networkName->setText(QString::fromStdString(Params().NetworkIDString()));
+
+        //Setup autocomplete and attach it
+        QStringList wordList;
+        std::vector<std::string> commandList = tableRPC.listCommands();
+        for (size_t i = 0; i < commandList.size(); ++i)
+        {
+            wordList << commandList[i].c_str();
+        }
+
+        autoCompleter = new QCompleter(wordList, this);
+        ui->lineEdit->setCompleter(autoCompleter);
+
+	// clear the lineEdit after activating from QCompleter
+	connect(autoCompleter, SIGNAL(activated(const QString&)), ui->lineEdit, SLOT(clear()), Qt::QueuedConnection);
     }
 }
 
@@ -490,16 +505,19 @@ void RPCConsole::setFontSize(int newSize)
 
     // clear console (reset icon sizes, default stylesheet) and re-add the content
     float oldPosFactor = 1.0 / ui->messagesWidget->verticalScrollBar()->maximum() * ui->messagesWidget->verticalScrollBar()->value();
-    clear();
+    clear(false);
     ui->messagesWidget->setHtml(str);
     ui->messagesWidget->verticalScrollBar()->setValue(oldPosFactor * ui->messagesWidget->verticalScrollBar()->maximum());
 }
 
-void RPCConsole::clear()
+void RPCConsole::clear(bool clearHistory)
 {
     ui->messagesWidget->clear();
-    history.clear();
-    historyPtr = 0;
+    if(clearHistory)
+    {
+        history.clear();
+        historyPtr = 0;
+    }
     ui->lineEdit->clear();
     ui->lineEdit->setFocus();
 

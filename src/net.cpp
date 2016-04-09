@@ -79,7 +79,6 @@ bool fListen = true;
 uint64_t nLocalServices = NODE_NETWORK;
 CCriticalSection cs_mapLocalHost;
 map<CNetAddr, LocalServiceInfo> mapLocalHost;
-static bool vfReachable[NET_MAX] = {};
 static bool vfLimited[NET_MAX] = {};
 static CNode* pnodeLocalHost = NULL;
 uint64_t nLocalHostNonce = 0;
@@ -226,14 +225,6 @@ void AdvertiseLocal(CNode *pnode)
     }
 }
 
-void SetReachable(enum Network net, bool fFlag)
-{
-    LOCK(cs_mapLocalHost);
-    vfReachable[net] = fFlag;
-    if (net == NET_IPV6 && fFlag)
-        vfReachable[NET_IPV4] = true;
-}
-
 // learn a new local address
 bool AddLocal(const CService& addr, int nScore)
 {
@@ -256,7 +247,6 @@ bool AddLocal(const CService& addr, int nScore)
             info.nScore = nScore + (fAlready ? 1 : 0);
             info.nPort = addr.GetPort();
         }
-        SetReachable(addr.GetNetwork());
     }
 
     return true;
@@ -319,7 +309,7 @@ bool IsLocal(const CService& addr)
 bool IsReachable(enum Network net)
 {
     LOCK(cs_mapLocalHost);
-    return vfReachable[net] && !vfLimited[net];
+    return !vfLimited[net];
 }
 
 /** check whether a given address is in a network we can probably connect to */
@@ -2063,20 +2053,15 @@ public:
 instance_of_cnetcleanup;
 
 
-
-
-
-
-
-void RelayTransaction(const CTransaction& tx)
+void RelayTransaction(const CTransaction& tx, CFeeRate feerate)
 {
     CDataStream ss(SER_NETWORK, PROTOCOL_VERSION);
     ss.reserve(10000);
     ss << tx;
-    RelayTransaction(tx, ss);
+    RelayTransaction(tx, feerate, ss);
 }
 
-void RelayTransaction(const CTransaction& tx, const CDataStream& ss)
+void RelayTransaction(const CTransaction& tx, CFeeRate feerate, const CDataStream& ss)
 {
     CInv inv(MSG_TX, tx.GetHash());
     {
@@ -2097,6 +2082,11 @@ void RelayTransaction(const CTransaction& tx, const CDataStream& ss)
     {
         if(!pnode->fRelayTxes)
             continue;
+        {
+            LOCK(pnode->cs_feeFilter);
+            if (feerate.GetFeePerK() < pnode->minFeeFilter)
+                continue;
+        }
         LOCK(pnode->cs_filter);
         if (pnode->pfilter)
         {
@@ -2400,6 +2390,10 @@ CNode::CNode(SOCKET hSocketIn, const CAddress& addrIn, const std::string& addrNa
     nPingUsecTime = 0;
     fPingQueued = false;
     nMinPingUsecTime = std::numeric_limits<int64_t>::max();
+    minFeeFilter = 0;
+    lastSentFeeFilter = 0;
+    nextSendTimeFeeFilter = 0;
+
     BOOST_FOREACH(const std::string &msg, getAllNetMessageTypes())
         mapRecvBytesPerMsgCmd[msg] = 0;
     mapRecvBytesPerMsgCmd[NET_MESSAGE_COMMAND_OTHER] = 0;

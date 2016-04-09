@@ -252,3 +252,19 @@ game_getpath (const UniValue& params, bool fHelp)
 
   return res;
 }
+
+/* ************************************************************************** */
+
+static const CRPCCommand commands[] =
+{ //  category              name                      actor (function)         okSafeMode
+  //  --------------------- ------------------------  -----------------------  ----------
+    { "game",               "game_getplayerstate",    &game_getplayerstate,    true },
+    { "game",               "game_getstate",          &game_getstate,          true },
+    { "game",               "game_getpath",           &game_getpath,           true },
+};
+
+void RegisterGameRPCCommands(CRPCTable &tableRPC)
+{
+    for (unsigned int vcidx = 0; vcidx < ARRAYLEN(commands); vcidx++)
+        tableRPC.appendCommand(commands[vcidx].name, &commands[vcidx]);
+}

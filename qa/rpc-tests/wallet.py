@@ -59,6 +59,15 @@ class WalletTest (BitcoinTestFramework):
         self.nodes[0].generate(1)
         self.sync_all()
 
+        # Exercise locking of unspent outputs
+        unspent_0 = self.nodes[2].listunspent()[0]
+        unspent_0 = {"txid": unspent_0["txid"], "vout": unspent_0["vout"]}
+        self.nodes[2].lockunspent(False, [unspent_0])
+        assert_raises(JSONRPCException, self.nodes[2].sendtoaddress, self.nodes[2].getnewaddress(), 20)
+        assert_equal([unspent_0], self.nodes[2].listlockunspent())
+        self.nodes[2].lockunspent(True, [unspent_0])
+        assert_equal(len(self.nodes[2].listlockunspent()), 0)
+
         # Have node1 generate 100 blocks (so node0 can recover the fee)
         self.nodes[1].generate(100)
         self.sync_all()
@@ -148,6 +157,10 @@ class WalletTest (BitcoinTestFramework):
 
         assert(txid1 in self.nodes[3].getrawmempool())
 
+        # Exercise balance rpcs
+        assert_equal(self.nodes[0].getwalletinfo()["unconfirmed_balance"], 1)
+        assert_equal(self.nodes[0].getunconfirmedbalance(), 1)
+
         #check if we can list zero value tx as available coins
         #1. create rawtx
         #2. hex-changed one output to 0.0
@@ -232,28 +245,36 @@ class WalletTest (BitcoinTestFramework):
         txObj = self.nodes[0].gettransaction(txId)
         assert_equal(txObj['amount'], Decimal('-0.001'))
 
-        #this should fail
-        errorString = ""
         try:
             txId  = self.nodes[0].sendtoaddress(self.nodes[2].getnewaddress(), "1f-4")
-        except JSONRPCException,e:
-            errorString = e.error['message']
+        except JSONRPCException as e:
+            assert("Invalid amount" in e.error['message'])
+        else:
+            raise AssertionError("Must not parse invalid amounts")
 
-        assert_equal("Invalid amount" in errorString, True)
 
-        errorString = ""
         try:
-            self.nodes[0].generate("2") #use a string to as block amount parameter must fail because it's not interpreted as amount
-        except JSONRPCException,e:
-            errorString = e.error['message']
+            self.nodes[0].generate("2")
+            raise AssertionError("Must not accept strings as numeric")
+        except JSONRPCException as e:
+            assert("not an integer" in e.error['message'])
 
-        assert_equal("not an integer" in errorString, True)
+
+        # Mine a block from node0 to an address from node1
+        cbAddr = self.nodes[1].getnewaddress()
+        blkHash = self.nodes[0].generatetoaddress(1, cbAddr)[0]
+        cbTxId = self.nodes[0].getblock(blkHash)['tx'][0]
+        self.sync_all()
+
+        # Check that the txid and balance is found by node1
+        self.nodes[1].gettransaction(cbTxId)
 
         #check if wallet or blochchain maintenance changes the balance
         self.sync_all()
-        self.nodes[0].generate(1)
+        blocks = self.nodes[0].generate(2)
         self.sync_all()
         balance_nodes = [self.nodes[i].getbalance() for i in range(3)]
+        block_count = self.nodes[0].getblockcount()
 
         maintenance = [
             '-rescan',
@@ -267,12 +288,17 @@ class WalletTest (BitcoinTestFramework):
             stop_nodes(self.nodes)
             wait_bitcoinds()
             self.nodes = start_nodes(3, self.options.tmpdir, [[m]] * 3)
-            connect_nodes_bi(self.nodes,0,1)
-            connect_nodes_bi(self.nodes,1,2)
-            connect_nodes_bi(self.nodes,0,2)
-            self.sync_all()
+            while m == '-reindex' and [block_count] * 3 != [self.nodes[i].getblockcount() for i in range(3)]:
+                # reindex will leave rpc warm up "early"; Wait for it to finish
+                time.sleep(0.1)
             assert_equal(balance_nodes, [self.nodes[i].getbalance() for i in range(3)])
 
+        # Exercise listsinceblock with the last two blocks
+        coinbase_tx_1 = self.nodes[0].listsinceblock(blocks[0])
+        assert_equal(coinbase_tx_1["lastblock"], blocks[1])
+        assert_equal(len(coinbase_tx_1["transactions"]), 1)
+        assert_equal(coinbase_tx_1["transactions"][0]["blockhash"], blocks[1])
+        assert_equal(len(self.nodes[0].listsinceblock(blocks[1])["transactions"]), 0)
 
 if __name__ == '__main__':
     WalletTest ().main ()

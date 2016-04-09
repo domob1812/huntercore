@@ -16,7 +16,7 @@ GetLastBlockIndex(const CBlockIndex* pindex, PowAlgo algo)
     if (!pindex)
         return NULL;
 
-    while (pindex && (pindex->nVersion.GetAlgo() != algo))
+    while (pindex && (pindex->GetAlgo() != algo))
         pindex = pindex->pprev;
 
     return pindex;
@@ -24,7 +24,7 @@ GetLastBlockIndex(const CBlockIndex* pindex, PowAlgo algo)
 
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
 {
-    const PowAlgo algo = pblock->nVersion.GetAlgo();
+    const PowAlgo algo = pblock->GetAlgo();
     const arith_uint256 bnProofOfWorkLimit = UintToArith256(params.powLimit[algo]);
     const unsigned nProofOfWorkLimit = bnProofOfWorkLimit.GetCompact();
 

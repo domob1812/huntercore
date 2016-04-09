@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import time
 import re
+import errno
 
 from . import coverage
 from .authproxy import AuthServiceProxy, JSONRPCException
@@ -147,11 +148,33 @@ def base_node_args(i):
 
     return []
 
+def rpc_url(i, rpchost=None):
+    return "http://rt:rt@%s:%d" % (rpchost or '127.0.0.1', rpc_port(i))
+
+def wait_for_bitcoind_start(process, url, i):
+    '''
+    Wait for bitcoind to start. This means that RPC is accessible and fully initialized.
+    Raise an exception if bitcoind exits during initialization.
+    '''
+    while True:
+        if process.poll() is not None:
+            raise Exception('huntercoind exited with status %i during initialization' % process.returncode)
+        try:
+            rpc = get_rpc_proxy(url, i)
+            blocks = rpc.getblockcount()
+            break # break out of loop on success
+        except IOError as e:
+            if e.errno != errno.ECONNREFUSED: # Port not yet open?
+                raise # unknown IO error
+        except JSONRPCException as e: # Initialization phase
+            if e.error['code'] != -28: # RPC in warmup?
+                raise # unkown JSON RPC exception
+        time.sleep(0.25)
+
 def initialize_chain(test_dir):
     """
     Create (or copy from cache) a 200-block-long chain and
     4 wallets.
-    huntercoind and huntercoin-cli must be in search path.
     """
 
     if (not os.path.isdir(os.path.join("cache","node0"))
@@ -164,7 +187,6 @@ def initialize_chain(test_dir):
             if os.path.isdir(os.path.join("cache","node"+str(i))):
                 shutil.rmtree(os.path.join("cache","node"+str(i)))
 
-        devnull = open(os.devnull, "w")
         # Create cache directories, run bitcoinds:
         for i in range(4):
             datadir=initialize_datadir("cache", i)
@@ -174,19 +196,15 @@ def initialize_chain(test_dir):
                 args.append("-connect=127.0.0.1:"+str(p2p_port(0)))
             bitcoind_processes[i] = subprocess.Popen(args)
             if os.getenv("PYTHON_DEBUG", ""):
-                print "initialize_chain: huntercoind started, calling huntercoin-cli -rpcwait getblockcount"
-            subprocess.check_call([ os.getenv("BITCOINCLI", "huntercoin-cli"), "-datadir="+datadir,
-                                    "-rpcwait", "getblockcount"], stdout=devnull)
+                print "initialize_chain: huntercoind started, waiting for RPC to come up"
+            wait_for_bitcoind_start(bitcoind_processes[i], rpc_url(i), i)
             if os.getenv("PYTHON_DEBUG", ""):
-                print "initialize_chain: huntercoin-cli -rpcwait getblockcount completed"
-        devnull.close()
+                print "initialize_chain: RPC succesfully started"
 
         rpcs = []
-
         for i in range(4):
             try:
-                url = "http://rt:rt@127.0.0.1:%d" % (rpc_port(i),)
-                rpcs.append(get_rpc_proxy(url, i))
+                rpcs.append(get_rpc_proxy(rpc_url(i), i))
             except:
                 sys.stderr.write("Error connecting to "+url+"\n")
                 sys.exit(1)
@@ -262,17 +280,12 @@ def start_node(i, dirname, extra_args=[], rpchost=None, timewait=None, binary=No
     if extra_args is not None: args.extend(extra_args)
     args.extend(base_node_args(i))
     bitcoind_processes[i] = subprocess.Popen(args)
-    devnull = open(os.devnull, "w")
     if os.getenv("PYTHON_DEBUG", ""):
-        print "start_node: huntercoind started, calling huntercoin-cli -rpcwait getblockcount"
-    subprocess.check_call([ os.getenv("BITCOINCLI", "huntercoin-cli"), "-datadir="+datadir] +
-                          _rpchost_to_args(rpchost)  +
-                          ["-rpcwait", "getblockcount"], stdout=devnull)
+        print "start_node: huntercoind started, waiting for RPC to come up"
+    url = rpc_url(i, rpchost)
+    wait_for_bitcoind_start(bitcoind_processes[i], url, i)
     if os.getenv("PYTHON_DEBUG", ""):
-        print "start_node: calling huntercoin-cli -rpcwait getblockcount returned"
-    devnull.close()
-    url = "http://rt:rt@%s:%d" % (rpchost or '127.0.0.1', rpc_port(i))
-
+        print "start_node: RPC succesfully started"
     proxy = get_rpc_proxy(url, i, timeout=timewait)
 
     if COVERAGE_DIR:
@@ -286,7 +299,14 @@ def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
     """
     if extra_args is None: extra_args = [ [] for i in range(num_nodes) ]
     if binary is None: binary = [ None for i in range(num_nodes) ]
-    return [ start_node(i, dirname, extra_args[i], rpchost, binary=binary[i]) for i in range(num_nodes) ]
+    rpcs = []
+    try:
+        for i in range(num_nodes):
+            rpcs.append(start_node(i, dirname, extra_args[i], rpchost, binary=binary[i]))
+    except: # If one node failed to start, stop the others
+        stop_nodes(rpcs)
+        raise
+    return rpcs
 
 def log_filename(dirname, n_node, logname):
     return os.path.join(dirname, "node"+str(n_node), "regtest", logname)
@@ -467,6 +487,8 @@ def assert_is_hash_string(string, length=64):
 def satoshi_round(amount):
     return  Decimal(amount).quantize(Decimal('0.00000001'), rounding=ROUND_DOWN)
 
+# Helper to create at least "count" utxos
+# Pass in a fee that is sufficient for relay and mining new transactions.
 def create_confirmed_utxos(fee, node, count):
     node.generate(int(0.5*count)+101)
     utxos = node.listunspent()
@@ -494,6 +516,8 @@ def create_confirmed_utxos(fee, node, count):
     assert(len(utxos) >= count)
     return utxos
 
+# Create large OP_RETURN txouts that can be appended to a transaction
+# to make it large (helper for constructing large transactions).
 def gen_return_txouts():
     # Some pre-processing to create a bunch of OP_RETURN txouts to insert into transactions we create
     # So we have big transactions (and therefore can't fit very many into each block)
@@ -512,6 +536,16 @@ def gen_return_txouts():
         txouts = txouts + script_pubkey
     return txouts
 
+def create_tx(node, coinbase, to_address, amount):
+    inputs = [{ "txid" : coinbase, "vout" : 0}]
+    outputs = { to_address : amount }
+    rawtx = node.createrawtransaction(inputs, outputs)
+    signresult = node.signrawtransaction(rawtx)
+    assert_equal(signresult["complete"], True)
+    return signresult["hex"]
+
+# Create a spend of each passed-in utxo, splicing in "txouts" to each raw
+# transaction to make it large.  See gen_return_txouts() above.
 def create_lots_of_big_transactions(node, txouts, utxos, fee):
     addr = node.getnewaddress()
     txids = []
@@ -530,3 +564,10 @@ def create_lots_of_big_transactions(node, txouts, utxos, fee):
         txid = node.sendrawtransaction(signresult["hex"], True)
         txids.append(txid)
     return txids
+
+def get_bip9_status(node, key):
+    info = node.getblockchaininfo()
+    for row in info['bip9_softforks']:
+        if row['id'] == key:
+            return row
+    raise IndexError ('key:"%s" not found' % key)

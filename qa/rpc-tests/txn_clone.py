@@ -28,7 +28,7 @@ class TxnMallTest(BitcoinTestFramework):
             self.nodes[i].getnewaddress("")  # bug workaround, coins generated assigned to first getnewaddress!
 
         # Assign coins to foo and bar accounts:
-        self.nodes[0].settxfee(.001)
+        self.nodes[0].settxfee(.005)
 
         node0_address_foo = self.nodes[0].getnewaddress("foo")
         fund_foo_txid = self.nodes[0].sendfrom("", node0_address_foo, 1219)
@@ -54,7 +54,7 @@ class TxnMallTest(BitcoinTestFramework):
         clone_outputs = {rawtx1["vout"][0]["scriptPubKey"]["addresses"][0]:rawtx1["vout"][0]["value"],
                          rawtx1["vout"][1]["scriptPubKey"]["addresses"][0]:rawtx1["vout"][1]["value"]}
         clone_locktime = rawtx1["locktime"]
-        clone_raw = self.nodes[0].createrawtransaction(clone_inputs, clone_outputs, clone_locktime)
+        clone_raw = self.nodes[0].createrawtransaction(clone_inputs, clone_outputs, None, clone_locktime)
 
         # createrawtransaction randomizes the order of its outputs, so swap them if necessary.
         # output 0 is at version+#inputs+input+sigstub+sequence+#outputs

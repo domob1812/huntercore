@@ -4,9 +4,9 @@
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #
 
-from mininode import *
-from blockstore import BlockStore, TxStore
-from util import p2p_port
+from .mininode import *
+from .blockstore import BlockStore, TxStore
+from .util import p2p_port
 
 '''
 This is a tool for comparing two or more bitcoinds to each other
@@ -26,20 +26,6 @@ generator that returns TestInstance objects.  See below for definition.
 # on_getdata: provide blocks via BlockStore
 
 global mininode_lock
-
-def wait_until(predicate, attempts=float('inf'), timeout=float('inf')):
-    attempt = 0
-    elapsed = 0
-
-    while attempt < attempts and elapsed < timeout:
-        with mininode_lock:
-            if predicate():
-                return True
-        attempt += 1
-        elapsed += 0.05
-        time.sleep(0.05)
-
-    return False
 
 class RejectResult(object):
     '''
@@ -192,6 +178,10 @@ class TestManager(object):
             # Make sure the TestNode (callback class) has a reference to its
             # associated NodeConn
             test_node.add_connection(self.connections[-1])
+
+    def clear_all_connections(self):
+        self.connections    = []
+        self.test_nodes     = []
 
     def wait_for_disconnections(self):
         def disconnected():

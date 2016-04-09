@@ -24,10 +24,6 @@ static const int MIN_PEER_PROTO_VERSION = GETHEADERS_VERSION;
 //! if possible, avoid requesting addresses nodes older than this
 static const int CADDR_TIME_VERSION = 31402;
 
-//! only request blocks from nodes outside this range of versions
-static const int NOBLKS_VERSION_START = 32000;
-static const int NOBLKS_VERSION_END = 32400;
-
 //! BIP 0031, pong message, is enabled for all versions AFTER this one
 static const int BIP0031_VERSION = 2000000;
 
@@ -41,6 +37,9 @@ static const int NO_BLOOM_VERSION = 2000000;
 static const int SIZE_HEADERS_LIMIT_VERSION = 2000000;
 
 //! "sendheaders" command and announcing blocks with headers starts with this version
-static const int SENDHEADERS_VERSION = 110012;
+static const int SENDHEADERS_VERSION = 2000000;
+
+//! "feefilter" tells peers to filter invs to you by fee starts with this version
+static const int FEEFILTER_VERSION = 2000000;
 
 #endif // BITCOIN_VERSION_H

@@ -31,6 +31,8 @@
 
 #include <boost/shared_ptr.hpp>
 
+extern CWallet* pwalletMain;
+
 /**
  * Settings
  */
@@ -57,6 +59,8 @@ static const unsigned int DEFAULT_TX_CONFIRM_TARGET = 2;
 //! Largest (in bytes) free transaction we're willing to create
 static const unsigned int MAX_FREE_TRANSACTION_CREATE_SIZE = 1000;
 static const bool DEFAULT_WALLETBROADCAST = true;
+
+extern const char * DEFAULT_WALLET_DAT;
 
 class CBlockIndex;
 class CCoinControl;
@@ -164,11 +168,11 @@ public:
     mapValue_t mapValue;
     std::vector<std::pair<std::string, std::string> > vOrderForm;
     unsigned int fTimeReceivedIsTxTime;
-    unsigned int nTimeReceived; //! time received by this node
+    unsigned int nTimeReceived; //!< time received by this node
     unsigned int nTimeSmart;
     char fFromMe;
     std::string strFromAccount;
-    int64_t nOrderPos; //! position in ordered transaction list
+    int64_t nOrderPos; //!< position in ordered transaction list
 
     // memory only
     mutable bool fDebitCached;
@@ -264,7 +268,7 @@ public:
         }
 
         READWRITE(*(CMerkleTx*)this);
-        std::vector<CMerkleTx> vUnused; //! Used to be vtxPrev
+        std::vector<CMerkleTx> vUnused; //!< Used to be vtxPrev
         READWRITE(vUnused);
         READWRITE(mapValue);
         READWRITE(vOrderForm);
@@ -405,7 +409,7 @@ public:
     std::string strOtherAccount;
     std::string strComment;
     mapValue_t mapValue;
-    int64_t nOrderPos;  //! position in ordered transaction list
+    int64_t nOrderPos; //!< position in ordered transaction list
     uint64_t nEntryNo;
 
     CAccountingEntry()
@@ -486,7 +490,7 @@ private:
      * all coins from coinControl are selected; Never select unconfirmed coins
      * if they are not ours
      */
-    bool SelectCoins(const CAmount& nTargetValue, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, CAmount& nValueRet, const CCoinControl *coinControl = NULL) const;
+    bool SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAmount& nTargetValue, std::set<std::pair<const CWalletTx*,unsigned int> >& setCoinsRet, CAmount& nValueRet, const CCoinControl *coinControl = NULL) const;
 
     CWalletDB *pwalletdbEncryption;
 
@@ -737,6 +741,7 @@ public:
 
     DBErrors LoadWallet(bool& fFirstRunRet);
     DBErrors ZapWalletTx(std::vector<CWalletTx>& vWtx);
+    DBErrors ZapSelectTx(std::vector<uint256>& vHashIn, std::vector<uint256>& vHashOut);
 
     bool SetAddressBook(const CTxDestination& address, const std::string& strName, const std::string& purpose);
 
@@ -785,7 +790,7 @@ public:
     void Flush(bool shutdown=false);
 
     //! Verify the wallet database and perform salvage if required
-    static bool Verify(const std::string& walletFile, std::string& warningString, std::string& errorString);
+    static bool Verify();
     
     /** 
      * Address book entry changed.
@@ -816,6 +821,15 @@ public:
 
     /* Mark a transaction (and it in-wallet descendants) as abandoned so its inputs may be respent. */
     bool AbandonTransaction(const uint256& hashTx);
+
+    /* Returns the wallets help message */
+    static std::string GetWalletHelpString(bool showDebug);
+
+    /* Initializes the wallet, returns a new CWallet instance or a null pointer in case of an error */
+    static bool InitLoadWallet();
+
+    /* Wallets parameter interaction */
+    static bool ParameterInteraction();
 };
 
 /** A key allocated from the key pool. */

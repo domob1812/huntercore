@@ -19,7 +19,7 @@ class GameTxIndexTest (GameTestFramework):
     me = self.get (0, "me", 0)
     me.move ([25, 25])
     me = self.finishMove (0, "me", 0)
-    assert_equal (me.pos, [25, 25])
+    assert_equal ([25, 25], me.pos)
 
     # Collect nearest loot.
     pos = self.nearestLoot (0, me.pos)
@@ -37,8 +37,10 @@ class GameTxIndexTest (GameTestFramework):
 
     # Bank the bounty (almost).
     print "Banking the coins..."
+    me = self.get (0, "me", 0)
     me.move ([1, 1])
     me = self.finishMove (0, "me", 0)
+    assert_equal ([1, 1], me.pos)
 
     # Finish banking and kill the redshirt at the same time,
     # so that we get a block with two game tx.

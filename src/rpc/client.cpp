@@ -18,8 +18,8 @@ using namespace std;
 class CRPCConvertParam
 {
 public:
-    std::string methodName;            //! method whose params want conversion
-    int paramIdx;                      //! 0-based idx of param to convert
+    std::string methodName; //!< method whose params want conversion
+    int paramIdx;           //!< 0-based idx of param to convert
 };
 
 static const CRPCConvertParam vRPCConvertParams[] =
@@ -27,10 +27,10 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "stop", 0 },
     { "setmocktime", 0 },
     { "getaddednodeinfo", 0 },
-    { "setgenerate", 0 },
-    { "setgenerate", 1 },
     { "generate", 0 },
     { "generate", 1 },
+    { "generatetoaddress", 0 },
+    { "generatetoaddress", 2 },
     { "getnetworkhashps", 0 },
     { "getnetworkhashps", 1 },
     { "sendtoaddress", 1 },
@@ -57,7 +57,6 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "listaccounts", 0 },
     { "listaccounts", 1 },
     { "walletpassphrase", 1 },
-    { "getblocktemplate", 0 },
     { "listsinceblock", 1 },
     { "listsinceblock", 2 },
     { "sendmany", 1 },
@@ -170,4 +169,3 @@ UniValue RPCConvertValues(const std::string &strMethod, const std::vector<std::s
 
     return params;
 }
-

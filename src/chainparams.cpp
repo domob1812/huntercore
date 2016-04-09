@@ -46,7 +46,7 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     genesis.nTime    = nTime;
     genesis.nBits    = nBits;
     genesis.nNonce   = nNonce;
-    genesis.nVersion.SetGenesisVersion(nVersion);
+    genesis.nVersion = nVersion;
     genesis.vtx.push_back(txNew);
     genesis.hashPrevBlock.SetNull();
     genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
@@ -107,6 +107,17 @@ public:
         consensus.nPowTargetSpacing = 60 * NUM_ALGOS;
         consensus.nPowTargetTimespan = consensus.nPowTargetSpacing * 2016;
         consensus.fPowNoRetargeting = false;
+        consensus.nRuleChangeActivationThreshold = 1916; // 95% of 2016
+        consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nPowTargetSpacing
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
+
+        // Deployment of BIP68, BIP112, and BIP113.
+        // FIXME: Enable later.
+        //consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
+        //consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1462060800; // May 1st, 2016
+        //consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1493596800; // May 1st, 2017
 
         consensus.nAuxpowChainId[ALGO_SHA256D] = 0x0006;
         consensus.nAuxpowChainId[ALGO_SCRYPT] = 0x0002;
@@ -123,8 +134,6 @@ public:
         pchMessageStart[1] = 0xbe;
         pchMessageStart[2] = 0xb4;
         pchMessageStart[3] = 0xfe;
-        /* FIXME: Update alert key.  */
-        vAlertPubKey = ParseHex("04d55568f5688898159fd01640f6c7ef2e63fef95376e8418244b4c7c4dd57110d8028f4086a092f2586dc09b36359e67e0717a0bec2a483c81aaf252377fc666a");
         nDefaultPort = 8398;
         nPruneAfterHeight = 100000;
 
@@ -187,6 +196,17 @@ public:
         consensus.nPowTargetSpacing = 60 * NUM_ALGOS;
         consensus.nPowTargetTimespan = consensus.nPowTargetSpacing * 2016;
         consensus.fPowNoRetargeting = false;
+        consensus.nRuleChangeActivationThreshold = 1512; // 75% for testchains
+        consensus.nMinerConfirmationWindow = 2016; // nPowTargetTimespan / nPowTargetSpacing
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 1199145601; // January 1, 2008
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 1230767999; // December 31, 2008
+
+        // Deployment of BIP68, BIP112, and BIP113.
+        // FIXME: Enable later.
+        //consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
+        //consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 1456790400; // March 1st, 2016
+        //consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 1493596800; // May 1st, 2017
 
         consensus.nAuxpowChainId[ALGO_SHA256D] = 0x0006;
         consensus.nAuxpowChainId[ALGO_SCRYPT] = 0x0002;
@@ -198,8 +218,6 @@ public:
         pchMessageStart[1] = 0xbf;
         pchMessageStart[2] = 0xb5;
         pchMessageStart[3] = 0xfe;
-        /* FIXME: Update alert key.  */
-        vAlertPubKey = ParseHex("04fc9702847840aaf195de8442ebecedf5b095cdbb9bc716bda9110971b28a49e0ead8564ff0db22209e0374782c093bb899692d524e9d6a6956e7c5ecbcd68284");
         nDefaultPort = 18398;
         nPruneAfterHeight = 1000;
 
@@ -264,6 +282,14 @@ public:
         consensus.nPowTargetSpacing = 60 * NUM_ALGOS;
         consensus.nPowTargetTimespan = consensus.nPowTargetSpacing * 2016;
         consensus.fPowNoRetargeting = true;
+        consensus.nRuleChangeActivationThreshold = 108; // 75% for testchains
+        consensus.nMinerConfirmationWindow = 144; // Faster than normal for regtest (144 instead of 2016)
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].bit = 28;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nStartTime = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_TESTDUMMY].nTimeout = 999999999999ULL;
+        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].bit = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 0;
+        consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 999999999999ULL;
 
         consensus.nAuxpowChainId[ALGO_SHA256D] = 0x0006;
         consensus.nAuxpowChainId[ALGO_SCRYPT] = 0x0002;
@@ -283,8 +309,8 @@ public:
         assert(consensus.hashGenesisBlock == uint256S("0x3867dcd08712d9b49de33d4ab145d57ad14a78c7843c51f8c5d782d5f102fb4a"));
         assert(genesis.hashMerkleRoot == uint256S("0x71c88ed0560ee7d644deba07485c4eff571e3f86f9485692ed3966e4f0f3a59c"));
 
-        vFixedSeeds.clear(); //! Regtest mode doesn't have any fixed seeds.
-        vSeeds.clear();  //! Regtest mode doesn't have any DNS seeds.
+        vFixedSeeds.clear(); //!< Regtest mode doesn't have any fixed seeds.
+        vSeeds.clear();      //!< Regtest mode doesn't have any DNS seeds.
 
         fMiningRequiresPeers = false;
         fDefaultConsistencyChecks = true;

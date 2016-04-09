@@ -9,18 +9,18 @@
 #include "scrypt/scrypt.h"
 #include "utilstrencodings.h"
 
-void CBlockVersion::SetBaseVersion(int32_t nBaseVersion, int32_t nChainId)
+uint256 CPureBlockHeader::GetHash() const
+{
+    return SerializeHash(*this);
+}
+
+void CPureBlockHeader::SetBaseVersion(int32_t nBaseVersion, int32_t nChainId)
 {
     assert(nBaseVersion >= 1 && nBaseVersion < VERSION_AUXPOW);
     assert(!IsAuxpow());
     const PowAlgo algo = GetAlgo ();
     nVersion = nBaseVersion | (nChainId * VERSION_CHAIN_START);
     SetAlgo (algo);
-}
-
-uint256 CPureBlockHeader::GetHash() const
-{
-    return SerializeHash(*this);
 }
 
 uint256 CPureBlockHeader::GetPowHash(PowAlgo algo) const

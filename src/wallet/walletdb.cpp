@@ -785,6 +785,45 @@ DBErrors CWalletDB::FindWalletTx(CWallet* pwallet, vector<uint256>& vTxHash, vec
     return result;
 }
 
+DBErrors CWalletDB::ZapSelectTx(CWallet* pwallet, vector<uint256>& vTxHashIn, vector<uint256>& vTxHashOut)
+{
+    // build list of wallet TXs and hashes
+    vector<uint256> vTxHash;
+    vector<CWalletTx> vWtx;
+    DBErrors err = FindWalletTx(pwallet, vTxHash, vWtx);
+    if (err != DB_LOAD_OK) {
+        return err;
+    }
+
+    std::sort(vTxHash.begin(), vTxHash.end());
+    std::sort(vTxHashIn.begin(), vTxHashIn.end());
+
+    // erase each matching wallet TX
+    bool delerror = false;
+    vector<uint256>::iterator it = vTxHashIn.begin();
+    BOOST_FOREACH (uint256 hash, vTxHash) {
+        while (it < vTxHashIn.end() && (*it) < hash) {
+            it++;
+        }
+        if (it == vTxHashIn.end()) {
+            break;
+        }
+        else if ((*it) == hash) {
+            pwallet->mapWallet.erase(hash);
+            if(!EraseTx(hash)) {
+                LogPrint("db", "Transaction was found for deletion but returned database error: %s\n", hash.GetHex());
+                delerror = true;
+            }
+            vTxHashOut.push_back(hash);
+        }
+    }
+
+    if (delerror) {
+        return DB_CORRUPT;
+    }
+    return DB_LOAD_OK;
+}
+
 DBErrors CWalletDB::ZapWalletTx(CWallet* pwallet, vector<CWalletTx>& vWtx)
 {
     // build list of wallet TXs
@@ -847,16 +886,16 @@ void ThreadFlushWalletDB(const string& strFile)
                     map<string, int>::iterator mi = bitdb.mapFileUseCount.find(strFile);
                     if (mi != bitdb.mapFileUseCount.end())
                     {
-                        LogPrint("db", "Flushing wallet.dat\n");
+                        LogPrint("db", "Flushing %s\n", strFile);
                         nLastFlushed = nWalletDBUpdated;
                         int64_t nStart = GetTimeMillis();
 
-                        // Flush wallet.dat so it's self contained
+                        // Flush wallet file so it's self contained
                         bitdb.CloseDb(strFile);
                         bitdb.CheckpointLSN(strFile);
 
                         bitdb.mapFileUseCount.erase(mi++);
-                        LogPrint("db", "Flushed wallet.dat %dms\n", GetTimeMillis() - nStart);
+                        LogPrint("db", "Flushed %s %dms\n", strFile, GetTimeMillis() - nStart);
                     }
                 }
             }
@@ -879,7 +918,7 @@ bool BackupWallet(const CWallet& wallet, const string& strDest)
                 bitdb.CheckpointLSN(wallet.strWalletFile);
                 bitdb.mapFileUseCount.erase(wallet.strWalletFile);
 
-                // Copy wallet.dat
+                // Copy wallet file
                 boost::filesystem::path pathSrc = GetDataDir() / wallet.strWalletFile;
                 boost::filesystem::path pathDest(strDest);
                 if (boost::filesystem::is_directory(pathDest))
@@ -891,10 +930,10 @@ bool BackupWallet(const CWallet& wallet, const string& strDest)
 #else
                     boost::filesystem::copy_file(pathSrc, pathDest);
 #endif
-                    LogPrintf("copied wallet.dat to %s\n", pathDest.string());
+                    LogPrintf("copied %s to %s\n", wallet.strWalletFile, pathDest.string());
                     return true;
                 } catch (const boost::filesystem::filesystem_error& e) {
-                    LogPrintf("error copying wallet.dat to %s - %s\n", pathDest.string(), e.what());
+                    LogPrintf("error copying %s to %s - %s\n", wallet.strWalletFile, pathDest.string(), e.what());
                     return false;
                 }
             }
@@ -905,15 +944,15 @@ bool BackupWallet(const CWallet& wallet, const string& strDest)
 }
 
 //
-// Try to (very carefully!) recover wallet.dat if there is a problem.
+// Try to (very carefully!) recover wallet file if there is a problem.
 //
 bool CWalletDB::Recover(CDBEnv& dbenv, const std::string& filename, bool fOnlyKeys)
 {
     // Recovery procedure:
-    // move wallet.dat to wallet.timestamp.bak
+    // move wallet file to wallet.timestamp.bak
     // Call Salvage with fAggressive=true to
     // get as much data as possible.
-    // Rewrite salvaged data to wallet.dat
+    // Rewrite salvaged data to fresh wallet file
     // Set -rescan so any missing transactions will be
     // found.
     int64_t now = GetTime();

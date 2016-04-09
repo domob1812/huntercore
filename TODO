@@ -1,27 +1,21 @@
-* think about what to do with atomic name trading
-
-* extend unit tests for HUC-specific stuff
-
-* apply (possibly upstream?) fix for redundant getheaders requests
-
 * test and fix wallet handling; name_list, display of game tx, and so on
-
-* update maturity checks in wallet for game tx; also test Qt?
-
-* notify wallet about game tx when connecting/disconnecting blocks
-
-* make sure the wallet finds also game tx when rescanning
 
 * invalidate moves from mempool when the game state changes
 
 * make sure miners take their taxes
 
-* write regtests and update failing existing ones
+* extend unit tests for HUC-specific stuff
 
 * add REST functions for accessing game state info
 
+* apply (possibly upstream?) fix for redundant getheaders requests
+
+* think about what to do with atomic name trading
+
 * use estimate of real memory usage for game state cache and tune the
-  parameters in general
+  parameters in general?
+
+* test Qt for game tx in wallet?
 
 * re-introduce tagging?
 

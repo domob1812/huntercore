@@ -1192,7 +1192,7 @@ bool AcceptToMemoryPoolWorker(CTxMemPool& pool, CValidationState& state, const C
         bool fSpendsCoinbase = false;
         BOOST_FOREACH(const CTxIn &txin, tx.vin) {
             const CCoins *coins = view.AccessCoins(txin.prevout.hash);
-            if (coins->IsCoinBase()) {
+            if (coins->IsCoinBase() || coins->IsGameTx()) {
                 fSpendsCoinbase = true;
                 break;
             }
@@ -2426,7 +2426,7 @@ static int64_t nTimeIndex = 0;
 static int64_t nTimeCallbacks = 0;
 static int64_t nTimeTotal = 0;
 
-bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)
+bool ConnectBlockWithGameTx(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, std::vector<CTransaction>& vGameTx, bool fJustCheck)
 {
     const CChainParams& chainparams = Params();
     AssertLockHeld(cs_main);
@@ -2619,7 +2619,6 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     nFees += stepResult.nTaxAmount;
 
     /* Construct and handle game transactions.  */
-    std::vector<CTransaction> vGameTx;
     if (!CreateGameTransactions (view, pindex->nHeight, stepResult, vGameTx))
         return state.Error ("ConnectBlock: failed to create game tx");
     ApplyGameTransactions (vGameTx, stepResult, pindex->nHeight,
@@ -2704,6 +2703,13 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
 
     return true;
 }
+
+bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pindex, CCoinsViewCache& view, bool fJustCheck)
+{
+  std::vector<CTransaction> vGameTx;
+  return ConnectBlockWithGameTx(block, state, pindex, view, vGameTx, fJustCheck);
+}
+
 
 enum FlushStateMode {
     FLUSH_STATE_NONE,
@@ -2894,7 +2900,8 @@ bool static DisconnectTip(CValidationState& state, const Consensus::Params& cons
     CheckNameDB (true);
     // Read block from disk.
     CBlock block;
-    if (!ReadBlockFromDisk(block, pindexDelete, consensusParams))
+    std::vector<CTransaction> vGameTx;
+    if (!ReadBlockFromDisk(block, vGameTx, pindexDelete, consensusParams))
         return AbortNode(state, "Failed to read block");
     // Apply the block atomically to the chain state.
     int64_t nStart = GetTimeMicros();
@@ -2914,7 +2921,8 @@ bool static DisconnectTip(CValidationState& state, const Consensus::Params& cons
         // ignore validation errors in resurrected transactions
         list<CTransaction> removed;
         CValidationState stateDummy;
-        if (tx.IsCoinBase() || tx.IsGameTx() || !AcceptToMemoryPool(mempool, stateDummy, tx, false, NULL, NULL, true)) {
+        assert(!tx.IsGameTx());
+        if (tx.IsCoinBase() || !AcceptToMemoryPool(mempool, stateDummy, tx, false, NULL, NULL, true)) {
             mempool.removeRecursive(tx, removed);
         } else if (mempool.exists(tx.GetHash())) {
             vHashUpdate.push_back(tx.GetHash());
@@ -2933,6 +2941,9 @@ bool static DisconnectTip(CValidationState& state, const Consensus::Params& cons
     // Let wallets know transactions went from 1-confirmed to
     // 0-confirmed or conflicted:
     BOOST_FOREACH(const CTransaction &tx, block.vtx) {
+        SyncWithWallets(tx, pindexDelete->pprev, NULL);
+    }
+    BOOST_FOREACH(const CTransaction &tx, vGameTx) {
         SyncWithWallets(tx, pindexDelete->pprev, NULL);
     }
     return true;
@@ -2965,9 +2976,10 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
     int64_t nTime2 = GetTimeMicros(); nTimeReadFromDisk += nTime2 - nTime1;
     int64_t nTime3;
     LogPrint("bench", "  - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * 0.001, nTimeReadFromDisk * 0.000001);
+    std::vector<CTransaction> vGameTx;
     {
         CCoinsViewCache view(pcoinsTip);
-        bool rv = ConnectBlock(*pblock, state, pindexNew, view);
+        bool rv = ConnectBlockWithGameTx(*pblock, state, pindexNew, view, vGameTx, false);
         GetMainSignals().BlockChecked(*pblock, state);
         if (!rv) {
             if (state.IsInvalid())
@@ -3006,6 +3018,9 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
     }
     // ... and about transactions that got confirmed:
     BOOST_FOREACH(const CTransaction &tx, pblock->vtx) {
+        SyncWithWallets(tx, pindexNew, pblock);
+    }
+    BOOST_FOREACH(const CTransaction &tx, vGameTx) {
         SyncWithWallets(tx, pindexNew, pblock);
     }
 

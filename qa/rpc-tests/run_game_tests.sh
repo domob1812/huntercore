@@ -8,3 +8,6 @@ echo "\nFee policy..."
 
 echo "\nGame transaction indexing..."
 ./game_txindex.py
+
+echo "\nGame bounties..."
+./game_bounties.py

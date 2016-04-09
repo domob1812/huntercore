@@ -33,20 +33,25 @@ int CMerkleTx::SetMerkleBranch(const CBlock& block)
     // Update the tx's hashBlock
     hashBlock = block.GetHash();
 
-    // Locate the transaction
-    for (nIndex = 0; nIndex < (int)block.vtx.size(); nIndex++)
-        if (block.vtx[nIndex] == *(CTransaction*)this)
-            break;
-    if (nIndex == (int)block.vtx.size())
+    // Only try to fill in the Merkle branch if this is not a game tx.
+    // (Otherwise it won't be found in the block.)
+    if (!IsGameTx())
     {
-        vMerkleBranch.clear();
-        nIndex = -1;
-        LogPrintf("ERROR: SetMerkleBranch(): couldn't find tx in block\n");
-        return 0;
-    }
+        // Locate the transaction
+        for (nIndex = 0; nIndex < (int)block.vtx.size(); nIndex++)
+            if (block.vtx[nIndex] == *(CTransaction*)this)
+                break;
+        if (nIndex == (int)block.vtx.size())
+        {
+            vMerkleBranch.clear();
+            nIndex = -1;
+            LogPrintf("ERROR: SetMerkleBranch(): couldn't find tx in block\n");
+            return 0;
+        }
 
-    // Fill in merkle branch
-    vMerkleBranch = BlockMerkleBranch (block, nIndex);
+        // Fill in merkle branch
+        vMerkleBranch = BlockMerkleBranch (block, nIndex);
+    }
 
     // Is the tx in a block that's in the main chain
     BlockMap::iterator mi = mapBlockIndex.find(hashBlock);
@@ -75,14 +80,17 @@ int CMerkleTx::GetDepthInMainChain(const CBlockIndex* &pindexRet) const
         return 0;
 
     pindexRet = pindex;
-    return ((nIndex == -1) ? (-1) : 1) * (chainActive.Height() - pindex->nHeight + 1);
+    return ((!IsGameTx() && nIndex == -1) ? (-1) : 1)
+            * (chainActive.Height() - pindex->nHeight + 1);
 }
 
 int CMerkleTx::GetBlocksToMaturity() const
 {
-    if (!IsCoinBase())
-        return 0;
-    return std::max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain());
+    if (IsCoinBase())
+        return std::max(0, (COINBASE_MATURITY+1) - GetDepthInMainChain());
+    if (IsGameTx())
+        return std::max(0, (GAMETX_MATURITY+1) - GetDepthInMainChain());
+    return 0;
 }
 
 

@@ -2173,6 +2173,7 @@ bool ApplyTxInUndo(const CTxInUndo& undo, CCoinsViewCache& view, const COutPoint
             fClean = fClean && error("%s: undo data overwriting existing transaction", __func__);
         coins->Clear();
         coins->fCoinBase = undo.fCoinBase;
+        coins->fGameTx = undo.fGameTx;
         coins->nHeight = undo.nHeight;
         coins->nVersion = undo.nVersion;
     } else {
@@ -2254,10 +2255,7 @@ bool DisconnectBlock(const CBlock& block, CValidationState& state, const CBlockI
                 assert (!out.IsNull());
                 const CTxInUndo &undo = txundo.vprevout[j];
                 if (!ApplyTxInUndo(undo, view, out))
-                    {
-                    LogPrintf ("%d %s\n", j, tx.GetHash().GetHex().c_str());
                     fClean = false;
-                    }
             }
         }
     }

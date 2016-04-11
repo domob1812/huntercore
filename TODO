@@ -1,4 +1,4 @@
-* test and fix wallet handling; name_list, display of game tx, and so on
+* check death tx handling in wallet, name_list
 
 * invalidate moves from mempool when the game state changes
 

@@ -569,6 +569,7 @@ UniValue gettxout(const UniValue& params, bool fHelp)
             "  },\n"
             "  \"version\" : n,            (numeric) The version\n"
             "  \"coinbase\" : true|false   (boolean) Coinbase or not\n"
+            "  \"bounty\" : true|false     (boolean) Game bounty or not\n"
             "}\n"
 
             "\nExamples:\n"
@@ -617,7 +618,8 @@ UniValue gettxout(const UniValue& params, bool fHelp)
     ScriptPubKeyToJSON(coins.vout[n].scriptPubKey, o, true);
     ret.push_back(Pair("scriptPubKey", o));
     ret.push_back(Pair("version", coins.nVersion));
-    ret.push_back(Pair("coinbase", coins.fCoinBase));
+    ret.push_back(Pair("coinbase", coins.IsCoinBase()));
+    ret.push_back(Pair("bounty", coins.IsGameTx()));
 
     return ret;
 }

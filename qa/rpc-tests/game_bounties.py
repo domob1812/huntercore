@@ -48,42 +48,74 @@ class GameTxIndexTest (GameTestFramework):
     assert_equal (len (gametxOut['scriptPubKey']['addresses']), 1)
     addr = gametxOut['scriptPubKey']['addresses'][0]
     print "Bounty: %.8f to %s" % (value, addr)
+    print "  txid: %s" % txid
 
     # Try to get information of the tx in the wallet of node 0.
     print "Verifying bounty transaction in the wallet..."
-    print "Txid: %s" % txid
     valid = self.nodes[0].validateaddress (addr)
     assert valid['ismine']
     blkhash = self.nodes[0].getbestblockhash ()
-    txdata = self.nodes[0].gettransaction (txid)
-    assert txdata['bounty']
-    assert_equal (blkhash, txdata['blockhash'])
-    assert_equal (txid, txdata['txid'])
-    assert_equal (1, txdata['confirmations'])
-    assert_equal (Decimal ('0'), txdata['amount'])
+    self.verifyTx (0, txid, blkhash, value, 1)
+
+    # Construct a tx spending the bounty.
+    print "Trying to spend immature bounty..."
+    spendValue = value - Decimal ('0.01')
+    toAddr = self.nodes[1].getnewaddress ()
+    inputs = [{"txid": txid, "vout": 0}]
+    outputs = {toAddr: spendValue}
+    rawtx = self.nodes[0].createrawtransaction (inputs, outputs)
+    data = self.nodes[0].signrawtransaction (rawtx)
+    assert data['complete']
+    rawtx = data['hex']
+    try:
+      self.nodes[2].sendrawtransaction (rawtx)
+      raise AssertionError ("immature spend accepted")
+    except JSONRPCException as exc:
+      assert_equal (-26, exc.error['code'])
 
     # The amount should become available as the tx matures.
     print "Letting bounty tx mature..."
     self.advance(0, 99)
-    txdata = self.nodes[0].gettransaction (txid)
-    assert_equal (blkhash, txdata['blockhash'])
-    assert_equal (txid, txdata['txid'])
-    assert_equal (100, txdata['confirmations'])
-    assert_equal (Decimal ('0'), txdata['amount'])
-    assert_equal (1, len (txdata['details']))
-    assert_equal ('immature_bounty', txdata['details'][0]['category'])
+    self.verifyTx (0, txid, blkhash, value, 100)
     self.advance(0, 1)
-    txdata = self.nodes[0].gettransaction (txid)
-    assert_equal (blkhash, txdata['blockhash'])
-    assert_equal (txid, txdata['txid'])
-    assert_equal (101, txdata['confirmations'])
-    assert_equal (value, txdata['amount'])
-    assert_equal (1, len (txdata['details']))
-    assert_equal ('bounty', txdata['details'][0]['category'])
+    self.verifyTx (0, txid, blkhash, value, 101)
+
+    # Now the spend should succeed.
+    spendTxid = self.nodes[2].sendrawtransaction (rawtx)
+    self.advance (0, 1)
+    txdata = self.nodes[1].gettransaction (spendTxid)
+    assert_equal (1, txdata['confirmations'])
 
     # TODO: Check importprivkey (rescanning) with this tx.
     # TODO: Check reorg that invalidates the bounty.
-    # TODO: gettxout, gametx flag
+
+  def verifyTx (self, node, txid, blkhash, value, conf):
+    """
+    Verify the bounty transaction in the wallet and its UTXO entry.
+    """
+
+    txdata = self.nodes[node].gettransaction (txid)
+    assert txdata['bounty']
+    assert_equal (blkhash, txdata['blockhash'])
+    assert_equal (txid, txdata['txid'])
+    assert_equal (conf, txdata['confirmations'])
+
+    if conf > 100:
+      cat = 'bounty'
+      amount = value
+    else:
+      cat = 'immature_bounty'
+      amount = Decimal ('0')
+
+    assert_equal (1, len (txdata['details']))
+    assert_equal (cat, txdata['details'][0]['category'])
+    assert_equal (amount, txdata['amount'])
+
+    utxo = self.nodes[node].gettxout (txid, 0)
+    assert_equal (value, utxo['value'])
+    assert_equal (conf, utxo['confirmations'])
+    assert not utxo['coinbase']
+    assert utxo['bounty']
 
 if __name__ == '__main__':
   GameTxIndexTest ().main ()

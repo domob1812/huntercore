@@ -122,12 +122,12 @@ CLEAN_BITCOIN_TEST = test/*.gcda test/*.gcno $(GENERATED_TEST_FILES)
 
 CLEANFILES += $(CLEAN_BITCOIN_TEST)
 
-namecoin_test: $(TEST_BINARY)
+huntercoin_test: $(TEST_BINARY)
 
-namecoin_test_check: $(TEST_BINARY) FORCE
+huntercoin_test_check: $(TEST_BINARY) FORCE
 	$(MAKE) check-TESTS TESTS=$^
 
-namecoin_test_clean : FORCE
+huntercoin_test_clean : FORCE
 	rm -f $(CLEAN_BITCOIN_TEST) $(test_test_huntercoin_OBJECTS) $(TEST_BINARY)
 
 check-local:

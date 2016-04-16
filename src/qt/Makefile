@@ -1,9 +1,9 @@
 .PHONY: FORCE
 all: FORCE
-	$(MAKE) -C .. namecoin_qt test_bitcoin_qt
+	$(MAKE) -C .. huntercoin_qt test_huntercoin_qt
 clean: FORCE
-	$(MAKE) -C .. namecoin_qt_clean test_bitcoin_qt_clean
+	$(MAKE) -C .. huntercoin_qt_clean test_huntercoin_qt_clean
 check: FORCE
-	$(MAKE) -C .. test_bitcoin_qt_check
-namecoin-qt namecoin-qt.exe: FORCE
-	 $(MAKE) -C .. namecoin_qt
+	$(MAKE) -C .. test_huntercoin_qt_check
+huntercoin-qt huntercoin-qt.exe: FORCE
+	 $(MAKE) -C .. huntercoin_qt

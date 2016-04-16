@@ -1,3 +1,5 @@
+* fix issue with wallet rescanning on startup
+
 * check death tx handling in wallet, name_list
 
 * fix name_list dead flag

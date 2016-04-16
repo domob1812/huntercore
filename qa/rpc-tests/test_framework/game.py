@@ -65,6 +65,7 @@ class GameTestFramework (NameTestFramework):
         self.nodes[nind].name_update (name, json.dumps (op))
 
     self.generate (node, numBlocks)
+    self.batched = {}
 
   def finishMove (self, node, name, ind, advanceFirst = True):
     """
@@ -123,14 +124,18 @@ class Hunter:
     if self.moving:
       self.eta = pathlen (self.pos, hunterData['wp'])
 
-  def _setInBatch (self, key, val):
+  def _setInBatch (self, key, val, onTeam = False):
     if not self.node in self.tester.batched:
       self.tester.batched[self.node] = {}
     if not self.name in self.tester.batched[self.node]:
       self.tester.batched[self.node][self.name] = {}
-    if not str (self.ind) in self.tester.batched[self.node][self.name]:
-      self.tester.batched[self.node][self.name][str (self.ind)] = {}
-    self.tester.batched[self.node][self.name][str (self.ind)][key] = val
+
+    if onTeam:
+      self.tester.batched[self.node][self.name][key] = val
+    else:
+      if not str (self.ind) in self.tester.batched[self.node][self.name]:
+        self.tester.batched[self.node][self.name][str (self.ind)] = {}
+      self.tester.batched[self.node][self.name][str (self.ind)][key] = val
 
   def move (self, target):
     path = self.rpcNode.game_getpath (self.pos, target)
@@ -138,6 +143,9 @@ class Hunter:
 
   def destruct (self):
     self._setInBatch ('destruct', True)
+
+  def setAddress (self, addr):
+    self._setInBatch ('address', addr, True)
 
 def distLInf (a, b):
   """

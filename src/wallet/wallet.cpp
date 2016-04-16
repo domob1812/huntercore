@@ -644,7 +644,9 @@ bool CWallet::AddToWallet(const CWalletTx& wtxIn, bool fFromLoadWallet, CWalletD
         BOOST_FOREACH(const CTxIn& txin, wtx.vin) {
             if (mapWallet.count(txin.prevout.hash)) {
                 CWalletTx& prevtx = mapWallet[txin.prevout.hash];
-                if (prevtx.nIndex == -1 && !prevtx.hashUnset()) {
+                /* Game transactions have precisely prevtx.nIndex == -1, but
+                   we should not mark them as conflicted because of that.  */
+                if (prevtx.nIndex == -1 && !prevtx.hashUnset() && !prevtx.IsGameTx()) {
                     MarkConflicted(prevtx.hashBlock, wtx.GetHash());
                 }
             }

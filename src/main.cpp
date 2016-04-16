@@ -1689,6 +1689,13 @@ bool ReadBlockFromDisk(CBlock& block, std::vector<CTransaction>& vGameTx, const 
     if (!ReadBlockFromDisk(block, pindex, consensusParams))
         return false;
 
+    /* If this is the genesis block, skip reading the undo file as it does
+       not exist.  There are no game tx in the genesis block.  */
+    if (pindex->nHeight == 0) {
+        vGameTx.clear();
+        return true;
+    }
+
     /* Read also the game tx array from the undo file.  */
     CAutoFile undo(OpenUndoFile(pindex->GetUndoPos(), true), SER_DISK, CLIENT_VERSION);
     if (undo.IsNull())
@@ -1698,7 +1705,6 @@ bool ReadBlockFromDisk(CBlock& block, std::vector<CTransaction>& vGameTx, const 
     } catch (const std::exception& e) {
         return error("%s: Deserialize or I/O error - %s", __func__, e.what());
     }
-
     return true;
 }
 

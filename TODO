@@ -1,5 +1,7 @@
 * check death tx handling in wallet, name_list
 
+* fix name_list dead flag
+
 * invalidate moves from mempool when the game state changes
 
 * make sure miners take their taxes

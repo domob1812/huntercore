@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# Copyright (c) 2015 Daniel Kraft
+# Copyright (c) 2015-2016 Daniel Kraft
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -71,6 +71,17 @@ class DualAlgoTest (BitcoinTestFramework):
         raise AssertionError ("invalid algo parameter accepted")
       except JSONRPCException as exc:
         assert_equal (exc.error['code'], -8)
+
+    # Briefly test generatetoaddress as well.
+    for algo in [0, 1]:
+      addr = self.nodes[0].getnewaddress ()
+      blkhash = self.nodes[0].generatetoaddress (1, addr, algo)
+      assert_equal (1, len (blkhash))
+      data = self.nodes[0].getblock(blkhash[0])
+      assert_equal (algo, data['algo'])
+      coinbaseTx = data['tx'][0]
+      utxo = self.nodes[0].gettxout (coinbaseTx, 0)
+      assert_equal ([addr], utxo['scriptPubKey']['addresses'])
 
     # Check updates of the returned block (or not) with getauxblock.
     # Note that this behaviour needs not necessarily be exactly as tested,

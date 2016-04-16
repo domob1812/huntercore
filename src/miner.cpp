@@ -136,6 +136,7 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, PowAlgo algo, co
         // FIXME: Active version bits after the always-auxpow fork!
         //const int32_t nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus());
         const int32_t nVersion = 4;
+        pblock->SetAlgo(algo);
         pblock->SetBaseVersion(nVersion, nChainId);
         // -regtest only: allow overriding block.nVersion with
         // -blockversion=N to test forking scenarios

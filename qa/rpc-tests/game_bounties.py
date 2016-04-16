@@ -57,6 +57,18 @@ class GameTxIndexTest (GameTestFramework):
     blkhash = self.nodes[0].getbestblockhash ()
     self.verifyTx (0, txid, blkhash, value, 1)
 
+    # Import the private key into node 3 and verify that rescanning
+    # makes the game tx appear.
+    print "Importing private key into wallet and rescanning..."
+    try:
+      self.verifyTx (3, txid, blkhash, value, 1)
+      raise AssertionError ("transaction in wallet before importing")
+    except JSONRPCException as exc:
+      assert_equal (-5, exc.error['code'])
+    privkey = self.nodes[0].dumpprivkey (addr)
+    self.nodes[3].importprivkey (privkey)
+    self.verifyTx (3, txid, blkhash, value, 1)
+
     # Construct a tx spending the bounty.
     print "Trying to spend immature bounty..."
     spendValue = value - Decimal ('0.01')
@@ -77,8 +89,10 @@ class GameTxIndexTest (GameTestFramework):
     print "Letting bounty tx mature..."
     self.advance(0, 99)
     self.verifyTx (0, txid, blkhash, value, 100)
+    self.verifyTx (3, txid, blkhash, value, 100)
     self.advance(0, 1)
     self.verifyTx (0, txid, blkhash, value, 101)
+    self.verifyTx (3, txid, blkhash, value, 101)
 
     # Now the spend should succeed.
     spendTxid = self.nodes[2].sendrawtransaction (rawtx)
@@ -86,7 +100,6 @@ class GameTxIndexTest (GameTestFramework):
     txdata = self.nodes[1].gettransaction (spendTxid)
     assert_equal (1, txdata['confirmations'])
 
-    # TODO: Check importprivkey (rescanning) with this tx.
     # TODO: Check reorg that invalidates the bounty.
 
   def verifyTx (self, node, txid, blkhash, value, conf):

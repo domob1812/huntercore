@@ -46,12 +46,17 @@ class GameBasicNamesTest (NameTestFramework):
       assert_equal (exc.error['code'], -5)
     state = self.nodes[0].game_getstate ()
     assert_equal (state['players'], {})
+    assert_equal ([], self.nodes[0].name_list ())
 
     # Register the player and verify that it appears on the map.
     self.firstupdateName (0, testname, new, '{"color":0}')
     self.sync_all ()
     self.generate (1, 1)
     self.checkName (2, testname, '{"color":0}', False)
+    arr = self.nodes[0].name_list ()
+    assert_equal (1, len (arr))
+    self.checkNameData (arr[0], testname, '{"color":0}', False)
+    assert_equal ([], self.nodes[1].name_list ())
     dat = self.nodes[2].game_getplayerstate (testname)
     state = self.nodes[2].game_getstate ()
     assert_equal (state['players'], {testname: dat})
@@ -81,6 +86,10 @@ class GameBasicNamesTest (NameTestFramework):
     self.nodes[0].name_update (testname, '{"0":{"destruct":true}}')
     self.generate (0, 1)
     self.checkName (2, testname, None, True)
+    arr = self.nodes[0].name_list ()
+    assert_equal (1, len (arr))
+    # FIXME: Enable once death tx are correct in wallet.
+    #self.checkNameData (arr[0], testname, None, True)
     state = self.nodes[2].game_getstate ()
     assert_equal (state['players'], {})
     found = False
@@ -98,14 +107,43 @@ class GameBasicNamesTest (NameTestFramework):
     state = self.nodes[2].game_getstate ()
     assert_equal (state['players'], {testname: dat})
 
+    # The old wallet should still list the dead entry.
+    arr = self.nodes[0].name_list ()
+    assert_equal (1, len (arr))
+    # FIXME: Enable once death tx are correct in wallet.
+    #self.checkNameData (arr[0], testname, None, True)
+
     # Also perform a new-style name_register registration.
-    self.nodes[1].name_register ("newstyle", '{"color":1}')
+    self.nodes[2].name_register ("newstyle", '{"color":1}')
     self.generate (0, 1)
-    self.checkName (2, "newstyle", '{"color":1}', False)
-    dat = self.nodes[2].game_getplayerstate ("newstyle")
-    state = self.nodes[2].game_getstate ()
+    self.checkName (3, "newstyle", '{"color":1}', False)
+    dat = self.nodes[3].game_getplayerstate ("newstyle")
+    state = self.nodes[3].game_getstate ()
     assert_equal (len (state['players']), 2)
     assert_equal (state['players']['newstyle'], dat)
+
+    # Transfer the name and check name_list afterwards.
+    addr = self.nodes[1].getnewaddress ()
+    self.nodes[2].name_update ("newstyle", '{}', addr)
+    self.generate (0, 1)
+    self.checkName (3, "newstyle", '{}', False)
+    arr = self.nodes[1].name_list ()
+    assert_equal (2, len (arr))
+    self.checkNameData (arr[0], testname, '{"color":0}', False)
+    self.checkNameData (arr[1], "newstyle", '{}', False)
+    assert not arr[1]['transferred']
+    arr = self.nodes[2].name_list ()
+    assert_equal (1, len (arr))
+    self.checkNameData (arr[0], "newstyle", '{}', False)
+    assert arr[0]['transferred']
+
+    # Check listtransactions for the transferred name.
+    tx = self.nodes[1].listtransactions ("*", 1)
+    assert_equal ("receive", tx[0]['category'])
+    assert_equal ("update: newstyle", tx[0]['name'])
+    tx = self.nodes[2].listtransactions ("*", 1)
+    assert_equal ("send", tx[0]['category'])
+    assert_equal ("update: newstyle", tx[0]['name'])
 
 if __name__ == '__main__':
   GameBasicNamesTest ().main ()

@@ -155,6 +155,12 @@ bool CTransaction::IsBountyTx() const
     return true;
 }
 
+bool CTransaction::IsKillTx() const
+{
+    /* Kill transactions are game transactions with no outputs.  */
+    return IsGameTx() && vout.empty() && !vin.empty();
+}
+
 std::string CTransaction::ToString() const
 {
     std::string str;

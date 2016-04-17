@@ -8,7 +8,7 @@
 from test_framework.game import GameTestFramework
 from test_framework.util import *
 
-class GameTxIndexTest (GameTestFramework):
+class GameBountiesTest (GameTestFramework):
 
   def run_test (self):
     GameTestFramework.run_test (self)
@@ -172,4 +172,4 @@ class GameTxIndexTest (GameTestFramework):
       assert utxo['bounty']
 
 if __name__ == '__main__':
-  GameTxIndexTest ().main ()
+  GameBountiesTest ().main ()

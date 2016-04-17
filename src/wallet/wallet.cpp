@@ -900,6 +900,14 @@ void CWallet::MarkConflicted(const uint256& hashBlock, const uint256& hashTx)
         done.insert(now);
         assert(mapWallet.count(now));
         CWalletTx& wtx = mapWallet[now];
+
+        /* If we have a game transaction, GetDepthInMainChain will not
+           return a proper "negative conflict score".  They are always
+           only confirm=0 in case of an orphaned block that created them.
+           Thus ignore those for the logic here.  */
+        if (wtx.IsGameTx())
+            continue;
+
         int currentconfirm = wtx.GetDepthInMainChain();
         if (conflictconfirms < currentconfirm) {
             // Block is 'more conflicted' than current confirm; update.
@@ -1050,7 +1058,7 @@ bool CWallet::IsMine(const CTransaction& tx) const
 
 bool CWallet::IsFromMe(const CTransaction& tx) const
 {
-    return (GetDebit(tx, ISMINE_ALL) > 0);
+    return (GetDebit(tx, ISMINE_ALL, false) > 0);
 }
 
 CAmount CWallet::GetDebit(const CTransaction& tx, const isminefilter& filter, bool fExcludeNames) const
@@ -1152,6 +1160,32 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
         nFee = nDebit - nValueOut;
     }
 
+    // If this is a kill tx, we need special handling since there
+    // are no vouts but we still want to show it as a "sent".
+    if (IsKillTx())
+    {
+        for (unsigned int i = 0; i < vin.size(); ++i)
+        {
+            if (pwallet->IsMine(vin[i]))
+            {
+                COutputEntry output;
+                output.destination = CNoDestination();
+                output.nameOp = "killed";
+                output.amount = 0;
+                output.vout = i;
+
+                CScript::const_iterator pc = vin[i].scriptSig.begin();
+                opcodetype opcode;
+                valtype vch;
+                if (vin[i].scriptSig.GetOp(pc, opcode, vch))
+                    output.nameOp = "killed: " + ValtypeToString(vch);
+
+                listSent.push_back(output);
+            }
+        }
+        return;
+    }
+
     // Sent/received.
     for (unsigned int i = 0; i < vout.size(); ++i)
     {
@@ -1198,8 +1232,7 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
 
         // If we are receiving the output, add it as a "received" entry
         // For names, only do this if we did not also add it as "sent"
-        if ((fIsMine & filter)
-            && (!nameOp.isNameOp() || !isFromMe))
+        if ((fIsMine & filter) && (!nameOp.isNameOp() || !isFromMe))
             listReceived.push_back(output);
     }
 

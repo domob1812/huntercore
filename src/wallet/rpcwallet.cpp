@@ -61,7 +61,7 @@ void WalletTxToJSON(const CWalletTx& wtx, UniValue& entry)
     entry.push_back(Pair("confirmations", confirms));
     if (wtx.IsCoinBase())
         entry.push_back(Pair("generated", true));
-    if (wtx.IsGameTx())
+    if (wtx.IsBountyTx())
         entry.push_back(Pair("bounty", true));
     if (confirms > 0)
     {
@@ -1350,7 +1350,14 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
             MaybePushAddress(entry, s.destination);
             if(!s.nameOp.empty())
                 entry.push_back(Pair("name", s.nameOp));
-            entry.push_back(Pair("category", "send"));
+            if (wtx.IsKillTx())
+            {
+                if (wtx.GetDepthInMainChain() < 1)
+                    entry.push_back(Pair("category", "orphan_killed"));
+                else
+                    entry.push_back(Pair("category", "killed"));
+            } else
+                entry.push_back(Pair("category", "send"));
             entry.push_back(Pair("amount", ValueFromAmount(-s.amount)));
             if (pwalletMain->mapAddressBook.count(s.destination))
                 entry.push_back(Pair("label", pwalletMain->mapAddressBook[s.destination].name));
@@ -1388,7 +1395,7 @@ void ListTransactions(const CWalletTx& wtx, const string& strAccount, int nMinDe
                         entry.push_back(Pair("category", "immature"));
                     else
                         entry.push_back(Pair("category", "generate"));
-                } if (wtx.IsGameTx())
+                } else if (wtx.IsGameTx())
                 {
                     if (wtx.GetDepthInMainChain() < 1)
                         entry.push_back(Pair("category", "orphan_bounty"));

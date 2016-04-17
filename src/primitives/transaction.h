@@ -284,6 +284,7 @@ public:
     }
 
     bool IsBountyTx() const;
+    bool IsKillTx() const;
 
     friend bool operator==(const CTransaction& a, const CTransaction& b)
     {

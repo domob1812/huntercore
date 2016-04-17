@@ -11,3 +11,6 @@ echo "\nGame transaction indexing..."
 
 echo "\nGame bounties..."
 ./game_bounties.py
+
+echo "\nGame kills..."
+./game_kills.py

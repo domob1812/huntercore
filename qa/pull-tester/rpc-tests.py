@@ -141,6 +141,7 @@ testScripts = [
     'game_feepolicy.py',
     'game_txindex.py',
     'game_bounties.py',
+    'game_kills.py',
 ]
 testScriptsExt = [
     'bip9-softforks.py',

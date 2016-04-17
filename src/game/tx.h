@@ -1,4 +1,4 @@
-// Copyright (C) 2015 Crypto Realities Ltd
+// Copyright (C) 2015-2016 Crypto Realities Ltd
 
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -16,11 +16,14 @@
 #ifndef GAME_TX_H
 #define GAME_TX_H
 
+#include "names/common.h"
+
 #include <vector>
 
 class CBlockUndo;
 class CCoinsView;
 class CCoinsViewCache;
+class CScript;
 class CTransaction;
 class CValidationState;
 class StepResult;
@@ -75,5 +78,10 @@ void ApplyGameTransactions (const std::vector<CTransaction>& vGameTx,
                             const StepResult& stepResult, unsigned nHeight,
                             CValidationState& state, CCoinsViewCache& view,
                             CBlockUndo& undo);
+
+/**
+ * Find the name of the player involved in a scriptSig of a game tx.
+ */
+bool NameFromGameTransactionInput (const CScript& scriptSig, valtype& name);
 
 #endif

@@ -88,8 +88,7 @@ class GameBasicNamesTest (NameTestFramework):
     self.checkName (2, testname, None, True)
     arr = self.nodes[0].name_list ()
     assert_equal (1, len (arr))
-    # FIXME: Enable once death tx are correct in wallet.
-    #self.checkNameData (arr[0], testname, None, True)
+    self.checkNameData (arr[0], testname, None, True)
     state = self.nodes[2].game_getstate ()
     assert_equal (state['players'], {})
     found = False
@@ -110,8 +109,7 @@ class GameBasicNamesTest (NameTestFramework):
     # The old wallet should still list the dead entry.
     arr = self.nodes[0].name_list ()
     assert_equal (1, len (arr))
-    # FIXME: Enable once death tx are correct in wallet.
-    #self.checkNameData (arr[0], testname, None, True)
+    self.checkNameData (arr[0], testname, None, True)
 
     # Also perform a new-style name_register registration.
     self.nodes[2].name_register ("newstyle", '{"color":1}')
@@ -144,6 +142,17 @@ class GameBasicNamesTest (NameTestFramework):
     tx = self.nodes[2].listtransactions ("*", 1)
     assert_equal ("send", tx[0]['category'])
     assert_equal ("update: newstyle", tx[0]['name'])
+
+    # Kill both names and verify that name_list handles that.
+    self.nodes[1].name_update (testname, '{"0":{"destruct":true}}')
+    self.nodes[1].name_update ("newstyle", '{"0":{"destruct":true}}')
+    self.generate (0, 1)
+    self.checkName (3, testname, None, True)
+    self.checkName (3, "newstyle", None, True)
+    arr = self.nodes[1].name_list ()
+    assert_equal (2, len (arr))
+    self.checkNameData (arr[0], testname, None, True)
+    self.checkNameData (arr[1], "newstyle", None, True)
 
 if __name__ == '__main__':
   GameBasicNamesTest ().main ()

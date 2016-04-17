@@ -11,6 +11,7 @@
 #include "coincontrol.h"
 #include "consensus/consensus.h"
 #include "consensus/validation.h"
+#include "game/tx.h"
 #include "key.h"
 #include "keystore.h"
 #include "main.h"
@@ -1174,10 +1175,8 @@ void CWalletTx::GetAmounts(list<COutputEntry>& listReceived,
                 output.amount = 0;
                 output.vout = i;
 
-                CScript::const_iterator pc = vin[i].scriptSig.begin();
-                opcodetype opcode;
                 valtype vch;
-                if (vin[i].scriptSig.GetOp(pc, opcode, vch))
+                if (NameFromGameTransactionInput(vin[i].scriptSig, vch))
                     output.nameOp = "killed: " + ValtypeToString(vch);
 
                 listSent.push_back(output);

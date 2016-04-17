@@ -1,4 +1,4 @@
-// Copyright (C) 2015 Crypto Realities Ltd
+// Copyright (C) 2015-2016 Crypto Realities Ltd
 
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -225,4 +225,12 @@ ApplyGameTransactions (const std::vector<CTransaction>& vGameTx,
           view.SetName (vchName, data, false);
         }
     }
+}
+
+bool
+NameFromGameTransactionInput (const CScript& scriptSig, valtype& name)
+{
+  CScript::const_iterator pc = scriptSig.begin ();
+  opcodetype opcode;
+  return scriptSig.GetOp (pc, opcode, name);
 }

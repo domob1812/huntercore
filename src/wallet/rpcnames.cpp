@@ -7,6 +7,7 @@
 #include "game/db.h"
 #include "game/move.h"
 #include "game/state.h"
+#include "game/tx.h"
 #include "init.h"
 #include "main.h"
 #include "names/common.h"
@@ -73,6 +74,87 @@ GetRequiredGameFee (const valtype& name, const valtype& value)
 
 /* ************************************************************************** */
 
+/**
+ * Helper class for the implementation of name_list.  In Huntercoin, things
+ * are more complicated due to kill transactions that might change multiple
+ * names in a single tx.  To handle them, name_list uses this class
+ * to track current heights of names and update them.
+ */
+class NameListBuilder
+{
+private:
+
+  const valtype nameFilter;
+
+  std::map<valtype, int> mapHeights;
+  std::map<valtype, UniValue> mapObjects;
+
+  /* Data for the current tx, which may be used for multiple changes
+     if we handle kill transactions.  */
+  int nHeight;
+  bool isKillTx;
+
+public:
+
+  explicit inline NameListBuilder (const valtype& filter)
+    : nameFilter(filter),
+      mapHeights(), mapObjects()
+  {}
+
+  /* Returns false if the tx should be skipped (is unconfirmed).  */
+  bool startTx (const CWalletTx& tx);
+
+  inline int
+  getHeight () const
+  {
+    return nHeight;
+  }
+
+  void add (const valtype& name, const UniValue& obj);
+
+  UniValue build () const;
+
+};
+
+bool
+NameListBuilder::startTx (const CWalletTx& tx)
+{
+  const CBlockIndex* pindex;
+  const int depth = tx.GetDepthInMainChain (pindex);
+
+  nHeight = pindex->nHeight;
+  isKillTx = tx.IsKillTx ();
+
+  return depth > 0;
+}
+
+void
+NameListBuilder::add (const valtype& name, const UniValue& obj)
+{
+  if (!nameFilter.empty () && nameFilter != name)
+    return;
+
+  /* Kill transactions have precedence over the non-kill name_update that
+     might be in the same block (when self-destructing).  */
+  const std::map<valtype, int>::const_iterator mit = mapHeights.find (name);
+  if (mit == mapHeights.end () || mit->second < nHeight
+      || (mit->second == nHeight && isKillTx))
+    {
+      mapHeights[name] = nHeight;
+      mapObjects[name] = obj;
+    }
+}
+
+UniValue
+NameListBuilder::build () const
+{
+  UniValue res(UniValue::VARR);
+  BOOST_FOREACH (const PAIRTYPE(const valtype, UniValue)& item, mapObjects)
+    res.push_back (item.second);
+
+  return res;
+}
+
 UniValue
 name_list (const UniValue& params, bool fHelp)
 {
@@ -100,8 +182,7 @@ name_list (const UniValue& params, bool fHelp)
   if (params.size () == 1)
     nameFilter = ValtypeFromString (params[0].get_str ());
 
-  std::map<valtype, int> mapHeights;
-  std::map<valtype, UniValue> mapObjects;
+  NameListBuilder builder(nameFilter);
 
   {
   LOCK2 (cs_main, pwalletMain->cs_wallet);
@@ -109,8 +190,34 @@ name_list (const UniValue& params, bool fHelp)
                  pwalletMain->mapWallet)
     {
       const CWalletTx& tx = item.second;
-      if (!tx.IsNamecoin ())
+      if (!tx.IsNamecoin () && !tx.IsKillTx ())
         continue;
+
+      if (!builder.startTx (tx))
+        continue;
+
+      if (tx.IsKillTx ())
+        {
+          for (unsigned i = 0; i < tx.vin.size (); ++i)
+            {
+              if (!pwalletMain->IsMine (tx.vin[i]))
+                continue;
+
+              valtype name;
+              if (!NameFromGameTransactionInput (tx.vin[i].scriptSig, name))
+                {
+                  LogPrintf ("ERROR: failed to get name from kill input");
+                  continue;
+                }
+
+              UniValue obj = getNameInfo (name, valtype (), true,
+                                          COutPoint (tx.GetHash (), 0),
+                                          CScript (), builder.getHeight ());
+              builder.add (name, obj);
+            }
+
+          continue;
+        }
 
       CNameScript nameOp;
       int nOut = -1;
@@ -134,37 +241,19 @@ name_list (const UniValue& params, bool fHelp)
         continue;
 
       const valtype& name = nameOp.getOpName ();
-      if (!nameFilter.empty () && nameFilter != name)
-        continue;
-
-      const CBlockIndex* pindex;
-      const int depth = tx.GetDepthInMainChain (pindex);
-      if (depth <= 0)
-        continue;
-
-      const std::map<valtype, int>::const_iterator mit = mapHeights.find (name);
-      if (mit != mapHeights.end () && mit->second > pindex->nHeight)
-        continue;
-
-      /* FIXME: Handle dead players.  */
       UniValue obj
         = getNameInfo (name, nameOp.getOpValue (), false,
                        COutPoint (tx.GetHash (), nOut),
-                       nameOp.getAddress (), pindex->nHeight);
+                       nameOp.getAddress (), builder.getHeight ());
 
       const bool mine = IsMine (*pwalletMain, nameOp.getAddress ());
       obj.push_back (Pair ("transferred", !mine));
 
-      mapHeights[name] = pindex->nHeight;
-      mapObjects[name] = obj;
+      builder.add (name, obj);
     }
   }
 
-  UniValue res(UniValue::VARR);
-  BOOST_FOREACH (const PAIRTYPE(const valtype, UniValue)& item, mapObjects)
-    res.push_back (item.second);
-
-  return res;
+  return builder.build ();
 }
 
 /* ************************************************************************** */

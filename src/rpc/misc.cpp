@@ -483,7 +483,8 @@ getstatsforheight (const UniValue& params, bool fHelp)
                  gameState.players)
     nHunters += cur.second.characters.size ();
   UniValue game(UniValue::VOBJ);
-  game.push_back (Pair ("players", gameState.players.size ()));
+  const unsigned nPlayers = gameState.players.size ();
+  game.push_back (Pair ("players", static_cast<int> (nPlayers)));
   game.push_back (Pair ("hunters", static_cast<int> (nHunters)));
 
   UniValue ret(UniValue::VOBJ);

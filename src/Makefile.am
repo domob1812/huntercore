@@ -453,7 +453,7 @@ if GLIBC_BACK_COMPAT
 endif
 
 libnamecoinconsensus_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
-libnamecoinconsensus_la_LIBADD = $(LIBSECP256K1)
+libnamecoinconsensus_la_LIBADD = $(LIBSECP256K1) $(BOOST_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) 
 libnamecoinconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL
 libnamecoinconsensus_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 

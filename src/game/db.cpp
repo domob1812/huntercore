@@ -26,6 +26,8 @@
 #include <vector>
 #include <memory>
 
+#include <boost/thread.hpp>
+
 /* Define prefix for database keys.  We only index by block hash, but still
    need them so we can tell game states apart from the obfuscation key that
    is also in the database.  */

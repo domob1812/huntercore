@@ -1,4 +1,4 @@
-// Copyright (C) 2015 Crypto Realities Ltd
+// Copyright (C) 2015-2016 Crypto Realities Ltd
 
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -426,6 +426,12 @@ struct GameState
     ForkInEffect (Fork type) const
     {
       return param->rules->ForkInEffect (type, nHeight);
+    }
+
+    inline bool
+    TestingRules () const
+    {
+      return param->rules->TestingRules ();
     }
 
     // Helper functions

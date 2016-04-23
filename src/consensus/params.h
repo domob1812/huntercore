@@ -72,6 +72,10 @@ public:
       return ForkInEffect (type, nHeight) && !ForkInEffect (type, nHeight - 1);
     }
 
+    /* Return whether this is regtest mode, for which we change the
+       game rules in order to allow easier testing.  */
+    virtual bool TestingRules() const = 0;
+
 };
 
 class MainNetConsensus : public ConsensusRules
@@ -93,6 +97,11 @@ public:
             default:
                 assert (false);
         }
+    }
+
+    bool TestingRules() const
+    {
+        return false;
     }
 
 };
@@ -123,6 +132,11 @@ public:
 class RegTestConsensus : public TestNetConsensus
 {
 public:
+
+    bool TestingRules() const
+    {
+        return true;
+    }
 
 };
 

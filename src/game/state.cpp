@@ -1,4 +1,4 @@
-// Copyright (C) 2015 Crypto Realities Ltd
+// Copyright (C) 2015-2016 Crypto Realities Ltd
 
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -523,6 +523,11 @@ CharacterState::Spawn (const GameState& state, int color, RandomGenerator &rnd)
         default:
           throw std::runtime_error("CharacterState::Spawn: incorrect color");
         }
+
+      /* Under the regtest rules, everyone is placed into the yellow corner.
+         This allows quicker fights for testing.  */
+      if (state.TestingRules ())
+        coord = Coord(x, y);
 
       // Set look-direction for the sprite
       if (coord.x == 0)

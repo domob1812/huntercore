@@ -17,7 +17,7 @@ class GameKillsTest (GameTestFramework):
     # Create two players and kill them.
     print "Creating and killing hunters..."
     self.nodes[0].name_register ("a", '{"color":1}')
-    self.nodes[1].name_register ("b", '{"color":2}')
+    self.nodes[1].name_register ("b", '{"color":1}')
     self.advance (3, 1)
     self.get (0, "a", 0).destruct ()
     self.get (1, "b", 0).destruct ()
@@ -48,7 +48,7 @@ class GameKillsTest (GameTestFramework):
     for i in range(4):
       self.nodes[i].invalidateblock (blkhash)
     self.checkName (3, "a", '{"color":1}', False)
-    self.checkName (3, "b", '{"color":2}', False)
+    self.checkName (3, "b", '{"color":1}', False)
     state = self.nodes[3].game_getstate ()
     assert_equal (len (state['players']), 2)
 
@@ -56,21 +56,14 @@ class GameKillsTest (GameTestFramework):
     print "Remining one of the kills..."
     mempool = self.nodes[3].getrawmempool ()
     assert_equal (len (mempool), 2)
-    txidB = None
-    for p in self.nodes[3].name_pending ():
-      if p['name'] == 'b':
-        txidB = p['txid']
-        break
-    assert txidB is not None
-    self.nodes[3].prioritisetransaction (txidB, 0, -100000000)
-    self.advance (3, 1)
+    self.advance (3, 1, ["b"])
 
     # Check the names to make sure killing / not killing has worked as expected.
     state = self.nodes[3].game_getstate ()
     assert_equal (len (state['players']), 1)
     assert 'b' in state['players']
     self.checkName (3, "a", None, True)
-    self.checkName (3, "b", '{"color":2}', False)
+    self.checkName (3, "b", '{"color":1}', False)
 
     # Check wallet handling of the previous kill transaction.
     self.checkKillTx (0, txid, None, 0, "a", 0)

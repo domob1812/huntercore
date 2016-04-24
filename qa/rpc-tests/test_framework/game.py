@@ -50,22 +50,45 @@ class GameTestFramework (NameTestFramework):
 
     return Hunter (self, self.nodes[node], node, name, ind, data)
 
-  def advance (self, node, numBlocks):
+  def issueMoves (self):
     """
-    Mine the given number of blocks, advancing the game state.
-    This should be used instead of generate, since it takes care
-    of issuing the batched moves before that.
-
-    If the network is split, moves should only be batched on nodes
-    connected to node!
+    Issue all batched moves as pending transactions onto the network.
     """
 
     for nind, ops in self.batched.items ():
       for name, op in ops.items ():
         self.nodes[nind].name_update (name, json.dumps (op))
+    self.batched = {}
+
+    self.sync_all ('mempool')
+
+  def advance (self, node, numBlocks, doNotMine = []):
+    """
+    Mine the given number of blocks, advancing the game state.
+    This should be used instead of generate, since it takes care
+    of issuing the batched moves before that.
+
+    doNotMine may contain a set of names for which we should not mine
+    their pending updates.  We de-prioritise those before advancing, and reset
+    the priority afterwards.
+
+    If the network is split, moves should only be batched on nodes
+    connected to node!
+    """
+
+    self.issueMoves ()
+
+    txids = []
+    for name in doNotMine:
+      txid = self.pendingTxid (node, name)
+      assert txid is not None
+      txids.append (txid)
+      self.nodes[node].prioritisetransaction (txid, 0, -100000000)
 
     self.generate (node, numBlocks)
-    self.batched = {}
+
+    for txid in txids:
+      self.nodes[node].prioritisetransaction (txid, 0, 100000000)
 
   def finishMove (self, node, name, ind, advanceFirst = True):
     """
@@ -102,6 +125,17 @@ class GameTestFramework (NameTestFramework):
         bestDist = curDist
       
     return bestPos
+
+  def players (self, node):
+    """
+    Return list of living player names on the map.
+    """
+
+    state = self.nodes[node].game_getstate ()
+    res = state['players'].keys ()
+    res.sort ()
+
+    return res
 
 class Hunter:
   """

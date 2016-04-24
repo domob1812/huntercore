@@ -562,16 +562,14 @@ public:
      */
     bool HasNoInputsOf(const CTransaction& tx) const;
 
-    /* TODO: Add code to remove invalidated moves.  */
-    /*
+    /* Remove conflicts due to "revived" players.  */
     inline void
-    removeUnexpireConflicts (const std::set<valtype>& unexpired,
-                             std::list<CTransaction>& removed)
+    removeReviveConflicts (const std::set<valtype>& revived,
+                           std::list<CTransaction>& removed)
     {
         LOCK(cs);
-        names.removeUnexpireConflicts (unexpired, removed);
+        names.removeReviveConflicts (revived, removed);
     }
-    */
 
     /** Affect CreateNewBlock prioritisation of transactions */
     void PrioritiseTransaction(const uint256 hash, const std::string strHash, double dPriorityDelta, const CAmount& nFeeDelta);

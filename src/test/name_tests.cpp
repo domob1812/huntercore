@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015 Daniel Kraft
+// Copyright (c) 2014-2016 Daniel Kraft
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -933,8 +933,20 @@ BOOST_AUTO_TEST_CASE (name_mempool)
   BOOST_CHECK (!mempool.registersName (nameReg));
   BOOST_CHECK (mempool.mapTx.empty ());
 
-  /* FIXME: In case the tests are "revived", check removing of invalidated
-     game transactions.  */
+  /* Check removing of conflicts after hunters are revived.  */
+
+  mempool.addUnchecked (entryReg.GetTx ().GetHash (), entryReg);
+  BOOST_CHECK (mempool.registersName (nameReg));
+  BOOST_CHECK (!mempool.checkNameOps (txReg2));
+
+  std::set<valtype> names;
+  names.insert (nameReg);
+  removed.clear ();
+  mempool.removeReviveConflicts (names, removed);
+  BOOST_CHECK (removed.size () == 1);
+  BOOST_CHECK (removed.front ().GetHash () == txReg1.GetHash ());
+  BOOST_CHECK (!mempool.registersName (nameReg));
+  BOOST_CHECK (mempool.mapTx.empty ());
 }
 
 /* ************************************************************************** */

@@ -14,3 +14,6 @@ echo "\nGame bounties..."
 
 echo "\nGame kills..."
 ./game_kills.py
+
+echo "\nGame mempool cleanup..."
+./game_mempool.py

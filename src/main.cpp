@@ -2940,10 +2940,29 @@ bool static DisconnectTip(CValidationState& state, const Consensus::Params& cons
     // UpdateTransactionsFromBlock finds descendants of any transactions in this
     // block that were added back and cleans up the mempool state.
     mempool.UpdateTransactionsFromBlock(vHashUpdate);
+    // Fix the pool for conflicts due to revived players.
+    std::set<valtype> revivedNames;
+    BOOST_FOREACH(const CTransaction &tx, vGameTx) {
+        if (tx.IsKillTx()) {
+            BOOST_FOREACH(const CTxIn &txin, tx.vin) {
+                valtype name;
+                if (NameFromGameTransactionInput(txin.scriptSig, name))
+                    revivedNames.insert(name);
+            }
+        }
+    }
+    list<CTransaction> txNameConflicts;
+    mempool.removeReviveConflicts(revivedNames, txNameConflicts);
     mempool.check(pcoinsTip);
     // Update chainActive and related variables.
     UpdateTip(pindexDelete->pprev);
     CheckNameDB (true);
+    // Tell wallet about transactions that went from mempool
+    // to conflicted:
+    BOOST_FOREACH(const CTransaction &tx, txNameConflicts) {
+        SyncWithWallets(tx, NULL);
+        NameConflict(tx, *pindexDelete->pprev->phashBlock);
+    }
     // Let wallets know transactions went from 1-confirmed to
     // 0-confirmed or conflicted:
     BOOST_FOREACH(const CTransaction &tx, block.vtx) {
@@ -3004,9 +3023,13 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
         return false;
     int64_t nTime5 = GetTimeMicros(); nTimeChainState += nTime5 - nTime4;
     LogPrint("bench", "  - Writing chainstate: %.2fms [%.2fs]\n", (nTime5 - nTime4) * 0.001, nTimeChainState * 0.000001);
+    // Obtain full list of transactions (including game tx).
+    std::vector<CTransaction> allTx = pblock->vtx;
+    allTx.insert(allTx.end(), vGameTx.begin(), vGameTx.end());
+    assert(allTx.size() == pblock->vtx.size() + vGameTx.size());
     // Remove conflicting transactions from the mempool.
     list<CTransaction> txConflicted, txNameConflicts;
-    mempool.removeForBlock(pblock->vtx, pindexNew->nHeight,
+    mempool.removeForBlock(allTx, pindexNew->nHeight,
                            txConflicted, txNameConflicts,
                            !IsInitialBlockDownload());
     mempool.check(pcoinsTip);
@@ -3023,10 +3046,7 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
         NameConflict(tx, pblock->GetHash());
     }
     // ... and about transactions that got confirmed:
-    BOOST_FOREACH(const CTransaction &tx, pblock->vtx) {
-        SyncWithWallets(tx, pindexNew, pblock);
-    }
-    BOOST_FOREACH(const CTransaction &tx, vGameTx) {
+    BOOST_FOREACH(const CTransaction &tx, allTx) {
         SyncWithWallets(tx, pindexNew, pblock);
     }
 

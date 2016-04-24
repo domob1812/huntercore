@@ -142,6 +142,7 @@ testScripts = [
     'game_txindex.py',
     'game_bounties.py',
     'game_kills.py',
+    'game_mempool.py',
 ]
 testScriptsExt = [
     'bip9-softforks.py',

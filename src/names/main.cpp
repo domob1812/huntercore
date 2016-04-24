@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015 Daniel Kraft
+// Copyright (c) 2014-2016 Daniel Kraft
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -132,6 +132,27 @@ CNameMemPool::removeConflicts (const CTransaction& tx,
               assert (mit2 != pool.mapTx.end ());
               pool.removeRecursive (mit2->GetTx (), removed);
             }
+        }
+    }
+}
+
+void
+CNameMemPool::removeReviveConflicts (const std::set<valtype>& revived,
+                                     std::list<CTransaction>& removed)
+{
+  AssertLockHeld (pool.cs);
+
+  BOOST_FOREACH (const valtype& name, revived)
+    {
+      LogPrint ("names", "revived: %s, mempool: %u\n",
+                ValtypeToString (name).c_str (), mapNameRegs.count (name));
+
+      const NameTxMap::const_iterator mit = mapNameRegs.find (name);
+      if (mit != mapNameRegs.end ())
+        {
+          const CTxMemPool::txiter mit2 = pool.mapTx.find (mit->second);
+          assert (mit2 != pool.mapTx.end ());
+          pool.removeRecursive (mit2->GetTx (), removed);
         }
     }
 }

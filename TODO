@@ -1,5 +1,3 @@
-* invalidate moves from mempool when the game state changes
-
 * make sure miners take their taxes
 
 * extend unit tests for HUC-specific stuff

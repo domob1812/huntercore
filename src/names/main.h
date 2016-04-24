@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2015 Daniel Kraft
+// Copyright (c) 2014-2016 Daniel Kraft
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -196,6 +196,15 @@ public:
    */
   void removeConflicts (const CTransaction& tx,
                         std::list<CTransaction>& removed);
+
+  /**
+   * Remove conflicts in the mempool due to revived players.  This removes
+   * conflicting name registrations that are no longer possible.
+   * @param revived The set of revived names.
+   * @param removed Put removed tx here.
+   */
+  void removeReviveConflicts (const std::set<valtype>& revived,
+                              std::list<CTransaction>& removed);
 
   /**
    * Perform sanity checks.  Throws if it fails.

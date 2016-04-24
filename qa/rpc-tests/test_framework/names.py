@@ -78,6 +78,17 @@ class NameTestFramework (BitcoinTestFramework):
 
     assert_equal (valuesFound, values)
 
+  def pendingTxid (self, ind, name):
+    """
+    Look through name_pending for the name and return the corresponding txid.
+    """
+
+    for p in self.nodes[ind].name_pending ():
+      if p['name'] == name:
+        return p['txid']
+
+    return None
+
   def atomicTrade (self, name, value, price, fee, nameFrom, nameTo):
     """
     Perform an atomic name trade, sending 'name' from the first to the

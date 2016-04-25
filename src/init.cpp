@@ -513,6 +513,13 @@ static void BlockNotifyCallback(bool initialSync, const CBlockIndex *pBlockIndex
     boost::thread t(runCommand, strCmd); // thread runs free
 }
 
+static void WaitForChangeCallback(bool initialSync, const CBlockIndex *pBlockIndex)
+{
+    if (initialSync || !pBlockIndex)
+        return;
+    cv_stateChange.notify_all();
+}
+
 struct CImportingNow
 {
     CImportingNow() {
@@ -1390,6 +1397,9 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     if (mapArgs.count("-blocknotify"))
         uiInterface.NotifyBlockTip.connect(BlockNotifyCallback);
+
+    /* Connect handler for game_waitforchange notifications.  */
+    uiInterface.NotifyBlockTip.connect(WaitForChangeCallback);
 
     uiInterface.InitMessage(_("Activating best chain..."));
     // scan for better chains in the block chain database, that are not yet connected in the active best chain

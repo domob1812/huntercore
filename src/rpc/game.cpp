@@ -26,6 +26,8 @@
 
 #include <univalue.h>
 
+#include <boost/thread.hpp>
+
 /* Decode an integer (could be encoded as OP_x or a bignum)
    from the script.  Returns -1 in case of error.  */
 static int
@@ -204,6 +206,55 @@ game_getstate (const UniValue& params, bool fHelp)
 /* ************************************************************************** */
 
 UniValue
+game_waitforchange (const UniValue& params, bool fHelp)
+{
+  if (fHelp || params.size () > 1)
+    throw std::runtime_error (
+        "game_waitforchange (\"hash\")\n"
+        "\nDo not use this call in new applications.  Instead, -blocknotify\n"
+        "or the ZeroMQ system should be used.\n"
+      );
+
+  uint256 hash;
+  {
+    LOCK (cs_main);
+    if (params.size () >= 1)
+      hash = uint256S (params[0].get_str ());
+    else
+      hash = *chainActive.Tip ()->phashBlock;
+
+    if (mapBlockIndex.count (hash) == 0)
+      throw JSONRPCError (RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
+  }
+
+  boost::unique_lock<boost::mutex> lock(mut_currentState);
+  while (true)
+    {
+      /* Atomically check whether we have found a new best block and return
+         it if that's the case.  We use a lock on cs_main in order to
+         prevent race conditions.  */
+      {
+        LOCK (cs_main);
+        const uint256 bestHash = *chainActive.Tip ()->phashBlock;
+        if (hash != bestHash)
+          {
+            GameState state(Params ().GetConsensus ());
+            if (!pgameDb->get (bestHash, state))
+              throw JSONRPCError (RPC_DATABASE_ERROR,
+                                  "Failed to fetch game state");
+
+            return state.ToJsonValue ();
+          }
+      }
+
+      /* Wait on the condition variable.  */
+      cv_stateChange.wait (lock);
+    }
+}
+
+/* ************************************************************************** */
+
+UniValue
 game_getpath (const UniValue& params, bool fHelp)
 {
   if (fHelp || params.size () != 2)
@@ -261,6 +312,7 @@ static const CRPCCommand commands[] =
     { "game",               "game_getplayerstate",    &game_getplayerstate,    true },
     { "game",               "game_getstate",          &game_getstate,          true },
     { "game",               "game_getpath",           &game_getpath,           true },
+    { "game",               "game_waitforchange",     &game_waitforchange,     true },
 };
 
 void RegisterGameRPCCommands(CRPCTable &tableRPC)

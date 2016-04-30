@@ -182,7 +182,7 @@ CGameDB::flush (bool saveAll)
 
   /* Go through everything and delete or store to disk.  */
   std::set<uint256> toErase;
-  CDBBatch batch(&db.GetObfuscateKey());
+  CDBBatch batch(db);
   unsigned written = 0, discarded = 0;
   for (GameStateMap::iterator mi = cache.begin (); mi != cache.end (); ++mi)
     {

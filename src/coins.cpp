@@ -63,7 +63,7 @@ bool CCoinsView::GetName(const valtype &name, CNameData &data) const { return fa
 bool CCoinsView::GetNameHistory(const valtype &name, CNameHistory &data) const { return false; }
 CNameIterator* CCoinsView::IterateNames() const { assert (false); }
 bool CCoinsView::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names) { return false; }
-bool CCoinsView::GetStats(CCoinsStats &stats) const { return false; }
+CCoinsViewCursor *CCoinsView::Cursor() const { return 0; }
 bool CCoinsView::ValidateNameDB(CGameDB& gameDb) const { return false; }
 
 
@@ -76,7 +76,7 @@ bool CCoinsViewBacked::GetNameHistory(const valtype &name, CNameHistory &data) c
 CNameIterator* CCoinsViewBacked::IterateNames() const { return base->IterateNames(); }
 void CCoinsViewBacked::SetBackend(CCoinsView &viewIn) { base = &viewIn; }
 bool CCoinsViewBacked::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names) { return base->BatchWrite(mapCoins, hashBlock, names); }
-bool CCoinsViewBacked::GetStats(CCoinsStats &stats) const { return base->GetStats(stats); }
+CCoinsViewCursor *CCoinsViewBacked::Cursor() const { return base->Cursor(); }
 bool CCoinsViewBacked::ValidateNameDB(CGameDB& gameDb) const { return base->ValidateNameDB(gameDb); }
 
 CCoinsKeyHasher::CCoinsKeyHasher() : salt(GetRandHash()) {}
@@ -399,4 +399,8 @@ CCoinsModifier::~CCoinsModifier()
         // If the coin still exists after the modification, add the new usage
         cache.cachedCoinsUsage += it->second.coins.DynamicMemoryUsage();
     }
+}
+
+CCoinsViewCursor::~CCoinsViewCursor()
+{
 }

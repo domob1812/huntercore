@@ -17,3 +17,6 @@ echo "\nGame kills..."
 
 echo "\nGame mempool cleanup..."
 ./game_mempool.py
+
+echo "\nGame miner taxes..."
+./game_minertaxes.py

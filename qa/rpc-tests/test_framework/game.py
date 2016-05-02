@@ -19,6 +19,7 @@
 
 from names import NameTestFramework
 
+from decimal import Decimal
 import json
 
 class GameTestFramework (NameTestFramework):
@@ -126,6 +127,18 @@ class GameTestFramework (NameTestFramework):
       
     return bestPos
 
+  def lootOnTile (self, node, pos):
+    """
+    Return the total loot on the given position (on the ground).
+    """
+
+    state = self.nodes[node].game_getstate ()
+    for l in state['loot']:
+      if l['x'] == pos[0] and l['y'] == pos[1]:
+        return l['amount']
+
+    return Decimal('0')
+
   def players (self, node):
     """
     Return list of living player names on the map.
@@ -154,6 +167,7 @@ class Hunter:
     hunterData = data[str (ind)]
     self.pos = [int (hunterData['x']), int (hunterData['y'])]
     self.loot = hunterData['loot']
+    self.value = data['value']
     self.moving = 'wp' in hunterData
     if self.moving:
       self.eta = pathlen (self.pos, hunterData['wp'])

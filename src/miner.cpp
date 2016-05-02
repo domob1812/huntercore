@@ -12,6 +12,9 @@
 #include "consensus/consensus.h"
 #include "consensus/merkle.h"
 #include "consensus/validation.h"
+#include "game/db.h"
+#include "game/move.h"
+#include "game/state.h"
 #include "hash.h"
 #include "main.h"
 #include "net.h"
@@ -131,6 +134,11 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, PowAlgo algo, co
         const int nHeight = pindexPrev->nHeight + 1;
         pblock->nTime = GetAdjustedTime();
         const int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
+
+        GameState prevGameState(chainparams.GetConsensus());
+        if (!pgameDb->get (*pindexPrev->phashBlock, prevGameState))
+            throw std::runtime_error(strprintf("%s: Failed to read prev game state", __func__));
+        StepData gameStep(prevGameState);
 
         const int32_t nChainId = chainparams.GetConsensus ().nAuxpowChainId[algo];
         // FIXME: Active version bits after the always-auxpow fork!
@@ -273,6 +281,16 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, PowAlgo algo, co
                     continue;
             }
 
+            /* Add the tx to the game step data.  This is necessary for the
+               tax computation and it does another check for validity with
+               respect to the game rules.  */
+            CValidationState state;
+            if (!gameStep.addTransaction(tx, pcoinsTip, state)) {
+                LogPrintf("WARNING: tx %s not accepted for game step",
+                          tx.GetHash().GetHex().c_str());
+                continue;
+            }
+
             CAmount nTxFees = iter->GetFee();
             // Added
             pblock->vtx.push_back(tx);
@@ -313,12 +331,20 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, PowAlgo algo, co
                 }
             }
         }
+
+        // Compute miner taxes from game step.
+        assert(gameStep.newHash.IsNull());
+        GameState newGameState(chainparams.GetConsensus());
+        StepResult stepResult;
+        if (!PerformStep(prevGameState, gameStep, newGameState, stepResult))
+            throw std::runtime_error(strprintf("%s: game engine failed to perform step", __func__));
+
         nLastBlockTx = nBlockTx;
         nLastBlockSize = nBlockSize;
-        LogPrintf("CreateNewBlock(): total size %u txs: %u fees: %ld sigops %d\n", nBlockSize, nBlockTx, nFees, nBlockSigOps);
+        LogPrintf("CreateNewBlock(): total size %u txs: %u fees: %ld taxes: %ld sigops %d\n", nBlockSize, nBlockTx, nFees, stepResult.nTaxAmount, nBlockSigOps);
 
         // Compute final coinbase transaction.
-        txNew.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
+        txNew.vout[0].nValue = nFees + stepResult.nTaxAmount + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
         txNew.vin[0].scriptSig = CScript() << nHeight << OP_0;
         pblock->vtx[0] = txNew;
         pblocktemplate->vTxFees[0] = -nFees;

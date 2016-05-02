@@ -1,5 +1,3 @@
-* make sure miners take their taxes
-
 * extend unit tests for HUC-specific stuff
 
 * add REST functions for accessing game state info

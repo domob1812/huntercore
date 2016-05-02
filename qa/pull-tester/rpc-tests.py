@@ -149,6 +149,7 @@ testScripts = [
     'game_bounties.py',
     'game_kills.py',
     'game_mempool.py',
+    'game_minertaxes.py',
 ]
 if ENABLE_ZMQ:
     testScripts.append('zmq_test.py')

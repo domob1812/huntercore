@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2016 Daniel Kraft
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -23,10 +23,10 @@ class GameTxIndexTest (GameTestFramework):
 
     # Collect nearest loot.
     pos = self.nearestLoot (0, me.pos)
-    print "Nearest loot on (%d, %d), collecting..." % (pos[0], pos[1])
+    print ("Nearest loot on (%d, %d), collecting..." % (pos[0], pos[1]))
     me.move (pos)
     me = self.finishMove (0, "me", 0)
-    print "Collected %.8f HUC." % me.loot
+    print ("Collected %.8f HUC." % me.loot)
     assert me.loot > 0
 
     # Create another player that can be used for a death game tx.
@@ -36,7 +36,7 @@ class GameTxIndexTest (GameTestFramework):
     redshirt.move ([1, 1])
 
     # Bank the bounty (almost).
-    print "Banking the coins..."
+    print ("Banking the coins...")
     me = self.get (0, "me", 0)
     me.move ([1, 1])
     me = self.finishMove (0, "me", 0)
@@ -54,7 +54,7 @@ class GameTxIndexTest (GameTestFramework):
     self.advance (0, 1)
 
     # There should be two game tx in the best block.
-    print "Verifying transactions..."
+    print ("Verifying transactions...")
     blkhash = self.nodes[0].getbestblockhash ()
     blkdata = self.nodes[0].getblock (blkhash)
     gametxIds = blkdata['gametx']

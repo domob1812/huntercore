@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2016 Daniel Kraft
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -20,18 +20,18 @@ class GameBountiesTest (GameTestFramework):
 
     # Collect nearest loot and bank.
     pos = self.nearestLoot (0, me.pos)
-    print "Nearest loot on (%d, %d), collecting..." % (pos[0], pos[1])
+    print ("Nearest loot on (%d, %d), collecting..." % (pos[0], pos[1]))
     me.move (pos)
     me = self.finishMove (0, "me", 0)
-    print "Collected %.8f HUC." % me.loot
+    print ("Collected %.8f HUC." % me.loot)
     assert me.loot > 0
-    print "Banking the coins..."
+    print ("Banking the coins...")
     me.move ([0, 0])
     self.finishMove (0, "me", 0)
     blkhash, txid, addr, value = self.extractBounty (1)
 
     # Try to get information of the tx in the wallet of node 0.
-    print "Verifying bounty transaction in the wallet..."
+    print ("Verifying bounty transaction in the wallet...")
     valid = self.nodes[0].validateaddress (addr)
     assert valid['ismine']
     blkhash = self.nodes[0].getbestblockhash ()
@@ -40,7 +40,7 @@ class GameBountiesTest (GameTestFramework):
     # Reorg the block away and recreate the bounty tx in another block.
     # Since no details of the bounty are changed, the original txid
     # is preserved.  This should be handled gracefully.
-    print "Invalidating block to reorg the game transaction..."
+    print ("Invalidating block to reorg the game transaction...")
     for i in range(4):
       self.nodes[i].invalidateblock (blkhash)
     self.verifyTx (0, txid, None, value, 0)
@@ -52,7 +52,7 @@ class GameBountiesTest (GameTestFramework):
 
     # Invalidate the block again.  This time, set the player's bounty tx
     # so that we get a different txid in the recreated game tx.
-    print "Invalidating again, changing bounty address..."
+    print ("Invalidating again, changing bounty address...")
     for i in range(4):
       self.nodes[i].invalidateblock (blkhashTmp)
     me = self.get (0, "me", 0)
@@ -67,7 +67,7 @@ class GameBountiesTest (GameTestFramework):
 
     # Import the private key into node 3 and verify that rescanning
     # makes the game tx appear.
-    print "Importing private key into wallet and rescanning..."
+    print ("Importing private key into wallet and rescanning...")
     try:
       self.verifyTx (3, txid, blkhash, value, 1)
       raise AssertionError ("transaction in wallet before importing")
@@ -78,7 +78,7 @@ class GameBountiesTest (GameTestFramework):
     self.verifyTx (3, txid, blkhash, value, 1)
 
     # Construct a tx spending the bounty.
-    print "Trying to spend immature bounty..."
+    print ("Trying to spend immature bounty...")
     spendValue = value - Decimal ('0.01')
     toAddr = self.nodes[1].getnewaddress ()
     inputs = [{"txid": txid, "vout": 0}]
@@ -94,7 +94,7 @@ class GameBountiesTest (GameTestFramework):
       assert_equal (-26, exc.error['code'])
 
     # The amount should become available as the tx matures.
-    print "Letting bounty tx mature..."
+    print ("Letting bounty tx mature...")
     self.advance(0, 99)
     self.verifyTx (0, txid, blkhash, value, 100)
     self.verifyTx (3, txid, blkhash, value, 100)
@@ -131,8 +131,8 @@ class GameBountiesTest (GameTestFramework):
     value = gametxOut['value']
     assert_equal (len (gametxOut['scriptPubKey']['addresses']), 1)
     addr = gametxOut['scriptPubKey']['addresses'][0]
-    print "Bounty: %.8f to %s" % (value, addr)
-    print "  txid: %s" % txid
+    print ("Bounty: %.8f to %s" % (value, addr))
+    print ("  txid: %s" % txid)
 
     return blkhash, txid, addr, value
 

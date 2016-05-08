@@ -1,14 +1,13 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2015-2016 Daniel Kraft
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 # Test mining (generate and getauxblock) with dual-algo.
 
+from test_framework import auxpow
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import *
-
-from test_framework import auxpow
 
 class DualAlgoTest (BitcoinTestFramework):
 
@@ -137,7 +136,7 @@ class DualAlgoTest (BitcoinTestFramework):
       target = auxpow.reverseHex (auxblock['_target'])
       apow = auxpow.computeAuxpow (auxblock['hash'], target, False)
       ok = self.nodes[0].getauxblock (auxblock['hash'], apow)
-    print "Found scrypt block after %d trials." % trials
+    print ("Found scrypt block after %d trials." % trials)
 
     # Check submitted auxblock.
     assert_equal (self.nodes[0].getblockcount (), curcnt + 1)

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2016 Daniel Kraft
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -15,7 +15,7 @@ class GameMempoolTest (GameTestFramework):
     GameTestFramework.run_test (self)
 
     # Split the network and create two conflicting name_register transactions.
-    print "Creating conflicting name registrations..."
+    print ("Creating conflicting name registrations...")
     self.split_network ()
     txidA = self.nodes[0].name_register ("foobar", '{"color":0}')
     txidB = self.nodes[2].name_register ("foobar", '{"color":1}')
@@ -41,13 +41,13 @@ class GameMempoolTest (GameTestFramework):
     self.advance (0, 1)
 
     # Move foobar out of spawn and killer close to it.
-    print "Moving hunters..."
+    print ("Moving hunters...")
     self.get (0, "foobar", 0).move ([1, 4])
     self.get (0, "killer", 0).move ([2, 4])
     self.finishMove (0, "killer", 0)
 
     # Create a tx to update foobar and kill it at the same time using killer.
-    print "Killing hunter with pending move..."
+    print ("Killing hunter with pending move...")
     self.get (0, "killer", 0).destruct ()
     self.get (0, "foobar", 1).move ([0, 0])
     self.issueMoves ()
@@ -64,7 +64,7 @@ class GameMempoolTest (GameTestFramework):
     assert_equal (len (data['walletconflicts']), 1)
 
     # Add pending re-registration and roll back the chain.
-    print "Rollback pending re-registration..."
+    print ("Rollback pending re-registration...")
     txidReg = self.nodes[0].name_register ("foobar", '{"color":1}')
     assert_equal (self.nodes[0].getrawmempool (), [txidReg])
     assert_equal (self.players (0), [])

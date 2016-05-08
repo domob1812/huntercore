@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2016 Daniel Kraft
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -15,7 +15,7 @@ class GameKillsTest (GameTestFramework):
     GameTestFramework.run_test (self)
 
     # Create two players and kill them.
-    print "Creating and killing hunters..."
+    print ("Creating and killing hunters...")
     self.nodes[0].name_register ("a", '{"color":1}')
     self.nodes[1].name_register ("b", '{"color":1}')
     self.advance (3, 1)
@@ -30,7 +30,7 @@ class GameKillsTest (GameTestFramework):
     self.checkName (3, "b", None, True)
 
     # Get the kill transaction from the block and verify it.
-    print "Verifying kill transaction..."
+    print ("Verifying kill transaction...")
     blkhash, txid, tx = self.fetchKill (2)
     txIn = tx['vin']
     assert_equal (2, len (txIn))
@@ -44,7 +44,7 @@ class GameKillsTest (GameTestFramework):
     self.checkKillTx (1, txid, blkhash, 1, "b", 1)
 
     # Invalidate the block to revive the players.
-    print "Reviving them by invalidating the block..."
+    print ("Reviving them by invalidating the block...")
     for i in range(4):
       self.nodes[i].invalidateblock (blkhash)
     self.checkName (3, "a", '{"color":1}', False)
@@ -53,7 +53,7 @@ class GameKillsTest (GameTestFramework):
     assert_equal (len (state['players']), 2)
 
     # Remine another block, but this time only with one of the destructs.
-    print "Remining one of the kills..."
+    print ("Remining one of the kills...")
     mempool = self.nodes[3].getrawmempool ()
     assert_equal (len (mempool), 2)
     self.advance (3, 1, ["b"])
@@ -70,7 +70,7 @@ class GameKillsTest (GameTestFramework):
     self.checkKillTx (1, txid, None, 1, "b", 0)
 
     # Get the new kill transaction from the block.
-    print "Verifying new kill transaction..."
+    print ("Verifying new kill transaction...")
     blkhash, txidNew, tx = self.fetchKill (2)
     txIn = tx['vin']
     assert_equal (len (txIn), 1)
@@ -102,7 +102,7 @@ class GameKillsTest (GameTestFramework):
     blk = self.nodes[node].getblock (blkhash)
     assert_equal (1, len (blk['gametx']))
     txid = blk['gametx'][0]
-    print "  txid: %s" % txid
+    print ("  txid: %s" % txid)
     tx = self.nodes[node].getrawtransaction (txid, 1)
     assert_equal (blkhash, tx['blockhash'])
     assert_equal ([], tx['vout'])

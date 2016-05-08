@@ -191,7 +191,7 @@ struct Params {
     bool fStrictChainId;
 
     /** Consensus rule interface.  */
-    std::auto_ptr<ConsensusRules> rules;
+    std::unique_ptr<ConsensusRules> rules;
 
     /**
      * Check whether or not to allow legacy blocks at the given height.

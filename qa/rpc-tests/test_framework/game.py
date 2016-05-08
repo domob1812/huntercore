@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Copyright (c) 2016 Crypto Realities Ltd
 #
@@ -17,7 +17,7 @@
 
 # Basic botting framework for testing game elements.
 
-from names import NameTestFramework
+from .names import NameTestFramework
 
 from decimal import Decimal
 import json
@@ -145,7 +145,7 @@ class GameTestFramework (NameTestFramework):
     """
 
     state = self.nodes[node].game_getstate ()
-    res = state['players'].keys ()
+    res = list (state['players'].keys ())
     res.sort ()
 
     return res

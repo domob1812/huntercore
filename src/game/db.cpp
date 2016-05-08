@@ -153,7 +153,7 @@ CGameDB::store (const uint256& hash, const GameState& state)
     }
   else
     {
-      std::auto_ptr<GameState> s(new GameState (Params ().GetConsensus ()));
+      std::unique_ptr<GameState> s(new GameState (Params ().GetConsensus ()));
       *s = state;
       cache.insert (std::make_pair (hash, s.release ()));
     }
@@ -231,7 +231,7 @@ CGameDB::flush (bool saveAll)
   /* TODO: Possibly not do this always.  We could do it for saveAll only,
      or with an explicit call.  Depends on how long this usually takes.  */
   discarded = 0;
-  std::auto_ptr<CDBIterator> pcursor(db.NewIterator ());
+  std::unique_ptr<CDBIterator> pcursor(db.NewIterator ());
   for (pcursor->Seek (DB_GAMESTATE); pcursor->Valid (); pcursor->Next ())
     {
       boost::this_thread::interruption_point();

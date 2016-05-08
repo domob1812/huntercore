@@ -8,15 +8,17 @@
 
 #include "coins.h"
 #include "dbwrapper.h"
+#include "chain.h"
 
 #include <map>
 #include <string>
 #include <utility>
 #include <vector>
 
-class CBlockFileInfo;
+#include <boost/function.hpp>
+
 class CBlockIndex;
-struct CDiskTxPos;
+class CCoinsViewDBCursor;
 class uint256;
 
 //! -dbcache default (MiB)
@@ -26,7 +28,47 @@ static const int64_t nMaxDbCache = sizeof(void*) > 4 ? 16384 : 1024;
 //! min. -dbcache in (MiB)
 static const int64_t nMinDbCache = 4;
 
-class CCoinsViewDBCursor;
+struct CDiskTxPos : public CDiskBlockPos
+{
+    /**
+     * If positive, this is the offset after the block header at which the
+     * given tx starts in the block file.  For game transactions, the value is
+     * negative and contains (in magnitude) the offset (nPos + nTxOffset)
+     * at which the tx starts in the undo file.  This allows us to still use
+     * nPos in the block file to load the header in GetTransactions.
+     */
+    int nTxOffset;
+
+    ADD_SERIALIZE_METHODS;
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        READWRITE(*(CDiskBlockPos*)this);
+        READWRITE(nTxOffset);
+    }
+
+    CDiskTxPos(const CDiskBlockPos &blockIn, int nTxOffsetIn)
+      : CDiskBlockPos(blockIn.nFile, blockIn.nPos), nTxOffset(nTxOffsetIn)
+    {}
+
+    CDiskTxPos() {
+        SetNull();
+    }
+
+    void SetNull() {
+        CDiskBlockPos::SetNull();
+        nTxOffset = 0;
+    }
+
+    inline bool IsGameTx() const {
+        return nTxOffset < 0;
+    }
+
+    inline CDiskBlockPos GetGamePos() const {
+        assert(IsGameTx());
+        return CDiskBlockPos(nFile, -nTxOffset);
+    }
+};
 
 /** CCoinsView backed by the coin database (chainstate/) */
 class CCoinsViewDB : public CCoinsView
@@ -87,7 +129,7 @@ public:
     bool WriteTxIndex(const std::vector<std::pair<uint256, CDiskTxPos> > &list);
     bool WriteFlag(const std::string &name, bool fValue);
     bool ReadFlag(const std::string &name, bool &fValue);
-    bool LoadBlockIndexGuts();
+    bool LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256&)> insertBlockIndex);
 };
 
 #endif // BITCOIN_TXDB_H

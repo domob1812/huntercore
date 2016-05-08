@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2016 Daniel Kraft
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -24,13 +24,13 @@ class GameMinerTaxesTest (GameTestFramework):
 
     # Collect nearest loot and bank.
     pos = self.nearestLoot (1, me.pos)
-    print "Nearest loot on (%d, %d), collecting..." % (pos[0], pos[1])
+    print ("Nearest loot on (%d, %d), collecting..." % (pos[0], pos[1]))
     me.move (pos)
     me = self.finishMove (1, "me", 0)
     bounty = me.loot
-    print "Collected %.8f HUC." % bounty
+    print ("Collected %.8f HUC." % bounty)
     assert bounty > 0
-    print "Banking the coins..."
+    print ("Banking the coins...")
     me.move ([0, 0])
     self.finishMove (1, "me", 0)
 
@@ -46,30 +46,30 @@ class GameMinerTaxesTest (GameTestFramework):
     txOut = tx['vout'][0]
     value = txOut['value']
     assert_greater_than (bounty, value)
-    print "Credited bounty: %.8f HUC." % value
+    print ("Credited bounty: %.8f HUC." % value)
 
     # Extract coinbase value and verify taxes.
     taxes = self.getTaxes (1)
     assert_equal (taxes + value, bounty)
 
     # Mine an ordinary block and verify that it has zero taxes.
-    print "Verifying zero taxes for empty block..."
+    print ("Verifying zero taxes for empty block...")
     self.advance (1, 1)
     assert_equal (self.getTaxes (1), 0)
 
     # Move player out of spawn so that death taxes apply.  Then kill the player.
-    print "Killing player for death taxes..."
+    print ("Killing player for death taxes...")
     pos = [2, 2]
     assert_equal (self.lootOnTile (1, pos), Decimal ('0'))
     self.get (1, "me", 0).move (pos)
     self.finishMove (1, "me", 0)
     me = self.get (1, "me", 0)
     value = me.value
-    print "Original hunter value: %.8f HUC" % value
+    print ("Original hunter value: %.8f HUC" % value)
     me.destruct ()
     self.advance (1, 1)
     loot = self.lootOnTile (1, pos)
-    print "Dropped loot: %.8f HUC" % loot
+    print ("Dropped loot: %.8f HUC" % loot)
     taxes = self.getTaxes (1)
     assert_equal (taxes + loot, value)
 
@@ -88,7 +88,7 @@ class GameMinerTaxesTest (GameTestFramework):
     coinbase = self.nodes[node].getrawtransaction (txs[0], 1)
     assert_equal (len (coinbase['vout']), 1)
     coinbaseValue = coinbase['vout'][0]['value']
-    print "Coinbase value: %.8f HUC" % coinbaseValue
+    print ("Coinbase value: %.8f HUC" % coinbaseValue)
 
     txs = txs[1:]
     fees = Decimal ('0')
@@ -101,8 +101,8 @@ class GameMinerTaxesTest (GameTestFramework):
     taxes = coinbaseValue - subsidy - fees
     assert (taxes >= 0)
 
-    print "  subsidy %.8f HUC, fees %.8f HUC" % (subsidy, fees)
-    print "  => taxes: %.8f HUC" % taxes
+    print ("  subsidy %.8f HUC, fees %.8f HUC" % (subsidy, fees))
+    print ("  => taxes: %.8f HUC" % taxes)
 
     return taxes
 

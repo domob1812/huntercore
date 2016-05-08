@@ -288,7 +288,7 @@ name_scan (const UniValue& params, bool fHelp)
 
   valtype name;
   CNameData data;
-  std::auto_ptr<CNameIterator> iter(pcoinsTip->IterateNames ());
+  std::unique_ptr<CNameIterator> iter(pcoinsTip->IterateNames ());
   for (iter->seek (start); count > 0 && iter->next (name, data); --count)
     res.push_back (getNameInfo (name, data));
 
@@ -370,7 +370,7 @@ name_filter (const UniValue& params, bool fHelp)
 
   valtype name;
   CNameData data;
-  std::auto_ptr<CNameIterator> iter(pcoinsTip->IterateNames ());
+  std::unique_ptr<CNameIterator> iter(pcoinsTip->IterateNames ());
   while (iter->next (name, data))
     {
       const int age = chainActive.Height () - data.getHeight ();

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) 2016 Daniel Kraft
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -11,8 +11,6 @@ from test_framework.util import *
 class GetStatsForHeightTest (BitcoinTestFramework):
 
   def run_test (self):
-    BitcoinTestFramework.run_test (self)
-
     # Generate a block so that we are not "downloading blocks".
     self.nodes[0].generate (1)
 

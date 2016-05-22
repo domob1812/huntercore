@@ -25,7 +25,6 @@ class CCoinsView;
 class CCoinsViewCache;
 class CScript;
 class CTransaction;
-class CValidationState;
 class StepResult;
 
 // Opcodes for scriptSig that acts as coinbase for game-generated transactions.
@@ -76,8 +75,7 @@ bool CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
  */
 void ApplyGameTransactions (const std::vector<CTransaction>& vGameTx,
                             const StepResult& stepResult, unsigned nHeight,
-                            CValidationState& state, CCoinsViewCache& view,
-                            CBlockUndo& undo);
+                            CCoinsViewCache& view, CBlockUndo& undo);
 
 /**
  * Find the name of the player involved in a scriptSig of a game tx.

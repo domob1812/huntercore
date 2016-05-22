@@ -11,8 +11,6 @@ from test_framework.util import *
 class GameFeePolicyTest (NameTestFramework):
 
   def run_test (self):
-    NameTestFramework.run_test (self)
-
     # Send ordinary tx and verify that it has low fee.
     addr = self.nodes[1].getnewaddress ()
     txid = self.nodes[0].sendtoaddress (addr, Decimal('1'))

@@ -12,8 +12,6 @@ from test_framework.util import *
 class GameMempoolTest (GameTestFramework):
 
   def run_test (self):
-    GameTestFramework.run_test (self)
-
     # Split the network and create two conflicting name_register transactions.
     print ("Creating conflicting name registrations...")
     self.split_network ()

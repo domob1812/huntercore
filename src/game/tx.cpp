@@ -17,7 +17,6 @@
 
 #include "base58.h"
 #include "coins.h"
-#include "consensus/validation.h"
 #include "game/state.h"
 #include "../main.h"
 #include "names/common.h"
@@ -192,13 +191,12 @@ CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
 void
 ApplyGameTransactions (const std::vector<CTransaction>& vGameTx,
                        const StepResult& stepResult, unsigned nHeight,
-                       CValidationState& state, CCoinsViewCache& view,
-                       CBlockUndo& undo)
+                       CCoinsViewCache& view, CBlockUndo& undo)
 {
   for (unsigned i = 0; i < vGameTx.size (); ++i)
     {
       undo.vtxundo.push_back (CTxUndo ());
-      UpdateCoins (vGameTx[i], state, view, undo.vtxundo.back (), nHeight);
+      UpdateCoins (vGameTx[i], view, undo.vtxundo.back (), nHeight);
     }
 
   /* Update name db for killed players.  */

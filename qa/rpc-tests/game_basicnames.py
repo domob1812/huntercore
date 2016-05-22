@@ -11,8 +11,6 @@ from test_framework.util import *
 class GameBasicNamesTest (NameTestFramework):
 
   def run_test (self):
-    NameTestFramework.run_test (self)
-
     # Perform some invalid name_new's and check for the corresponding
     # error messages.
     invalids = ["x" * 11, "", " abc", "abc ", "abc  abc", "a+b"]

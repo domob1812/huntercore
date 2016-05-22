@@ -14,8 +14,6 @@ from decimal import Decimal
 class GameMinerTaxesTest (GameTestFramework):
 
   def run_test (self):
-    GameTestFramework.run_test (self)
-
     # Register a player.  We use node 1 here since it has -txindex and
     # we later need that.
     self.register (1, "me", 0)

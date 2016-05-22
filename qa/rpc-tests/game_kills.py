@@ -12,8 +12,6 @@ from test_framework.util import *
 class GameKillsTest (GameTestFramework):
 
   def run_test (self):
-    GameTestFramework.run_test (self)
-
     # Create two players and kill them.
     print ("Creating and killing hunters...")
     self.nodes[0].name_register ("a", '{"color":1}')

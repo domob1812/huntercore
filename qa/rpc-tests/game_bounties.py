@@ -11,8 +11,6 @@ from test_framework.util import *
 class GameBountiesTest (GameTestFramework):
 
   def run_test (self):
-    GameTestFramework.run_test (self)
-
     # Register a player.
     self.register (0, "me", 0)
     self.advance (0, 1)

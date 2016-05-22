@@ -12,8 +12,6 @@ from test_framework.util import *
 class DualAlgoTest (BitcoinTestFramework):
 
   def run_test (self):
-    BitcoinTestFramework.run_test (self)
-
     # Check for difficulty reports in various RPC calls.  Where the "current"
     # state is involved, we get two (for each algo).  Where a particular block
     # is involved, we just get that block's difficulty (whatever the algo).

@@ -25,6 +25,7 @@ import json
 class GameTestFramework (NameTestFramework):
 
   def __init__ (self):
+    NameTestFramework.__init__ (self)
     self.batched = {}
 
   def register (self, node, name, col):

@@ -79,7 +79,11 @@ bool CCoinsViewBacked::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock,
 CCoinsViewCursor *CCoinsViewBacked::Cursor() const { return base->Cursor(); }
 bool CCoinsViewBacked::ValidateNameDB(CGameDB& gameDb) const { return base->ValidateNameDB(gameDb); }
 
-CCoinsKeyHasher::CCoinsKeyHasher() : salt(GetRandHash()) {}
+SaltedTxidHasher::SaltedTxidHasher()
+{
+    GetRandBytes((unsigned char*)&k0, sizeof(k0));
+    GetRandBytes((unsigned char*)&k1, sizeof(k1));
+}
 
 CCoinsViewCache::CCoinsViewCache(CCoinsView *baseIn) : CCoinsViewBacked(baseIn), hasModifier(false), cachedCoinsUsage(0) { }
 

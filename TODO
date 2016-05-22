@@ -2,8 +2,6 @@
 
 * add REST functions for accessing game state info
 
-* apply (possibly upstream?) fix for redundant getheaders requests
-
 * think about what to do with atomic name trading
 
 * use estimate of real memory usage for game state cache and tune the
@@ -18,3 +16,5 @@
 * re-instate checks for initial blockchain download?
 
 * disallow JSON obj followed by garbage in a move with softfork?
+
+* simplify regtests with reduced number of nodes?

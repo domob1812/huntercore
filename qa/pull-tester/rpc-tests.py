@@ -29,6 +29,7 @@ import subprocess
 import tempfile
 import re
 
+sys.path.append("qa/pull-tester/")
 from tests_config import *
 
 BOLD = ("","")
@@ -37,7 +38,7 @@ if os.name == 'posix':
     # terminal via ANSI escape sequences:
     BOLD = ('\033[0m', '\033[1m')
 
-RPC_TESTS_DIR = BUILDDIR + '/qa/rpc-tests/'
+RPC_TESTS_DIR = SRCDIR + '/qa/rpc-tests/'
 
 #If imported values are not defined then set to zero (or disabled)
 if 'ENABLE_WALLET' not in vars():
@@ -125,7 +126,9 @@ testScripts = [
     'nodehandling.py',
     'reindex.py',
     'decodescript.py',
-    'p2p-fullblocktest.py',
+    # Disabled for now, seems flaky in Namecoin (see Bitcoin issue #7978).
+    # FIXME: Investigate and fix properly.
+    #'p2p-fullblocktest.py',
     'blockchain.py',
     'disablewallet.py',
     'sendheaders.py',

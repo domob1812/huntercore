@@ -23,6 +23,8 @@
 #include "validationinterface.h"
 
 #include <stdint.h>
+#include <memory>
+#include <utility>
 
 #include <boost/assign/list_of.hpp>
 #include <boost/shared_ptr.hpp>
@@ -146,7 +148,7 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript, int nG
     UniValue blockHashes(UniValue::VARR);
     while (nHeight < nHeightEnd)
     {
-        std::unique_ptr<CBlockTemplate> pblocktemplate(CreateNewBlock(Params(), algo, coinbaseScript->reserveScript));
+        std::unique_ptr<CBlockTemplate> pblocktemplate(BlockAssembler(Params()).CreateNewBlock(algo, coinbaseScript->reserveScript));
         if (!pblocktemplate.get())
             throw JSONRPCError(RPC_INTERNAL_ERROR, "Couldn't create new block");
         CBlock *pblock = &pblocktemplate->block;
@@ -270,6 +272,7 @@ UniValue getmininginfo(const UniValue& params, bool fHelp)
             "{\n"
             "  \"blocks\": nnn,             (numeric) The current block\n"
             "  \"currentblocksize\": nnn,   (numeric) The last block size\n"
+            "  \"currentblockcost\": nnn,   (numeric) The last block cost\n"
             "  \"currentblocktx\": nnn,     (numeric) The last block transaction\n"
             "  \"difficulty_algo\": xxx.xxxxx (numeric) The current difficulty for algo\n"
             "  \"errors\": \"...\"          (string) Current errors\n"
@@ -288,6 +291,7 @@ UniValue getmininginfo(const UniValue& params, bool fHelp)
     UniValue obj(UniValue::VOBJ);
     obj.push_back(Pair("blocks",           (int)chainActive.Height()));
     obj.push_back(Pair("currentblocksize", (uint64_t)nLastBlockSize));
+    obj.push_back(Pair("currentblockcost", (uint64_t)nLastBlockCost));
     obj.push_back(Pair("currentblocktx",   (uint64_t)nLastBlockTx));
     obj.push_back(Pair("difficulty_sha256d", (double)GetDifficulty(ALGO_SHA256D)));
     obj.push_back(Pair("difficulty_scrypt", (double)GetDifficulty(ALGO_SCRYPT)));
@@ -400,13 +404,15 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
             "  \"transactions\" : [                (array) contents of non-coinbase transactions that should be included in the next block\n"
             "      {\n"
             "         \"data\" : \"xxxx\",          (string) transaction data encoded in hexadecimal (byte-for-byte)\n"
-            "         \"hash\" : \"xxxx\",          (string) hash/id encoded in little-endian hexadecimal\n"
+            "         \"txid\" : \"xxxx\",          (string) transaction id encoded in little-endian hexadecimal\n"
+            "         \"hash\" : \"xxxx\",          (string) hash encoded in little-endian hexadecimal (including witness data)\n"
             "         \"depends\" : [              (array) array of numbers \n"
             "             n                        (numeric) transactions before this one (by 1-based index in 'transactions' list) that must be present in the final block if this one is\n"
             "             ,...\n"
             "         ],\n"
             "         \"fee\": n,                   (numeric) difference in value between transaction inputs and outputs (in Satoshis); for coinbase transactions, this is a negative Number of the total collected block fees (ie, not including the block subsidy); if key is not present, fee is unknown and clients MUST NOT assume there isn't one\n"
-            "         \"sigops\" : n,               (numeric) total number of SigOps, as counted for purposes of block limits; if key is not present, sigop count is unknown and clients MUST NOT assume there aren't any\n"
+            "         \"sigops\" : n,               (numeric) total SigOps cost, as counted for purposes of block limits; if key is not present, sigop cost is unknown and clients MUST NOT assume it is zero\n"
+            "         \"cost\" : n,                 (numeric) total transaction size cost, as counted for purposes of block limits\n"
             "         \"required\" : true|false     (boolean) if provided and true, this transaction must be in the final block\n"
             "      }\n"
             "      ,...\n"
@@ -423,8 +429,9 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
             "     ,...\n"
             "  ],\n"
             "  \"noncerange\" : \"00000000ffffffff\",   (string) A range of valid nonces\n"
-            "  \"sigoplimit\" : n,                 (numeric) limit of sigops in blocks\n"
+            "  \"sigoplimit\" : n,                 (numeric) cost limit of sigops in blocks\n"
             "  \"sizelimit\" : n,                  (numeric) limit of block size\n"
+            "  \"costlimit\" : n,                  (numeric) limit of block cost\n"
             "  \"curtime\" : ttt,                  (numeric) current timestamp in seconds since epoch (Jan 1 1970 GMT)\n"
             "  \"bits\" : \"xxx\",                 (string) compressed target of next block\n"
             "  \"height\" : n                      (numeric) The height of the next block\n"
@@ -579,7 +586,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
             pblocktemplate = NULL;
         }
         CScript scriptDummy = CScript() << OP_TRUE;
-        pblocktemplate = CreateNewBlock(Params(), ALGO_SHA256D, scriptDummy);
+        pblocktemplate = BlockAssembler(Params()).CreateNewBlock(ALGO_SHA256D, scriptDummy);
         if (!pblocktemplate)
             throw JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");
 
@@ -598,7 +605,7 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
     UniValue transactions(UniValue::VARR);
     map<uint256, int64_t> setTxIndex;
     int i = 0;
-    BOOST_FOREACH (const CTransaction& tx, pblock->vtx) {
+    BOOST_FOREACH (CTransaction& tx, pblock->vtx) {
         uint256 txHash = tx.GetHash();
         setTxIndex[txHash] = i++;
 
@@ -608,8 +615,8 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
         UniValue entry(UniValue::VOBJ);
 
         entry.push_back(Pair("data", EncodeHexTx(tx)));
-
-        entry.push_back(Pair("hash", txHash.GetHex()));
+        entry.push_back(Pair("txid", txHash.GetHex()));
+        entry.push_back(Pair("hash", tx.GetWitnessHash().GetHex()));
 
         UniValue deps(UniValue::VARR);
         BOOST_FOREACH (const CTxIn &in, tx.vin)
@@ -621,7 +628,8 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
 
         int index_in_template = i - 1;
         entry.push_back(Pair("fee", pblocktemplate->vTxFees[index_in_template]));
-        entry.push_back(Pair("sigops", pblocktemplate->vTxSigOps[index_in_template]));
+        entry.push_back(Pair("sigops", pblocktemplate->vTxSigOpsCost[index_in_template]));
+        entry.push_back(Pair("cost", GetTransactionCost(tx)));
 
         transactions.push_back(entry);
     }
@@ -703,11 +711,15 @@ UniValue getblocktemplate(const UniValue& params, bool fHelp)
     result.push_back(Pair("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1));
     result.push_back(Pair("mutable", aMutable));
     result.push_back(Pair("noncerange", "00000000ffffffff"));
-    result.push_back(Pair("sigoplimit", (int64_t)MAX_BLOCK_SIGOPS));
-    result.push_back(Pair("sizelimit", (int64_t)MAX_BLOCK_SIZE));
+    result.push_back(Pair("sigoplimit", (int64_t)MAX_BLOCK_SIGOPS_COST));
+    result.push_back(Pair("sizelimit", (int64_t)MAX_BLOCK_SERIALIZED_SIZE));
+    result.push_back(Pair("costlimit", (int64_t)MAX_BLOCK_COST));
     result.push_back(Pair("curtime", pblock->GetBlockTime()));
     result.push_back(Pair("bits", strprintf("%08x", pblock->nBits)));
     result.push_back(Pair("height", (int64_t)(pindexPrev->nHeight+1)));
+    if (!pblocktemplate->vchCoinbaseCommitment.empty()) {
+        result.push_back(Pair("default_witness_commitment", HexStr(pblocktemplate->vchCoinbaseCommitment.begin(), pblocktemplate->vchCoinbaseCommitment.end())));
+    }
 
     return result;
 }
@@ -769,6 +781,14 @@ UniValue submitblock(const UniValue& params, bool fHelp)
                 return "duplicate-invalid";
             // Otherwise, we might only have the header - process the block before returning
             fBlockPresent = true;
+        }
+    }
+
+    {
+        LOCK(cs_main);
+        BlockMap::iterator mi = mapBlockIndex.find(block.hashPrevBlock);
+        if (mi != mapBlockIndex.end()) {
+            UpdateUncommittedBlockStructures(block, mi->second, Params().GetConsensus());
         }
     }
 
@@ -986,7 +1006,7 @@ UniValue getauxblock(const UniValue& params, bool fHelp)
     static CCriticalSection cs_auxblockCache;
     LOCK(cs_auxblockCache);
     static std::map<uint256, CBlock*> mapNewBlock;
-    static std::vector<CBlockTemplate*> vNewBlockTemplate;
+    static std::vector<std::unique_ptr<CBlockTemplate>> vNewBlockTemplate;
 
     /* Create a new block?  */
     if (params.size() < 2)
@@ -996,9 +1016,9 @@ UniValue getauxblock(const UniValue& params, bool fHelp)
           algo = DecodeAlgoParam (params[0]);
 
         static unsigned nTransactionsUpdatedLast;
-        static const CBlockIndex* pindexPrev = NULL;
+        static const CBlockIndex* pindexPrev = nullptr;
         static uint64_t nStart;
-        static CBlockTemplate* pblocktemplate;
+        static CBlock* pblock = nullptr;
         static unsigned nExtraNonce = 0;
 
         // Update block
@@ -1008,22 +1028,21 @@ UniValue getauxblock(const UniValue& params, bool fHelp)
         {
         LOCK(cs_main);
         if (pindexPrev != chainActive.Tip()
-            || pblocktemplate->block.GetAlgo() != algo
+            || pblock->GetAlgo() != algo
             || (mempool.GetTransactionsUpdated() != nTransactionsUpdatedLast
                 && GetTime() - nStart > 60))
         {
             if (pindexPrev != chainActive.Tip())
             {
-                // Deallocate old blocks since they're obsolete now
+                // Clear old blocks since they're obsolete now.
                 mapNewBlock.clear();
-                BOOST_FOREACH(CBlockTemplate* pbt, vNewBlockTemplate)
-                    delete pbt;
                 vNewBlockTemplate.clear();
+                pblock = nullptr;
             }
 
             // Create new block with nonce = 0 and extraNonce = 1
-            pblocktemplate = CreateNewBlock(Params(), algo, coinbaseScript->reserveScript);
-            if (!pblocktemplate)
+            std::unique_ptr<CBlockTemplate> newBlock(BlockAssembler(Params()).CreateNewBlock(algo, coinbaseScript->reserveScript));
+            if (!newBlock)
                 throw JSONRPCError(RPC_OUT_OF_MEMORY, "out of memory");
 
             // Update state only when CreateNewBlock succeeded
@@ -1032,31 +1051,29 @@ UniValue getauxblock(const UniValue& params, bool fHelp)
             nStart = GetTime();
 
             // Finalise it by setting the version and building the merkle root
-            CBlock* pblock = &pblocktemplate->block;
-            IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
-            pblock->SetAuxpowVersion(true);
+            IncrementExtraNonce(&newBlock->block, pindexPrev, nExtraNonce);
+            newBlock->block.SetAuxpowVersion(true);
 
             // Save
+            pblock = &newBlock->block;
             mapNewBlock[pblock->GetHash()] = pblock;
-            vNewBlockTemplate.push_back(pblocktemplate);
+            vNewBlockTemplate.push_back(std::move(newBlock));
         }
         }
-
-        const CBlock& block = pblocktemplate->block;
 
         arith_uint256 target;
         bool fNegative, fOverflow;
-        target.SetCompact(block.nBits, &fNegative, &fOverflow);
+        target.SetCompact(pblock->nBits, &fNegative, &fOverflow);
         if (fNegative || fOverflow || target == 0)
             throw std::runtime_error("invalid difficulty bits in block");
 
         UniValue result(UniValue::VOBJ);
-        result.push_back(Pair("hash", block.GetHash().GetHex()));
-        result.push_back(Pair("chainid", block.GetChainId()));
-        result.push_back(Pair("algo", block.GetAlgo()));
-        result.push_back(Pair("previousblockhash", block.hashPrevBlock.GetHex()));
-        result.push_back(Pair("coinbasevalue", (int64_t)block.vtx[0].vout[0].nValue));
-        result.push_back(Pair("bits", strprintf("%08x", block.nBits)));
+        result.push_back(Pair("hash", pblock->GetHash().GetHex()));
+        result.push_back(Pair("chainid", pblock->GetChainId()));
+        result.push_back(Pair("algo", pblock->GetAlgo()));
+        result.push_back(Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
+        result.push_back(Pair("coinbasevalue", (int64_t)pblock->vtx[0].vout[0].nValue));
+        result.push_back(Pair("bits", strprintf("%08x", pblock->nBits)));
         result.push_back(Pair("height", static_cast<int64_t> (pindexPrev->nHeight + 1)));
         result.push_back(Pair("_target", HexStr(BEGIN(target), END(target))));
 
@@ -1085,7 +1102,8 @@ UniValue getauxblock(const UniValue& params, bool fHelp)
     CValidationState state;
     submitblock_StateCatcher sc(block.GetHash());
     RegisterValidationInterface(&sc);
-    bool fAccepted = ProcessNewBlock(state, Params(), NULL, &block, true, NULL);
+    bool fAccepted = ProcessNewBlock(state, Params(), nullptr, &block,
+                                     true, nullptr);
     UnregisterValidationInterface(&sc);
 
     if (fAccepted)

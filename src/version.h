@@ -42,4 +42,7 @@ static const int SENDHEADERS_VERSION = 2000000;
 //! "feefilter" tells peers to filter invs to you by fee starts with this version
 static const int FEEFILTER_VERSION = 2000000;
 
+//! shord-id-based block download starts with this version
+static const int SHORT_IDS_BLOCKS_VERSION = 2000000;
+
 #endif // BITCOIN_VERSION_H

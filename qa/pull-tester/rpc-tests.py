@@ -102,8 +102,7 @@ if ENABLE_ZMQ:
 #Tests
 testScripts = [
     # longest test should go first, to favor running tests in parallel
-    # Disabled for now, seems flaky in Namecoin (see Bitcoin issue #7978).
-    # FIXME: Investigate and fix properly.
+    # p2p-fullblocktest is disabled as it hits the BDB lock limit.
     #'p2p-fullblocktest.py',
     'walletbackup.py',
     # FIXME: Enable once we activate BIP9.
@@ -115,6 +114,9 @@ testScripts = [
     'receivedby.py',
     'mempool_resurrect_test.py',
     'txn_doublespend.py --mineblock',
+    # FIXME: Reenable and possibly fix once the BIP9 mining is activated.
+    #'p2p-segwit.py',
+    #'segwit.py',
     'txn_clone.py',
     'getchaintips.py',
     'rawtransactions.py',
@@ -136,17 +138,16 @@ testScripts = [
     'disablewallet.py',
     'sendheaders.py',
     'keypool.py',
+    'p2p-mempool.py',
     'prioritise_transaction.py',
     'invalidblockrequest.py',
     'invalidtxrequest.py',
     'abandonconflict.py',
     # FIXME: Reenable and possibly fix once the BIP9 mining is activated.
     #'p2p-versionbits-warning.py',
-    #'p2p-segwit.py',
-    #'segwit.py',
     'importprunedfunds.py',
     'signmessages.py',
-    'getstatsforheight.py',
+    'p2p-compactblocks.py',
 
     # auxpow tests
     'getauxblock.py',
@@ -171,6 +172,9 @@ testScripts = [
     'game_kills.py',
     'game_mempool.py',
     'game_minertaxes.py',
+
+    # Other new tests for Huntercoin.
+    'getstatsforheight.py',
 ]
 if ENABLE_ZMQ:
     testScripts.append('zmq_test.py')
@@ -186,7 +190,7 @@ testScriptsExt = [
     'txn_clone.py --mineblock',
     'forknotify.py',
     'invalidateblock.py',
-#    'rpcbind_test.py', #temporary, bug in libevent, see #6655
+    'rpcbind_test.py',
     'smartfees.py',
     'maxblocksinflight.py',
     'p2p-acceptblock.py',
@@ -220,6 +224,7 @@ def runtests():
         coverage = RPCCoverage()
         print("Initializing coverage directory at %s\n" % coverage.dir)
     flags = ["--srcdir=%s/src" % BUILDDIR] + passon_args
+    flags.append("--cachedir=%s/qa/cache" % BUILDDIR)
     if coverage:
         flags.append(coverage.flag)
 

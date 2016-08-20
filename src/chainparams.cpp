@@ -96,12 +96,10 @@ public:
     CMainParams() {
         strNetworkID = "main";
         consensus.nSubsidyHalvingInterval = 2100000;
-        consensus.nMajorityEnforceBlockUpgrade = 7500;
-        consensus.nMajorityRejectBlockOutdated = 9500;
-        consensus.nMajorityWindow = 10000;
-        /* FIXME: Set once we need the value in main.cpp.  */
-        consensus.BIP34Height = -1;
-        consensus.BIP34Hash = uint256();
+        /* FIXME: Set to activate the forks.  */
+        consensus.BIP34Height = 1000000000;
+        consensus.BIP65Height = 1000000000;
+        consensus.BIP66Height = 1000000000;
         consensus.powLimit[ALGO_SHA256D] = uint256S("00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.powLimit[ALGO_SCRYPT] = uint256S("00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowTargetSpacing = 60 * NUM_ALGOS;
@@ -190,12 +188,10 @@ public:
     CTestNetParams() {
         strNetworkID = "test";
         consensus.nSubsidyHalvingInterval = 2100000;
-        consensus.nMajorityEnforceBlockUpgrade = 510;
-        consensus.nMajorityRejectBlockOutdated = 750;
-        consensus.nMajorityWindow = 1000;
-        /* FIXME: Set once we need the value in main.cpp.  */
-        consensus.BIP34Height = -1;
-        consensus.BIP34Hash = uint256();
+        /* FIXME: Set to activate the forks.  */
+        consensus.BIP34Height = 1000000000;
+        consensus.BIP65Height = 1000000000;
+        consensus.BIP66Height = 1000000000;
         consensus.powLimit[ALGO_SHA256D] = uint256S("000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.powLimit[ALGO_SCRYPT] = uint256S("000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowTargetSpacing = 60 * NUM_ALGOS;
@@ -282,11 +278,9 @@ public:
     CRegTestParams() {
         strNetworkID = "regtest";
         consensus.nSubsidyHalvingInterval = 150;
-        consensus.nMajorityEnforceBlockUpgrade = 750;
-        consensus.nMajorityRejectBlockOutdated = 950;
-        consensus.nMajorityWindow = 1000;
-        consensus.BIP34Height = -1; // BIP34 has not necessarily activated on regtest
-        consensus.BIP34Hash = uint256();
+        consensus.BIP34Height = 100000000; // BIP34 has not activated on regtest (far in the future so block v1 are not rejected in tests)
+        consensus.BIP65Height = 1351; // BIP65 activated on regtest (Used in rpc activation tests)
+        consensus.BIP66Height = 1251; // BIP66 activated on regtest (Used in rpc activation tests)
         consensus.powLimit[ALGO_SHA256D] = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.powLimit[ALGO_SCRYPT] = uint256S("7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
         consensus.nPowTargetSpacing = 60 * NUM_ALGOS;
@@ -352,6 +346,12 @@ public:
     {
         return 0;
     }
+
+    void UpdateBIP9Parameters(Consensus::DeploymentPos d, int64_t nStartTime, int64_t nTimeout)
+    {
+        consensus.vDeployments[d].nStartTime = nStartTime;
+        consensus.vDeployments[d].nTimeout = nTimeout;
+    }
 };
 static CRegTestParams regTestParams;
 
@@ -379,3 +379,9 @@ void SelectParams(const std::string& network)
     SelectBaseParams(network);
     pCurrentParams = &Params(network);
 }
+
+void UpdateRegtestBIP9Parameters(Consensus::DeploymentPos d, int64_t nStartTime, int64_t nTimeout)
+{
+    regTestParams.UpdateBIP9Parameters(d, nStartTime, nTimeout);
+}
+ 

@@ -107,7 +107,6 @@ map<string, vector<string> > mapMultiArgs;
 bool fDebug = false;
 bool fPrintToConsole = false;
 bool fPrintToDebugLog = true;
-bool fDaemon = false;
 bool fServer = false;
 string strMiscWarning;
 bool fLogTimestamps = DEFAULT_LOGTIMESTAMPS;
@@ -801,9 +800,6 @@ int GetNumCores()
 
 std::string CopyrightHolders(const std::string& strPrefix)
 {
-    std::string strCopyrightHolders = strPrefix + _(COPYRIGHT_HOLDERS);
-    if (strCopyrightHolders.find("%s") != strCopyrightHolders.npos) {
-        strCopyrightHolders = strprintf(strCopyrightHolders, _(COPYRIGHT_HOLDERS_SUBSTITUTION));
-    }
+    std::string strCopyrightHolders = strPrefix + strprintf(_(COPYRIGHT_HOLDERS), _(COPYRIGHT_HOLDERS_SUBSTITUTION));
     return strCopyrightHolders;
 }

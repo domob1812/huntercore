@@ -295,17 +295,17 @@ void copyEntryData(QAbstractItemView *view, int column, int role)
     }
 }
 
-QString getEntryData(QAbstractItemView *view, int column, int role)
+QVariant getEntryData(QAbstractItemView *view, int column, int role)
 {
     if(!view || !view->selectionModel())
-        return QString();
+        return QVariant();
     QModelIndexList selection = view->selectionModel()->selectedRows(column);
 
     if(!selection.isEmpty()) {
         // Return first item
-        return (selection.at(0).data(role).toString());
+        return (selection.at(0).data(role));
     }
-    return QString();
+    return QVariant();
 }
 
 QString getSaveFileName(QWidget *parent, const QString &caption, const QString &dir,
@@ -933,6 +933,9 @@ QString formatServicesStr(quint64 mask)
                 break;
             case NODE_WITNESS:
                 strList.append("WITNESS");
+                break;
+            case NODE_XTHIN:
+                strList.append("XTHIN");
                 break;
             default:
                 strList.append(QString("%1[%2]").arg("UNKNOWN").arg(check));

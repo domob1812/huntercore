@@ -24,15 +24,15 @@ void RegisterNameRPCCommands(CRPCTable &tableRPC);
 /** Register Huntercoin RPC commands */
 void RegisterGameRPCCommands(CRPCTable &tableRPC);
 
-static inline void RegisterAllCoreRPCCommands(CRPCTable &tableRPC)
+static inline void RegisterAllCoreRPCCommands(CRPCTable &t)
 {
-    RegisterBlockchainRPCCommands(tableRPC);
-    RegisterNetRPCCommands(tableRPC);
-    RegisterMiscRPCCommands(tableRPC);
-    RegisterMiningRPCCommands(tableRPC);
-    RegisterRawTransactionRPCCommands(tableRPC);
-    RegisterNameRPCCommands(tableRPC);
-    RegisterGameRPCCommands(tableRPC);
+    RegisterBlockchainRPCCommands(t);
+    RegisterNetRPCCommands(t);
+    RegisterMiscRPCCommands(t);
+    RegisterMiningRPCCommands(t);
+    RegisterRawTransactionRPCCommands(t);
+    RegisterNameRPCCommands(t);
+    RegisterGameRPCCommands(t);
 }
 
 #endif

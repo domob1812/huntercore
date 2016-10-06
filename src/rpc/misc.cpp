@@ -91,7 +91,8 @@ UniValue getinfo(const UniValue& params, bool fHelp)
 #endif
     obj.push_back(Pair("blocks",        (int)chainActive.Height()));
     obj.push_back(Pair("timeoffset",    GetTimeOffset()));
-    obj.push_back(Pair("connections",   (int)vNodes.size()));
+    if(g_connman)
+        obj.push_back(Pair("connections",   (int)g_connman->GetNodeCount(CConnman::CONNECTIONS_ALL)));
     obj.push_back(Pair("proxy",         (proxy.IsValid() ? proxy.proxy.ToStringIPPort() : string())));
     obj.push_back(Pair("difficulty_sha256d", (double)GetDifficulty(ALGO_SHA256D)));
     obj.push_back(Pair("difficulty_scrypt", (double)GetDifficulty(ALGO_SCRYPT)));
@@ -474,14 +475,16 @@ UniValue setmocktime(const UniValue& params, bool fHelp)
     // atomically with the time change to prevent peers from being
     // disconnected because we think we haven't communicated with them
     // in a long time.
-    LOCK2(cs_main, cs_vNodes);
+    LOCK(cs_main);
 
     RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM));
     SetMockTime(params[0].get_int64());
 
     uint64_t t = GetTime();
-    BOOST_FOREACH(CNode* pnode, vNodes) {
-        pnode->nLastSend = pnode->nLastRecv = t;
+    if(g_connman) {
+        g_connman->ForEachNode([t](CNode* pnode) {
+            pnode->nLastSend = pnode->nLastRecv = t;
+        });
     }
 
     return NullUniValue;
@@ -600,8 +603,8 @@ static const CRPCCommand commands[] =
     { "hidden",             "setmocktime",            &setmocktime,            true  },
 };
 
-void RegisterMiscRPCCommands(CRPCTable &tableRPC)
+void RegisterMiscRPCCommands(CRPCTable &t)
 {
     for (unsigned int vcidx = 0; vcidx < ARRAYLEN(commands); vcidx++)
-        tableRPC.appendCommand(commands[vcidx].name, &commands[vcidx]);
+        t.appendCommand(commands[vcidx].name, &commands[vcidx]);
 }

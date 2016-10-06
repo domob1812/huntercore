@@ -77,8 +77,6 @@ for arg in sys.argv[1:]:
 #Set env vars
 if "BITCOIND" not in os.environ:
     os.environ["BITCOIND"] = BUILDDIR + '/src/namecoind' + EXEEXT
-if "BITCOINCLI" not in os.environ:
-    os.environ["BITCOINCLI"] = BUILDDIR + '/src/namecoin-cli' + EXEEXT
 
 if EXEEXT == ".exe" and "-win" not in opts:
     # https://github.com/bitcoin/bitcoin/commit/d52802551752140cf41f0d9a225a43e84404d3e9
@@ -94,12 +92,12 @@ if not (ENABLE_WALLET == 1 and ENABLE_UTILS == 1 and ENABLE_BITCOIND == 1):
 if ENABLE_ZMQ:
     try:
         import zmq
-    except ImportError as e:
-        print("WARNING: \"import zmq\" failed. Set ENABLE_ZMQ=0 or " \
-            "to run zmq tests, see dependency info in /qa/README.md.")
-        ENABLE_ZMQ=0
+    except ImportError:
+        print("ERROR: \"import zmq\" failed. Set ENABLE_ZMQ=0 or "
+              "to run zmq tests, see dependency info in /qa/README.md.")
+        # ENABLE_ZMQ=0
+        raise
 
-#Tests
 testScripts = [
     # longest test should go first, to favor running tests in parallel
     # p2p-fullblocktest is disabled as it hits the BDB lock limit.
@@ -108,6 +106,7 @@ testScripts = [
     # FIXME: Enable once we activate BIP9.
     #'bip68-112-113-p2p.py',
     'wallet.py',
+    'wallet-accounts.py',
     'wallet-hd.py',
     'wallet-dump.py',
     'listtransactions.py',

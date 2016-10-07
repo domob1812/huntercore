@@ -17,6 +17,7 @@
 #include "streams.h"
 #include "sync.h"
 #include "txmempool.h"
+#include "ui_interface.h"
 #include "util.h"
 #include "utilstrencodings.h"
 #include "hash.h"
@@ -1353,6 +1354,11 @@ UniValue invalidateblock(const UniValue& params, bool fHelp)
 
     if (state.IsValid()) {
         ActivateBestChain(state, Params(), NULL, g_connman.get());
+
+        // FIXME: This is a hopefully temporary hack to make the regtests
+        // (which use invalidateblock) work with waitforblock.
+        // See https://github.com/bitcoin/bitcoin/issues/8698.
+        uiInterface.NotifyBlockTip(false, chainActive.Tip());
     }
 
     if (!state.IsValid()) {

@@ -49,6 +49,7 @@ class GameBasicNamesTest (NameTestFramework):
     # Register the player and verify that it appears on the map.
     self.firstupdateName (0, testname, new, '{"color":0}')
     self.sync_all ()
+    assert_equal ([], self.nodes[0].name_list ())
     self.generate (1, 1)
     self.checkName (2, testname, '{"color":0}', False)
     arr = self.nodes[0].name_list ()
@@ -111,7 +112,11 @@ class GameBasicNamesTest (NameTestFramework):
 
     # Also perform a new-style name_register registration.
     self.nodes[2].name_register ("newstyle", '{"color":1}')
+    assert_equal ([], self.nodes[2].name_list ())
     self.generate (0, 1)
+    arr = self.nodes[2].name_list ()
+    assert_equal (1, len (arr))
+    self.checkNameData (arr[0], "newstyle", '{"color":1}', False)
     self.checkName (3, "newstyle", '{"color":1}', False)
     dat = self.nodes[3].game_getplayerstate ("newstyle")
     state = self.nodes[3].game_getstate ()

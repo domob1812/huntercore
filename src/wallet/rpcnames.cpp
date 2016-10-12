@@ -121,11 +121,13 @@ NameListBuilder::startTx (const CWalletTx& tx)
 {
   const CBlockIndex* pindex;
   const int depth = tx.GetDepthInMainChain (pindex);
+  if (depth <= 0)
+    return false;
 
   nHeight = pindex->nHeight;
   isKillTx = tx.IsKillTx ();
 
-  return depth > 0;
+  return true;
 }
 
 void

@@ -147,6 +147,8 @@ testScripts = [
     'importprunedfunds.py',
     'signmessages.py',
     'p2p-compactblocks.py',
+    # FIXME: Reenable and possibly fix once the BIP9 mining is activated.
+    #'nulldummy.py',
 
     # auxpow tests
     'getauxblock.py',
@@ -244,8 +246,8 @@ def runtests():
         time_sum += duration
 
         print('\n' + BOLD[1] + name + BOLD[0] + ":")
-        print(stdout)
-        print('stderr:\n' if not stderr == '' else '', stderr)
+        print('' if passed else stdout + '\n', end='')
+        print('' if stderr == '' else 'stderr:\n' + stderr + '\n', end='')
         results += "%s | %s | %s s\n" % (name.ljust(max_len_name), str(passed).ljust(6), duration)
         print("Pass: %s%s%s, Duration: %s s\n" % (BOLD[1], passed, BOLD[0], duration))
     results += BOLD[1] + "\n%s | %s | %s s (accumulated)" % ("ALL".ljust(max_len_name), str(all_passed).ljust(6), time_sum) + BOLD[0]
@@ -280,21 +282,27 @@ class RPCTestHandler:
             self.num_running += 1
             t = self.test_list.pop(0)
             port_seed = ["--portseed=%s" % len(self.test_list)]
+            log_stdout = tempfile.SpooledTemporaryFile(max_size=2**16)
+            log_stderr = tempfile.SpooledTemporaryFile(max_size=2**16)
             self.jobs.append((t,
                               time.time(),
                               subprocess.Popen((RPC_TESTS_DIR + t).split() + self.flags + port_seed,
                                                universal_newlines=True,
-                                               stdout=subprocess.PIPE,
-                                               stderr=subprocess.PIPE)))
+                                               stdout=log_stdout,
+                                               stderr=log_stderr),
+                              log_stdout,
+                              log_stderr))
         if not self.jobs:
             raise IndexError('pop from empty list')
         while True:
             # Return first proc that finishes
             time.sleep(.5)
             for j in self.jobs:
-                (name, time0, proc) = j
+                (name, time0, proc, log_out, log_err) = j
                 if proc.poll() is not None:
-                    (stdout, stderr) = proc.communicate(timeout=3)
+                    log_out.seek(0), log_err.seek(0)
+                    [stdout, stderr] = [l.read().decode('utf-8') for l in (log_out, log_err)]
+                    log_out.close(), log_err.close()
                     passed = stderr == "" and proc.returncode == 0
                     self.num_running -= 1
                     self.jobs.remove(j)

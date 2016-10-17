@@ -63,6 +63,7 @@
 
 const static std::string NET_MESSAGE_COMMAND_OTHER = "*other*";
 
+static const uint64_t RANDOMIZER_ID_NETGROUP = 0x6c0edd8036ef4036ULL; // SHA256("netgroup")[0:8]
 //
 // Global state variables
 //
@@ -387,7 +388,7 @@ CNode* CConnman::ConnectNode(CAddress addrConnect, const char *pszDest, bool fCo
         addrman.Attempt(addrConnect, fCountFailure);
 
         // Add node
-        CNode* pnode = new CNode(GetNewNodeId(), nLocalServices, GetBestHeight(), hSocket, addrConnect, pszDest ? pszDest : "", false);
+        CNode* pnode = new CNode(GetNewNodeId(), nLocalServices, GetBestHeight(), hSocket, addrConnect, CalculateKeyedNetGroup(addrConnect), pszDest ? pszDest : "", false);
         GetNodeSignals().InitializeNode(pnode->GetId(), pnode);
         pnode->AddRef();
 
@@ -448,7 +449,7 @@ void CNode::PushVersion()
 {
     int64_t nTime = (fInbound ? GetAdjustedTime() : GetTime());
     CAddress addrYou = (addr.IsRoutable() && !IsProxy(addr) ? addr : CAddress(CService(), addr.nServices));
-    CAddress addrMe = GetLocalAddress(&addr, nLocalServices);
+    CAddress addrMe = CAddress(CService(), nLocalServices);
     if (fLogIPs)
         LogPrint("net", "send version message: version %d, blocks=%d, us=%s, them=%s, peer=%d\n", PROTOCOL_VERSION, nMyStartingHeight, addrMe.ToString(), addrYou.ToString(), id);
     else
@@ -628,6 +629,7 @@ void CNode::copyStats(CNodeStats &stats)
 {
     stats.nodeid = this->GetId();
     X(nServices);
+    X(addr);
     X(fRelayTxes);
     X(nLastSend);
     X(nLastRecv);
@@ -1022,7 +1024,7 @@ void CConnman::AcceptConnection(const ListenSocket& hListenSocket) {
         }
     }
 
-    CNode* pnode = new CNode(GetNewNodeId(), nLocalServices, GetBestHeight(), hSocket, addr, "", true);
+    CNode* pnode = new CNode(GetNewNodeId(), nLocalServices, GetBestHeight(), hSocket, addr, CalculateKeyedNetGroup(addr), "", true);
     GetNodeSignals().InitializeNode(pnode->GetId(), pnode);
     pnode->AddRef();
     pnode->fWhitelisted = whitelisted;
@@ -2023,7 +2025,7 @@ void Discover(boost::thread_group& threadGroup)
 #endif
 }
 
-CConnman::CConnman()
+CConnman::CConnman(uint64_t nSeed0In, uint64_t nSeed1In) : nSeed0(nSeed0In), nSeed1(nSeed1In)
 {
     setBannedIsDirty = false;
     fAddressesInitialized = false;
@@ -2046,9 +2048,7 @@ bool CConnman::Start(boost::thread_group& threadGroup, CScheduler& scheduler, st
 {
     nTotalBytesRecv = 0;
     nTotalBytesSent = 0;
-    nMaxOutboundLimit = 0;
     nMaxOutboundTotalBytesSentInCycle = 0;
-    nMaxOutboundTimeframe = 60*60*24; //1 day
     nMaxOutboundCycleStartTime = 0;
 
     nRelevantServices = connOptions.nRelevantServices;
@@ -2059,6 +2059,9 @@ bool CConnman::Start(boost::thread_group& threadGroup, CScheduler& scheduler, st
 
     nSendBufferMaxSize = connOptions.nSendBufferMaxSize;
     nReceiveFloodSize = connOptions.nSendBufferMaxSize;
+
+    nMaxOutboundLimit = connOptions.nMaxOutboundLimit;
+    nMaxOutboundTimeframe = connOptions.nMaxOutboundTimeframe;
 
     SetBestHeight(connOptions.nBestHeight);
 
@@ -2108,7 +2111,7 @@ bool CConnman::Start(boost::thread_group& threadGroup, CScheduler& scheduler, st
     if (pnodeLocalHost == NULL) {
         CNetAddr local;
         LookupHost("127.0.0.1", local, false);
-        pnodeLocalHost = new CNode(GetNewNodeId(), nLocalServices, GetBestHeight(), INVALID_SOCKET, CAddress(CService(local, 0), nLocalServices));
+        pnodeLocalHost = new CNode(GetNewNodeId(), nLocalServices, GetBestHeight(), INVALID_SOCKET, CAddress(CService(local, 0), nLocalServices), 0);
         GetNodeSignals().InitializeNode(pnodeLocalHost->GetId(), pnodeLocalHost);
     }
 
@@ -2205,6 +2208,7 @@ void CConnman::DeleteNode(CNode* pnode)
 
 CConnman::~CConnman()
 {
+    Stop();
 }
 
 size_t CConnman::GetAddressCount() const
@@ -2362,11 +2366,7 @@ void CConnman::RecordBytesSent(uint64_t bytes)
 void CConnman::SetMaxOutboundTarget(uint64_t limit)
 {
     LOCK(cs_totalBytesSent);
-    uint64_t recommendedMinimum = (nMaxOutboundTimeframe / 600) * MAX_BLOCK_SERIALIZED_SIZE;
     nMaxOutboundLimit = limit;
-
-    if (limit > 0 && limit < recommendedMinimum)
-        LogPrintf("Max outbound target is very small (%s bytes) and will be overshot. Recommended minimum is %s bytes.\n", nMaxOutboundLimit, recommendedMinimum);
 }
 
 uint64_t CConnman::GetMaxOutboundTarget()
@@ -2501,10 +2501,10 @@ void CNode::Fuzz(int nChance)
 unsigned int CConnman::GetReceiveFloodSize() const { return nReceiveFloodSize; }
 unsigned int CConnman::GetSendBufferSize() const{ return nSendBufferMaxSize; }
 
-CNode::CNode(NodeId idIn, ServiceFlags nLocalServicesIn, int nMyStartingHeightIn, SOCKET hSocketIn, const CAddress& addrIn, const std::string& addrNameIn, bool fInboundIn) :
+CNode::CNode(NodeId idIn, ServiceFlags nLocalServicesIn, int nMyStartingHeightIn, SOCKET hSocketIn, const CAddress& addrIn, uint64_t nKeyedNetGroupIn, const std::string& addrNameIn, bool fInboundIn) :
     ssSend(SER_NETWORK, INIT_PROTO_VERSION),
     addr(addrIn),
-    nKeyedNetGroup(CalculateKeyedNetGroup(addrIn)),
+    nKeyedNetGroup(nKeyedNetGroupIn),
     addrKnown(5000, 0.001),
     filterInventoryKnown(50000, 0.000001)
 {
@@ -2662,10 +2662,8 @@ void CNode::EndMessage(const char* pszCommand) UNLOCK_FUNCTION(cs_vSend)
 
     // Set the checksum
     uint256 hash = Hash(ssSend.begin() + CMessageHeader::HEADER_SIZE, ssSend.end());
-    unsigned int nChecksum = 0;
-    memcpy(&nChecksum, &hash, sizeof(nChecksum));
-    assert(ssSend.size () >= CMessageHeader::CHECKSUM_OFFSET + sizeof(nChecksum));
-    memcpy((char*)&ssSend[CMessageHeader::CHECKSUM_OFFSET], &nChecksum, sizeof(nChecksum));
+    assert(ssSend.size () >= CMessageHeader::CHECKSUM_OFFSET + CMessageHeader::CHECKSUM_SIZE);
+    memcpy((char*)&ssSend[CMessageHeader::CHECKSUM_OFFSET], hash.begin(), CMessageHeader::CHECKSUM_SIZE);
 
     LogPrint("net", "(%d bytes) peer=%d\n", nSize, id);
 
@@ -2697,12 +2695,14 @@ int64_t PoissonNextSend(int64_t nNow, int average_interval_seconds) {
     return nNow + (int64_t)(log1p(GetRand(1ULL << 48) * -0.0000000000000035527136788 /* -1/2^48 */) * average_interval_seconds * -1000000.0 + 0.5);
 }
 
-/* static */ uint64_t CNode::CalculateKeyedNetGroup(const CAddress& ad)
+CSipHasher CConnman::GetDeterministicRandomizer(uint64_t id)
 {
-    static const uint64_t k0 = GetRand(std::numeric_limits<uint64_t>::max());
-    static const uint64_t k1 = GetRand(std::numeric_limits<uint64_t>::max());
+    return CSipHasher(nSeed0, nSeed1).Write(id);
+}
 
+uint64_t CConnman::CalculateKeyedNetGroup(const CAddress& ad)
+{
     std::vector<unsigned char> vchNetGroup(ad.GetGroup());
 
-    return CSipHasher(k0, k1).Write(&vchNetGroup[0], vchNetGroup.size()).Finalize();
+    return GetDeterministicRandomizer(RANDOMIZER_ID_NETGROUP).Write(&vchNetGroup[0], vchNetGroup.size()).Finalize();
 }

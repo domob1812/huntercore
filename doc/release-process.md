@@ -5,6 +5,8 @@ Before every release candidate:
 
 * ( **Not in Namecoin yet.** ) Update translations (ping wumpus on IRC) see [translation_process.md](https://github.com/namecoin/namecoin-core/blob/master/doc/translation_process.md#syncing-with-transifex)
 
+* Update manpages, see [gen-manpages.sh](https://github.com/bitcoin/bitcoin/blob/master/contrib/devtools/README.md#gen-manpagessh).
+
 Before every minor and major release:
 
 * ( **Not in Namecoin yet.** ) Update [bips.md](bips.md) to account for changes since the last release.
@@ -14,8 +16,11 @@ Before every minor and major release:
 Before every major release:
 
 * Update hardcoded [seeds](/contrib/seeds/README.md), see [this pull request](https://github.com/bitcoin/bitcoin/pull/7415) for an example.
+* Update [`BLOCK_CHAIN_SIZE`](/src/qt/intro.cpp) to the current size plus some overhead.
 
 ### First time / New builders
+
+If you're using the automated script (found in [contrib/gitian-build.sh](/contrib/gitian-build.sh)), then at this point you should run it with the "--setup" command. Otherwise ignore this.
 
 Check out the source code in the following directory hierarchy.
 
@@ -59,6 +64,8 @@ Tag version (or release candidate) in git
     git tag -s nc(new version, e.g. 0.8.0)
 
 ### Setup and perform Gitian builds
+
+If you're using the automated script (found in [contrib/gitian-build.sh](/contrib/gitian-build.sh)), then at this point you should run it with the "--build" command. Otherwise ignore this.
 
 Setup Gitian descriptors:
 
@@ -118,19 +125,19 @@ The gbuild invocations below <b>DO NOT DO THIS</b> by default.
 ### Build and sign Namecoin Core for Linux, Windows, and OS X:
 
     pushd ./gitian-builder
-    ./bin/gbuild --memory 3000 --commit namecoin=nc${VERSION} ../namecoin/contrib/gitian-descriptors/gitian-linux.yml
-    ./bin/gsign --signer $SIGNER --release ${VERSION}-linux --destination ../gitian.sigs/ ../namecoin/contrib/gitian-descriptors/gitian-linux.yml
+    ./bin/gbuild --memory 3000 --commit namecoin=nc${VERSION} ../namecoin-core/contrib/gitian-descriptors/gitian-linux.yml
+    ./bin/gsign --signer $SIGNER --release ${VERSION}-linux --destination ../gitian.sigs/ ../namecoin-core/contrib/gitian-descriptors/gitian-linux.yml
     mv build/out/namecoin-*.tar.gz build/out/src/namecoin-*.tar.gz ../
 
-    ./bin/gbuild --memory 3000 --commit namecoin=nc${VERSION} ../namecoin/contrib/gitian-descriptors/gitian-win.yml
-    ./bin/gsign --signer $SIGNER --release ${VERSION}-win-unsigned --destination ../gitian.sigs/ ../namecoin/contrib/gitian-descriptors/gitian-win.yml
+    ./bin/gbuild --memory 3000 --commit namecoin=nc${VERSION} ../namecoin-core/contrib/gitian-descriptors/gitian-win.yml
+    ./bin/gsign --signer $SIGNER --release ${VERSION}-win-unsigned --destination ../gitian.sigs/ ../namecoin-core/contrib/gitian-descriptors/gitian-win.yml
     mv build/out/namecoin-*-win-unsigned.tar.gz inputs/namecoin-win-unsigned.tar.gz
     mv build/out/namecoin-*.zip build/out/namecoin-*.exe ../
 
 ( **OS X is not in Namecoin yet.** )
 
-    ./bin/gbuild --memory 3000 --commit namecoin=nc${VERSION} ../namecoin/contrib/gitian-descriptors/gitian-osx.yml
-    ./bin/gsign --signer $SIGNER --release ${VERSION}-osx-unsigned --destination ../gitian.sigs/ ../namecoin/contrib/gitian-descriptors/gitian-osx.yml
+    ./bin/gbuild --memory 3000 --commit namecoin=nc${VERSION} ../namecoin-core/contrib/gitian-descriptors/gitian-osx.yml
+    ./bin/gsign --signer $SIGNER --release ${VERSION}-osx-unsigned --destination ../gitian.sigs/ ../namecoin-core/contrib/gitian-descriptors/gitian-osx.yml
     mv build/out/namecoin-*-osx-unsigned.tar.gz inputs/namecoin-osx-unsigned.tar.gz
     mv build/out/namecoin-*.tar.gz build/out/namecoin-*.dmg ../
     popd

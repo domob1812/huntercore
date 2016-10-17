@@ -87,6 +87,15 @@ before it will be merged. The basic squashing workflow is shown below.
     # save and quit
     git push -f # (force push to GitHub)
 
+If you have problems with squashing (or other workflows with `git`), you can
+alternatively enable "Allow edits from maintainers" in the right GitHub
+sidebar and ask for help in the pull request.
+
+Please refrain from creating several pull requests for the same change.
+Use the pull request that is already open (or was created earlier) to amend
+changes. This preserves the discussion and review that happened earlier for
+the respective change set.
+
 The length of time required for peer review is unpredictable and will vary from
 pull request to pull request.
 
@@ -169,7 +178,9 @@ language is used within pull-request comments:
 
   - ACK means "I have tested the code and I agree it should be merged";
   - NACK means "I disagree this should be merged", and must be accompanied by
-    sound technical justification. NACKs without accompanying reasoning may be disregarded;
+    sound technical justification (or in certain cases of copyright/patent/licensing
+    issues, legal justification). NACKs without accompanying reasoning may be
+    disregarded;
   - utACK means "I have not tested the code, but I have reviewed it and it looks
     OK, I agree it can be merged";
   - Concept ACK means "I agree in the general principle of this pull request";
@@ -198,3 +209,11 @@ Release Policy
 --------------
 
 The project leader is the release manager for each Bitcoin Core release.
+
+Copyright
+---------
+
+By contributing to this repository, you agree to license your work under the 
+MIT license unless specified otherwise in `contrib/debian/copyright` or at 
+the top of the file itself. Any work contributed where you are not the original 
+author must contain its license header with the original author(s) and source.

@@ -167,6 +167,11 @@ bool CTransaction::IsKillTx() const
     return IsGameTx() && vout.empty() && !vin.empty();
 }
 
+unsigned int CTransaction::GetTotalSize() const
+{
+    return ::GetSerializeSize(*this, SER_NETWORK, PROTOCOL_VERSION);
+}
+
 std::string CTransaction::ToString() const
 {
     std::string str;

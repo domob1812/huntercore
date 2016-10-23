@@ -292,11 +292,19 @@ Move::MinimumGameFee (const Consensus::Params& param, unsigned nHeight) const
     {
       const CAmount coinAmount = GetNameCoinAmount (param, nHeight);
 
+      // fee for new hunter is 1 HUC
+      if (param.rules->ForkInEffect (FORK_TIMESAVE, nHeight))
+        return coinAmount + COIN;
+
       if (param.rules->ForkInEffect (FORK_LIFESTEAL, nHeight))
         return coinAmount + 5 * COIN;
 
       return coinAmount;
     }
+
+  // destruct fee is 1 HUC
+  if (param.rules->ForkInEffect (FORK_TIMESAVE, nHeight))
+    return COIN * destruct.size ();
 
   if (!param.rules->ForkInEffect (FORK_LIFESTEAL, nHeight))
     return 0;

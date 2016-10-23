@@ -26,6 +26,20 @@ static const int NUM_CROWN_LOCATIONS = 416;
 static const int CROWN_START_X = 250;
 static const int CROWN_START_Y = 248;
 
+// for FORK_TIMESAVE
+extern unsigned char SpawnMap[MAP_HEIGHT][MAP_WIDTH];
+#define SPAWNMAPFLAG_BANK 1
+#define SPAWNMAPFLAG_PLAYER 2
+#define CHARACTER_MODE_NORMAL 6
+// difference of 2 means we can walk over (and along) the player spawn strip without logout
+#define CHARACTER_MODE_LOGOUT 8
+#define CHARACTER_MODE_SPECTATOR_BEGIN 9
+#define CHARACTER_HAS_SPAWN_PROTECTION(S) (S<CHARACTER_MODE_NORMAL)
+#define CHARACTER_IS_PROTECTED(S) ((S<CHARACTER_MODE_NORMAL)||(S>CHARACTER_MODE_LOGOUT))
+#define CHARACTER_SPAWN_PROTECTION_ALMOST_FINISHED(S) (S==CHARACTER_MODE_NORMAL-1)
+#define CHARACTER_IN_SPECTATOR_MODE(S) (S>CHARACTER_MODE_LOGOUT)
+#define CHARACTER_NO_LOGOUT(S) ((S!=CHARACTER_MODE_LOGOUT)&&(S<CHARACTER_MODE_SPECTATOR_BEGIN+15))
+
 extern const unsigned char ObstacleMap[MAP_HEIGHT][MAP_WIDTH];
 
 // HarvestAreas[i] has size 2*HarvestAreaSizes[i] and contains alternating x,y coordinates

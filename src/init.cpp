@@ -17,6 +17,7 @@
 #include "compat/sanity.h"
 #include "consensus/validation.h"
 #include "game/db.h"
+#include "game/map.h" // for FORK_TIMESAVE
 #include "httpserver.h"
 #include "httprpc.h"
 #include "key.h"
@@ -1087,6 +1088,43 @@ bool AppInit2(boost::thread_group& threadGroup, CScheduler& scheduler)
     // Start the lightweight task scheduler thread
     CScheduler::Function serviceLoop = boost::bind(&CScheduler::serviceQueue, &scheduler);
     threadGroup.create_thread(boost::bind(&TraceThread<CScheduler::Function>, "scheduler", serviceLoop));
+
+    // for FORK_TIMESAVE -- calculate possible player spawn tiles and bank spawn tiles
+    {
+        for (int h = 0; h < NUM_HARVEST_AREAS; h++)
+            for (int a = 0; a < HarvestAreaSizes[h]; a++)
+            {
+                 int harvest_x = HarvestAreas[h][2 * a];
+                 int harvest_y = HarvestAreas[h][2 * a + 1];
+                 if (IsInsideMap(harvest_x, harvest_y))
+                 {
+                     for (int x1 = harvest_x - 1; x1 <= harvest_x + 1; x1++)
+                         for (int y1 = harvest_y - 1; y1 <= harvest_y + 1; y1++)
+                         {
+                             if ((IsInsideMap(x1, y1)) &&
+                                 (IsWalkable(x1, y1)))
+                                 SpawnMap[y1][x1] = SPAWNMAPFLAG_BANK;
+                         }
+                 }
+            }
+        for (int h = 0; h < NUM_HARVEST_AREAS; h++)
+            for (int a = 0; a < HarvestAreaSizes[h]; a++)
+            {
+                 int harvest_x = HarvestAreas[h][2 * a];
+                 int harvest_y = HarvestAreas[h][2 * a + 1];
+                 if (IsInsideMap(harvest_x, harvest_y))
+                 {
+                     for (int x2 = harvest_x - 2; x2 <= harvest_x + 2; x2++)
+                         for (int y2 = harvest_y - 2; y2 <= harvest_y + 2; y2++)
+                         {
+                             if ((IsInsideMap(x2, y2)) &&
+                                 (IsWalkable(x2, y2)) &&
+                                 ( ! (SpawnMap[y2][x2] & SPAWNMAPFLAG_BANK) ))
+                                 SpawnMap[y2][x2] = SPAWNMAPFLAG_PLAYER;
+                         }
+                 }
+            }
+    }
 
     /* Start the RPC server already.  It will be started in "warmup" mode
      * and not really process calls already (but it will signify connections

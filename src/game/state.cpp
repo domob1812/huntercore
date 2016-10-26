@@ -90,7 +90,7 @@ GetCarryingCapacity (const GameState& state, bool isGeneral, bool isCrownHolder)
 CAmount
 GetNameCoinAmount (const Consensus::Params& param, unsigned nHeight)
 {
-  if (param.rules->ForkInEffect (FORK_TIMESAVE_PART2, nHeight))
+  if (param.rules->ForkInEffect (FORK_TIMESAVE, nHeight))
     return 100 * COIN;
   if (param.rules->ForkInEffect (FORK_LESSHEARTS, nHeight))
     return 200 * COIN;

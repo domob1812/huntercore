@@ -228,7 +228,7 @@ game_waitforchange (const UniValue& params, bool fHelp)
   }
 
   boost::unique_lock<boost::mutex> lock(mut_currentState);
-  while (true)
+  while (IsRPCRunning())
     {
       /* Atomically check whether we have found a new best block and return
          it if that's the case.  We use a lock on cs_main in order to
@@ -250,6 +250,8 @@ game_waitforchange (const UniValue& params, bool fHelp)
       /* Wait on the condition variable.  */
       cv_stateChange.wait (lock);
     }
+
+  return UniValue();
 }
 
 /* ************************************************************************** */

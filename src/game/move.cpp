@@ -306,10 +306,10 @@ Move::MinimumGameFee (const Consensus::Params& param, unsigned nHeight) const
   if (param.rules->ForkInEffect (FORK_TIMESAVE, nHeight))
     return COIN * destruct.size ();
 
-  if (!param.rules->ForkInEffect (FORK_LIFESTEAL, nHeight))
-    return 0;
+  if (param.rules->ForkInEffect (FORK_LIFESTEAL, nHeight))
+    return 20 * COIN * destruct.size ();
 
-  return 20 * COIN * destruct.size ();
+  return 0;
 }
 
 bool

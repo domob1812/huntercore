@@ -237,6 +237,28 @@ struct CollectedLootInfo : public LootInfo
     }
 };
 
+// for FORK_TIMESAVE
+constexpr int CHARACTER_MODE_NORMAL = 6;
+// difference of 2 means we can walk over (and along) the player spawn strip without logout
+constexpr int CHARACTER_MODE_LOGOUT = 8;
+constexpr int CHARACTER_MODE_SPECTATOR_BEGIN = 9;
+inline bool CharacterIsProtected(int s)
+{
+    return ((s < CHARACTER_MODE_NORMAL) || (s > CHARACTER_MODE_LOGOUT));
+}
+inline bool CharacterSpawnProtectionAlmostFinished(int s)
+{
+    return (s == CHARACTER_MODE_NORMAL - 1);
+}
+inline bool CharacterInSpectatorMode(int s)
+{
+    return (s > CHARACTER_MODE_LOGOUT);
+}
+inline bool CharacterNoLogout(int s)
+{
+    return ((s != CHARACTER_MODE_LOGOUT) && (s < CHARACTER_MODE_SPECTATOR_BEGIN + 15));
+}
+
 struct CharacterState
 {
     Coord coord;                        // Current coordinate

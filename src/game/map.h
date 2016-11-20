@@ -26,6 +26,11 @@ static const int NUM_CROWN_LOCATIONS = 416;
 static const int CROWN_START_X = 250;
 static const int CROWN_START_Y = 248;
 
+// for FORK_TIMESAVE
+extern const unsigned char SpawnMap[MAP_HEIGHT][MAP_WIDTH];
+constexpr int SPAWNMAPFLAG_BANK = 1;
+constexpr int SPAWNMAPFLAG_PLAYER = 2;
+
 extern const unsigned char ObstacleMap[MAP_HEIGHT][MAP_WIDTH];
 
 // HarvestAreas[i] has size 2*HarvestAreaSizes[i] and contains alternating x,y coordinates

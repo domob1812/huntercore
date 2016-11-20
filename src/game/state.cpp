@@ -23,30 +23,35 @@
 
 #include <boost/foreach.hpp>
 
-static const int MAX_CHARACTERS_PER_PLAYER = 20;           // Maximum number of characters per player at the same time
-static const int MAX_CHARACTERS_PER_PLAYER_TOTAL = 1000;   // Maximum number of characters per player in the lifetime
+namespace
+{
+
+constexpr int MAX_CHARACTERS_PER_PLAYER = 20;           // Maximum number of characters per player at the same time
+constexpr int MAX_CHARACTERS_PER_PLAYER_TOTAL = 1000;   // Maximum number of characters per player in the lifetime
 
 /* Parameters that determine when a poison-disaster will happen.  The
    probability is 1/x at each block between min and max time.  */
-static const unsigned PDISASTER_MIN_TIME = 1440;
-static const unsigned PDISASTER_MAX_TIME = 12 * 1440;
-static const unsigned PDISASTER_PROBABILITY = 10000;
+constexpr unsigned PDISASTER_MIN_TIME = 1440;
+constexpr unsigned PDISASTER_MAX_TIME = 12 * 1440;
+constexpr unsigned PDISASTER_PROBABILITY = 10000;
 
 /* Parameters about how long a poisoned player may still live.  */
-static const unsigned POISON_MIN_LIFE = 1;
-static const unsigned POISON_MAX_LIFE = 50;
+constexpr unsigned POISON_MIN_LIFE = 1;
+constexpr unsigned POISON_MAX_LIFE = 50;
 
 /* Parameters for dynamic banks after the life-steal fork.  */
-static const unsigned DYNBANKS_NUM_BANKS = 75;
-static const unsigned DYNBANKS_MIN_LIFE = 25;
-static const unsigned DYNBANKS_MAX_LIFE = 100;
+constexpr unsigned DYNBANKS_NUM_BANKS = 75;
+constexpr unsigned DYNBANKS_MIN_LIFE = 25;
+constexpr unsigned DYNBANKS_MAX_LIFE = 100;
 
-inline bool IsOriginalSpawnArea(const Coord &c)
+bool
+IsOriginalSpawnAreaCoord (const Coord &c)
 {
     return IsOriginalSpawnArea(c.x, c.y);
 }
 
-inline bool IsWalkable(const Coord &c)
+bool
+IsWalkableCoord (const Coord &c)
 {
     return IsWalkable(c.x, c.y);
 }
@@ -60,16 +65,16 @@ inline bool IsWalkable(const Coord &c)
  * This is filled in from IsWalkable() whenever it is empty (on startup).  It
  * does not ever change.
  */
-static std::vector<Coord> walkableTiles;
+std::vector<Coord> walkableTiles;
 // for FORK_TIMESAVE -- 2 more sets of walkable tiles
-static std::vector<Coord> walkableTiles_ts_players;
-static std::vector<Coord> walkableTiles_ts_banks;
+std::vector<Coord> walkableTiles_ts_players;
+std::vector<Coord> walkableTiles_ts_banks;
 
 /* Calculate carrying capacity.  This is where it is basically defined.
    It depends on the block height (taking forks changing it into account)
    and possibly properties of the player.  Returns -1 if the capacity
    is unlimited.  */
-static CAmount
+CAmount
 GetCarryingCapacity (const GameState& state, bool isGeneral, bool isCrownHolder)
 {
   if (!state.ForkInEffect (FORK_CARRYINGCAP) || isCrownHolder)
@@ -84,24 +89,9 @@ GetCarryingCapacity (const GameState& state, bool isGeneral, bool isCrownHolder)
   return (isGeneral ? 50 : 25) * COIN;
 }
 
-/* Return the minimum necessary amount of locked coins.  This replaces the
-   old NAME_COIN_AMOUNT constant and makes it more dynamic, so that we can
-   change it with hard forks.  */
-CAmount
-GetNameCoinAmount (const Consensus::Params& param, unsigned nHeight)
-{
-  if (param.rules->ForkInEffect (FORK_TIMESAVE, nHeight))
-    return 100 * COIN;
-  if (param.rules->ForkInEffect (FORK_LESSHEARTS, nHeight))
-    return 200 * COIN;
-  if (param.rules->ForkInEffect (FORK_POISON, nHeight))
-    return 10 * COIN;
-  return COIN;
-}
-
 /* Get the destruct radius a hunter has at a certain block height.  This
    may depend on whether or not it is a general.  */
-static int
+int
 GetDestructRadius (const GameState& state, bool isGeneral)
 {
   if (state.ForkInEffect (FORK_LESSHEARTS))
@@ -111,7 +101,7 @@ GetDestructRadius (const GameState& state, bool isGeneral)
 }
 
 /* Get maximum allowed stay on a bank.  */
-static int
+int
 MaxStayOnBank (const GameState& state)
 {
   if (state.ForkInEffect (FORK_LIFESTEAL))
@@ -127,7 +117,7 @@ MaxStayOnBank (const GameState& state)
 }
 
 /* Check whether or not a heart should be dropped at the current height.  */
-static bool
+bool
 DropHeart (const GameState& state)
 {
   if (state.ForkInEffect (FORK_LIFESTEAL))
@@ -138,7 +128,7 @@ DropHeart (const GameState& state)
 } 
 
 /* Ensure that walkableTiles is filled.  */
-static void
+void
 FillWalkableTiles ()
 {
   // for FORK_TIMESAVE -- less possible player and bank spawn tiles
@@ -187,6 +177,23 @@ FillWalkableTiles ()
   std::sort (walkableTiles.begin (), walkableTiles.end ());
 
   assert (!walkableTiles.empty ());
+}
+
+} // anonymous namespace
+
+/* Return the minimum necessary amount of locked coins.  This replaces the
+   old NAME_COIN_AMOUNT constant and makes it more dynamic, so that we can
+   change it with hard forks.  */
+CAmount
+GetNameCoinAmount (const Consensus::Params& param, unsigned nHeight)
+{
+  if (param.rules->ForkInEffect (FORK_TIMESAVE, nHeight))
+    return 100 * COIN;
+  if (param.rules->ForkInEffect (FORK_LESSHEARTS, nHeight))
+    return 200 * COIN;
+  if (param.rules->ForkInEffect (FORK_POISON, nHeight))
+    return 10 * COIN;
+  return COIN;
 }
 
 /* ************************************************************************** */
@@ -709,7 +716,7 @@ void CharacterState::MoveTowardsWaypoint()
         new_c.x = Helper::CoordUpd(new_c.y, coord.x, dy, dx, from.y, from.x);
     }
 
-    if (!IsWalkable(new_c))
+    if (!IsWalkableCoord (new_c))
         StopMoving();
     else
     {
@@ -932,7 +939,7 @@ SetOriginalBanks (std::map<Coord, unsigned>& banks)
   assert (banks.size () == 4 * (2 * SPAWN_AREA_LENGTH - 1));
   BOOST_FOREACH (const PAIRTYPE(Coord, unsigned)& b, banks)
     {
-      assert (IsOriginalSpawnArea (b.first));
+      assert (IsOriginalSpawnAreaCoord (b.first));
       assert (b.second == 0);
     }
 }
@@ -1346,7 +1353,7 @@ void GameState::CollectCrown(RandomGenerator &rnd, bool respawn_crown)
 static Coord
 PushCoordOutOfSpawnArea(const Coord &c)
 {
-    if (!IsOriginalSpawnArea(c))
+    if (!IsOriginalSpawnAreaCoord (c))
         return c;
     if (c.x == 0)
     {
@@ -1938,7 +1945,7 @@ bool PerformStep(const GameState &inState, const StepData &stepData, GameState &
         {
             heart.x = rnd.GetIntRnd(MAP_WIDTH);
             heart.y = rnd.GetIntRnd(MAP_HEIGHT);
-        } while (!IsWalkable(heart) || IsOriginalSpawnArea (heart));
+        } while (!IsWalkableCoord (heart) || IsOriginalSpawnAreaCoord (heart));
         outState.hearts.insert(heart);
     }
 

@@ -23,6 +23,8 @@
 
 #include <boost/foreach.hpp>
 
+#include <functional>
+
 namespace
 {
 
@@ -125,58 +127,50 @@ DropHeart (const GameState& state)
 
   const int heartEvery = (state.ForkInEffect (FORK_LESSHEARTS) ? 500 : 10);
   return state.nHeight % heartEvery == 0;
-} 
+}
+
+/* Fills in a walkableTiles array, using the passed predicate in addition
+   to the general IsWalkable() function to decide which coordinates should
+   be put into the list.  */
+void
+FillWalkableArray (std::vector<Coord>& tiles,
+                   const std::function<bool(int, int)>& predicate)
+{
+  if (tiles.empty ())
+    {
+      for (int x = 0; x < MAP_WIDTH; ++x)
+        for (int y = 0; y < MAP_HEIGHT; ++y)
+          if (IsWalkable (x, y) && predicate (x, y))
+            tiles.push_back (Coord (x, y));
+
+      /* Do not forget to sort in the order defined by operator<!  */
+      std::sort (tiles.begin (), tiles.end ());
+    }
+
+  assert (!tiles.empty ());
+}
 
 /* Ensure that walkableTiles is filled.  */
 void
 FillWalkableTiles ()
 {
-  // for FORK_TIMESAVE -- less possible player and bank spawn tiles
-  if (walkableTiles_ts_players.empty ())
-  {
-      for (int x = 0; x < MAP_WIDTH; ++x)
-        for (int y = 0; y < MAP_HEIGHT; ++y)
-          if (IsWalkable (x, y))
-          {
-              if ( ! (SpawnMap[y][x] & SPAWNMAPFLAG_PLAYER) ) // note: player spawn tiles and bank spawn tiles are separated
-                continue;
+  FillWalkableArray (walkableTiles_ts_players,
+    [] (int x, int y)
+      {
+        return SpawnMap[y][x] & SPAWNMAPFLAG_PLAYER;
+      });
 
-            walkableTiles_ts_players.push_back (Coord (x, y));
-          }
+  FillWalkableArray (walkableTiles_ts_banks,
+    [] (int x, int y)
+      {
+        return SpawnMap[y][x] & SPAWNMAPFLAG_BANK;
+      });
 
-      /* Do not forget to sort in the order defined by operator<!  */
-      std::sort (walkableTiles_ts_players.begin (), walkableTiles_ts_players.end ());
-      assert (!walkableTiles_ts_players.empty ());
-  }
-  if (walkableTiles_ts_banks.empty ())
-  {
-      for (int x = 0; x < MAP_WIDTH; ++x)
-        for (int y = 0; y < MAP_HEIGHT; ++y)
-          if (IsWalkable (x, y))
-          {
-              if ( ! (SpawnMap[y][x] & SPAWNMAPFLAG_BANK) )
-                continue;
-
-            walkableTiles_ts_banks.push_back (Coord (x, y));
-          }
-
-      /* Do not forget to sort in the order defined by operator<!  */
-      std::sort (walkableTiles_ts_banks.begin (), walkableTiles_ts_banks.end ());
-      assert (!walkableTiles_ts_banks.empty ());
-  }
-
-  if (!walkableTiles.empty ())
-    return;
-
-  for (int x = 0; x < MAP_WIDTH; ++x)
-    for (int y = 0; y < MAP_HEIGHT; ++y)
-      if (IsWalkable (x, y))
-        walkableTiles.push_back (Coord (x, y));
-
-  /* Do not forget to sort in the order defined by operator<!  */
-  std::sort (walkableTiles.begin (), walkableTiles.end ());
-
-  assert (!walkableTiles.empty ());
+  FillWalkableArray (walkableTiles,
+    [] (int x, int y)
+      {
+        return true;
+      });
 }
 
 } // anonymous namespace

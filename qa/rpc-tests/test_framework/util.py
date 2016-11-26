@@ -121,23 +121,44 @@ def hex_str_to_bytes(hex_str):
 def str_to_b64str(string):
     return b64encode(string.encode('utf-8')).decode('ascii')
 
-def sync_blocks(rpc_connections, wait=1, timeout=60):
+def sync_blocks(rpc_connections, *, wait=1, timeout=60):
     """
-    Wait until everybody has the same tip
-    """
-    maxheight = 0
-    while timeout > 0:
-        tips = [ x.waitforblockheight(maxheight, int(wait * 1000)) for x in rpc_connections ]
-        heights = [ x["height"] for x in tips ]
-        if tips == [ tips[0] ]*len(tips):
-            return True
-        if heights == [ heights[0] ]*len(heights): #heights are the same but hashes are not
-            raise AssertionError("Block sync failed")
-        timeout -= wait
-        maxheight = max(heights)
-    raise AssertionError("Block sync failed")
+    Wait until everybody has the same tip.
 
-def sync_mempools(rpc_connections, wait=1, timeout=60):
+    sync_blocks needs to be called with an rpc_connections set that has least
+    one node already synced to the latest, stable tip, otherwise there's a
+    chance it might return before all nodes are stably synced.
+    """
+    # Use getblockcount() instead of waitforblockheight() to determine the
+    # initial max height because the two RPCs look at different internal global
+    # variables (chainActive vs latestBlock) and the former gets updated
+    # earlier.
+    maxheight = max(x.getblockcount() for x in rpc_connections)
+    start_time = cur_time = time.time()
+    while cur_time <= start_time + timeout:
+        tips = [r.waitforblockheight(maxheight, int(wait * 1000)) for r in rpc_connections]
+        if all(t["height"] == maxheight for t in tips):
+            if all(t["hash"] == tips[0]["hash"] for t in tips):
+                return
+            raise AssertionError("Block sync failed, mismatched block hashes:{}".format(
+                                 "".join("\n  {!r}".format(tip) for tip in tips)))
+        cur_time = time.time()
+    raise AssertionError("Block sync to height {} timed out:{}".format(
+                         maxheight, "".join("\n  {!r}".format(tip) for tip in tips)))
+
+def sync_chain(rpc_connections, *, wait=1, timeout=60):
+    """
+    Wait until everybody has the same best block
+    """
+    while timeout > 0:
+        best_hash = [x.getbestblockhash() for x in rpc_connections]
+        if best_hash == [best_hash[0]]*len(best_hash):
+            return
+        time.sleep(wait)
+        timeout -= wait
+    raise AssertionError("Chain sync failed: Best block hashes don't match")
+
+def sync_mempools(rpc_connections, *, wait=1, timeout=60):
     """
     Wait until everybody has the same transactions in their memory
     pools
@@ -149,7 +170,7 @@ def sync_mempools(rpc_connections, wait=1, timeout=60):
             if set(rpc_connections[i].getrawmempool()) == pool:
                 num_match = num_match+1
         if num_match == len(rpc_connections):
-            return True
+            return
         time.sleep(wait)
         timeout -= wait
     raise AssertionError("Mempool sync failed")
@@ -350,7 +371,7 @@ def start_node(i, dirname, extra_args=[], rpchost=None, timewait=None, binary=No
 
     return proxy
 
-def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
+def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, timewait=None, binary=None):
     """
     Start multiple huntercoinds, return RPC connections to them
     """
@@ -359,7 +380,7 @@ def start_nodes(num_nodes, dirname, extra_args=None, rpchost=None, binary=None):
     rpcs = []
     try:
         for i in range(num_nodes):
-            rpcs.append(start_node(i, dirname, extra_args[i], rpchost, binary=binary[i]))
+            rpcs.append(start_node(i, dirname, extra_args[i], rpchost, timewait=timewait, binary=binary[i]))
     except: # If one node failed to start, stop the others
         stop_nodes(rpcs)
         raise
@@ -531,10 +552,14 @@ def assert_greater_than(thing1, thing2):
         raise AssertionError("%s <= %s"%(str(thing1),str(thing2)))
 
 def assert_raises(exc, fun, *args, **kwds):
+    assert_raises_message(exc, None, fun, *args, **kwds)
+
+def assert_raises_message(exc, message, fun, *args, **kwds):
     try:
         fun(*args, **kwds)
-    except exc:
-        pass
+    except exc as e:
+        if message is not None and message not in e.error['message']:
+            raise AssertionError("Expected substring not found:"+e.error['message'])
     except Exception as e:
         raise AssertionError("Unexpected exception raised: "+type(e).__name__)
     else:

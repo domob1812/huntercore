@@ -35,21 +35,21 @@ static CBlock BuildBlockTestCase() {
     tx.vout[0].nValue = 42;
 
     block.vtx.resize(3);
-    block.vtx[0] = tx;
+    block.vtx[0] = MakeTransactionRef(tx);
     SetBlockVersion(block, 42);
     block.hashPrevBlock = GetRandHash();
     block.nBits = 0x207fffff;
 
     tx.vin[0].prevout.hash = GetRandHash();
     tx.vin[0].prevout.n = 0;
-    block.vtx[1] = tx;
+    block.vtx[1] = MakeTransactionRef(tx);
 
     tx.vin.resize(10);
     for (size_t i = 0; i < tx.vin.size(); i++) {
         tx.vin[i].prevout.hash = GetRandHash();
         tx.vin[i].prevout.n = 0;
     }
-    block.vtx[2] = tx;
+    block.vtx[2] = MakeTransactionRef(tx);
 
     bool mutated;
     block.hashMerkleRoot = BlockMerkleRoot(block, &mutated);
@@ -68,8 +68,8 @@ BOOST_AUTO_TEST_CASE(SimpleRoundTripTest)
     TestMemPoolEntryHelper entry;
     CBlock block(BuildBlockTestCase());
 
-    pool.addUnchecked(block.vtx[2].GetHash(), entry.FromTx(block.vtx[2]));
-    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
+    pool.addUnchecked(block.vtx[2]->GetHash(), entry.FromTx(*block.vtx[2]));
+    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
 
     // Do a simple ShortTxIDs RT
     {
@@ -87,14 +87,14 @@ BOOST_AUTO_TEST_CASE(SimpleRoundTripTest)
         BOOST_CHECK(!partialBlock.IsTxAvailable(1));
         BOOST_CHECK( partialBlock.IsTxAvailable(2));
 
-        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);
+        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);
 
-        std::list<CTransaction> removed;
-        pool.removeRecursive(block.vtx[2], removed);
+        std::vector<CTransactionRef> removed;
+        pool.removeRecursive(*block.vtx[2], &removed);
         BOOST_CHECK_EQUAL(removed.size(), 1);
 
         CBlock block2;
-        std::vector<CTransaction> vtx_missing;
+        std::vector<CTransactionRef> vtx_missing;
         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_INVALID); // No transactions
 
         vtx_missing.push_back(block.vtx[2]); // Wrong transaction
@@ -138,7 +138,7 @@ public:
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+    inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(header);
         READWRITE(nonce);
         size_t shorttxids_size = shorttxids.size();
@@ -161,8 +161,10 @@ BOOST_AUTO_TEST_CASE(NonCoinbasePreforwardRTTest)
     TestMemPoolEntryHelper entry;
     CBlock block(BuildBlockTestCase());
 
-    pool.addUnchecked(block.vtx[2].GetHash(), entry.FromTx(block.vtx[2]));
-    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
+    pool.addUnchecked(block.vtx[2]->GetHash(), entry.FromTx(*block.vtx[2]));
+    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
+
+    uint256 txhash;
 
     // Test with pre-forwarding tx 1, but not coinbase
     {
@@ -170,8 +172,8 @@ BOOST_AUTO_TEST_CASE(NonCoinbasePreforwardRTTest)
         shortIDs.prefilledtxn.resize(1);
         shortIDs.prefilledtxn[0] = {1, block.vtx[1]};
         shortIDs.shorttxids.resize(2);
-        shortIDs.shorttxids[0] = shortIDs.GetShortID(block.vtx[0].GetHash());
-        shortIDs.shorttxids[1] = shortIDs.GetShortID(block.vtx[2].GetHash());
+        shortIDs.shorttxids[0] = shortIDs.GetShortID(block.vtx[0]->GetHash());
+        shortIDs.shorttxids[1] = shortIDs.GetShortID(block.vtx[2]->GetHash());
 
         CDataStream stream(SER_NETWORK, PROTOCOL_VERSION);
         stream << shortIDs;
@@ -185,10 +187,10 @@ BOOST_AUTO_TEST_CASE(NonCoinbasePreforwardRTTest)
         BOOST_CHECK( partialBlock.IsTxAvailable(1));
         BOOST_CHECK( partialBlock.IsTxAvailable(2));
 
-        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);
+        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);
 
         CBlock block2;
-        std::vector<CTransaction> vtx_missing;
+        std::vector<CTransactionRef> vtx_missing;
         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_INVALID); // No transactions
 
         vtx_missing.push_back(block.vtx[1]); // Wrong transaction
@@ -203,9 +205,13 @@ BOOST_AUTO_TEST_CASE(NonCoinbasePreforwardRTTest)
         BOOST_CHECK_EQUAL(block.hashMerkleRoot.ToString(), BlockMerkleRoot(block3, &mutated).ToString());
         BOOST_CHECK(!mutated);
 
-        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);
+        txhash = block.vtx[2]->GetHash();
+        block.vtx.clear();
+        block2.vtx.clear();
+        block3.vtx.clear();
+        BOOST_CHECK_EQUAL(pool.mapTx.find(txhash)->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);
     }
-    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[2].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
+    BOOST_CHECK_EQUAL(pool.mapTx.find(txhash)->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
 }
 
 BOOST_AUTO_TEST_CASE(SufficientPreforwardRTTest)
@@ -214,8 +220,10 @@ BOOST_AUTO_TEST_CASE(SufficientPreforwardRTTest)
     TestMemPoolEntryHelper entry;
     CBlock block(BuildBlockTestCase());
 
-    pool.addUnchecked(block.vtx[1].GetHash(), entry.FromTx(block.vtx[1]));
-    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
+    pool.addUnchecked(block.vtx[1]->GetHash(), entry.FromTx(*block.vtx[1]));
+    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
+
+    uint256 txhash;
 
     // Test with pre-forwarding coinbase + tx 2 with tx 1 in mempool
     {
@@ -224,7 +232,7 @@ BOOST_AUTO_TEST_CASE(SufficientPreforwardRTTest)
         shortIDs.prefilledtxn[0] = {0, block.vtx[0]};
         shortIDs.prefilledtxn[1] = {1, block.vtx[2]}; // id == 1 as it is 1 after index 1
         shortIDs.shorttxids.resize(1);
-        shortIDs.shorttxids[0] = shortIDs.GetShortID(block.vtx[1].GetHash());
+        shortIDs.shorttxids[0] = shortIDs.GetShortID(block.vtx[1]->GetHash());
 
         CDataStream stream(SER_NETWORK, PROTOCOL_VERSION);
         stream << shortIDs;
@@ -238,19 +246,22 @@ BOOST_AUTO_TEST_CASE(SufficientPreforwardRTTest)
         BOOST_CHECK( partialBlock.IsTxAvailable(1));
         BOOST_CHECK( partialBlock.IsTxAvailable(2));
 
-        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);
+        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1]->GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);
 
         CBlock block2;
-        std::vector<CTransaction> vtx_missing;
+        std::vector<CTransactionRef> vtx_missing;
         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_OK);
         BOOST_CHECK_EQUAL(block.GetHash().ToString(), block2.GetHash().ToString());
         bool mutated;
         BOOST_CHECK_EQUAL(block.hashMerkleRoot.ToString(), BlockMerkleRoot(block2, &mutated).ToString());
         BOOST_CHECK(!mutated);
 
-        BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);
+        txhash = block.vtx[1]->GetHash();
+        block.vtx.clear();
+        block2.vtx.clear();
+        BOOST_CHECK_EQUAL(pool.mapTx.find(txhash)->GetSharedTx().use_count(), SHARED_TX_OFFSET + 1);
     }
-    BOOST_CHECK_EQUAL(pool.mapTx.find(block.vtx[1].GetHash())->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
+    BOOST_CHECK_EQUAL(pool.mapTx.find(txhash)->GetSharedTx().use_count(), SHARED_TX_OFFSET + 0);
 }
 
 BOOST_AUTO_TEST_CASE(EmptyBlockRoundTripTest)
@@ -264,7 +275,7 @@ BOOST_AUTO_TEST_CASE(EmptyBlockRoundTripTest)
 
     CBlock block;
     block.vtx.resize(1);
-    block.vtx[0] = coinbase;
+    block.vtx[0] = MakeTransactionRef(std::move(coinbase));
     SetBlockVersion(block, 42);
     block.hashPrevBlock = GetRandHash();
     block.nBits = 0x207fffff;
@@ -289,7 +300,7 @@ BOOST_AUTO_TEST_CASE(EmptyBlockRoundTripTest)
         BOOST_CHECK(partialBlock.IsTxAvailable(0));
 
         CBlock block2;
-        std::vector<CTransaction> vtx_missing;
+        std::vector<CTransactionRef> vtx_missing;
         BOOST_CHECK(partialBlock.FillBlock(block2, vtx_missing) == READ_STATUS_OK);
         BOOST_CHECK_EQUAL(block.GetHash().ToString(), block2.GetHash().ToString());
         BOOST_CHECK_EQUAL(block.hashMerkleRoot.ToString(), BlockMerkleRoot(block2, &mutated).ToString());

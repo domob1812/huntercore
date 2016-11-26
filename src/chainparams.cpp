@@ -47,7 +47,7 @@ static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesi
     genesis.nBits    = nBits;
     genesis.nNonce   = nNonce;
     genesis.nVersion = nVersion;
-    genesis.vtx.push_back(txNew);
+    genesis.vtx.push_back(MakeTransactionRef(std::move(txNew)));
     genesis.hashPrevBlock.SetNull();
     genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
     return genesis;
@@ -116,10 +116,16 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 0; // Not yet enabled
 
-        // Deployment of SegWit (BIP141 and BIP143)
+        // Deployment of SegWit (BIP141, BIP143, and BIP147)
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 0; // Not yet enabled
+
+        // The best chain should have at least this much work.
+        // The value is the chain work of the Huntercoin mainnet chain at height
+        // 1,490,000, with best block hash:
+        // d38feb2df0fc1b64bd3b3fe5b1e90d15a5d8ca17a13b735db381d16ce359393f
+        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000326ede22d6f88e27b6e95");
 
         consensus.nAuxpowChainId[ALGO_SHA256D] = 0x0006;
         consensus.nAuxpowChainId[ALGO_SCRYPT] = 0x0002;
@@ -161,7 +167,6 @@ public:
         fDefaultConsistencyChecks = false;
         fRequireStandard = true;
         fMineBlocksOnDemand = false;
-        fTestnetToBeDeprecatedFieldRPC = false;
 
         checkpointData = (CCheckpointData) {
             boost::assign::map_list_of
@@ -208,10 +213,16 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_CSV].nTimeout = 0; // Not yet enabled
 
-        // Deployment of SegWit (BIP141 and BIP143)
+        // Deployment of SegWit (BIP141, BIP143, and BIP147)
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].bit = 1;
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 0; // Not yet enabled
+
+        // The best chain should have at least this much work.
+        // The value is the chain work of the Huntercoin testnet chain at height
+        // 350,000, with best block hash:
+        // 884920fb406847e9ebaac69305d97d6df9fa125603fd7d3e26c00a0d79c29ddc
+        consensus.nMinimumChainWork = uint256S("0x00000000000000000000000000000000000000000000000000038998cea702f2");
 
         consensus.nAuxpowChainId[ALGO_SHA256D] = 0x0006;
         consensus.nAuxpowChainId[ALGO_SCRYPT] = 0x0002;
@@ -250,7 +261,7 @@ public:
         fDefaultConsistencyChecks = false;
         fRequireStandard = false;
         fMineBlocksOnDemand = false;
-        fTestnetToBeDeprecatedFieldRPC = true;
+
 
         checkpointData = (CCheckpointData) {
             boost::assign::map_list_of
@@ -298,6 +309,9 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nStartTime = 0;
         consensus.vDeployments[Consensus::DEPLOYMENT_SEGWIT].nTimeout = 999999999999ULL;
 
+        // The best chain should have at least this much work.
+        consensus.nMinimumChainWork = uint256S("0x00");
+
         consensus.nAuxpowChainId[ALGO_SHA256D] = 0x0006;
         consensus.nAuxpowChainId[ALGO_SCRYPT] = 0x0002;
         consensus.fStrictChainId = true;
@@ -323,7 +337,6 @@ public:
         fDefaultConsistencyChecks = true;
         fRequireStandard = false;
         fMineBlocksOnDemand = true;
-        fTestnetToBeDeprecatedFieldRPC = false;
 
         checkpointData = (CCheckpointData){
             boost::assign::map_list_of

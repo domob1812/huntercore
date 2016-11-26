@@ -169,7 +169,7 @@ private:
 public:
     BlockAssembler(const CChainParams& chainparams);
     /** Construct a new block template with coinbase to scriptPubKeyIn */
-    CBlockTemplate* CreateNewBlock(PowAlgo algo, const CScript& scriptPubKeyIn);
+    std::unique_ptr<CBlockTemplate> CreateNewBlock(PowAlgo algo, const CScript& scriptPubKeyIn);
 
 private:
     // utility functions

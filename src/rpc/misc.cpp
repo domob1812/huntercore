@@ -41,9 +41,9 @@ using namespace std;
  *
  * Or alternatively, create a specific query method for the information.
  **/
-UniValue getinfo(const UniValue& params, bool fHelp)
+UniValue getinfo(const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() != 0)
+    if (request.fHelp || request.params.size() != 0)
         throw runtime_error(
             "getinfo\n"
             "\nDEPRECATED. Returns an object containing various state info.\n"
@@ -59,7 +59,7 @@ UniValue getinfo(const UniValue& params, bool fHelp)
             "  \"proxy\": \"host:port\",     (string, optional) the proxy used by the server\n"
             "  \"difficulty_algo\": xxxxxx,  (numeric) the current difficulty for algo\n"
             "  \"testnet\": true|false,      (boolean) if the server is using testnet or not\n"
-            "  \"keypoololdest\": xxxxxx,    (numeric) the timestamp (seconds since GMT epoch) of the oldest pre-generated key in the key pool\n"
+            "  \"keypoololdest\": xxxxxx,    (numeric) the timestamp (seconds since Unix epoch) of the oldest pre-generated key in the key pool\n"
             "  \"keypoolsize\": xxxx,        (numeric) how many new keys are pre-generated\n"
             "  \"unlocked_until\": ttt,      (numeric) the timestamp in seconds since epoch (midnight Jan 1 1970 GMT) that the wallet is unlocked for transfers, or 0 if the wallet is locked\n"
             "  \"paytxfee\": x.xxxx,         (numeric) the transaction fee set in " + CURRENCY_UNIT + "/kB\n"
@@ -96,7 +96,7 @@ UniValue getinfo(const UniValue& params, bool fHelp)
     obj.push_back(Pair("proxy",         (proxy.IsValid() ? proxy.proxy.ToStringIPPort() : string())));
     obj.push_back(Pair("difficulty_sha256d", (double)GetDifficulty(ALGO_SHA256D)));
     obj.push_back(Pair("difficulty_scrypt", (double)GetDifficulty(ALGO_SCRYPT)));
-    obj.push_back(Pair("testnet",       Params().TestnetToBeDeprecatedFieldRPC()));
+    obj.push_back(Pair("testnet",       Params().NetworkIDString() == CBaseChainParams::TESTNET));
 #ifdef ENABLE_WALLET
     if (pwalletMain) {
         obj.push_back(Pair("keypoololdest", pwalletMain->GetOldestKeyPoolTime()));
@@ -151,9 +151,9 @@ public:
 };
 #endif
 
-UniValue validateaddress(const UniValue& params, bool fHelp)
+UniValue validateaddress(const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() != 1)
+    if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "validateaddress \"namecoinaddress\"\n"
             "\nReturn information about the given namecoin address.\n"
@@ -184,7 +184,7 @@ UniValue validateaddress(const UniValue& params, bool fHelp)
     LOCK(cs_main);
 #endif
 
-    CBitcoinAddress address(params[0].get_str());
+    CBitcoinAddress address(request.params[0].get_str());
     bool isValid = address.IsValid();
 
     UniValue ret(UniValue::VOBJ);
@@ -281,9 +281,9 @@ CScript _createmultisig_redeemScript(const UniValue& params)
     return result;
 }
 
-UniValue createmultisig(const UniValue& params, bool fHelp)
+UniValue createmultisig(const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() < 2 || params.size() > 2)
+    if (request.fHelp || request.params.size() < 2 || request.params.size() > 2)
     {
         string msg = "createmultisig nrequired [\"key\",...]\n"
             "\nCreates a multi-signature address with n signature of m keys required.\n"
@@ -313,7 +313,7 @@ UniValue createmultisig(const UniValue& params, bool fHelp)
     }
 
     // Construct using pay-to-script-hash:
-    CScript inner = _createmultisig_redeemScript(params);
+    CScript inner = _createmultisig_redeemScript(request.params);
     CScriptID innerID(inner);
     CBitcoinAddress address(innerID);
 
@@ -324,9 +324,9 @@ UniValue createmultisig(const UniValue& params, bool fHelp)
     return result;
 }
 
-UniValue verifymessage(const UniValue& params, bool fHelp)
+UniValue verifymessage(const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() != 3)
+    if (request.fHelp || request.params.size() != 3)
         throw runtime_error(
             "verifymessage \"namecoinaddress\" \"signature\" \"message\"\n"
             "\nVerify a signed message\n"
@@ -349,9 +349,9 @@ UniValue verifymessage(const UniValue& params, bool fHelp)
 
     LOCK(cs_main);
 
-    string strAddress  = params[0].get_str();
-    string strSign     = params[1].get_str();
-    string strMessage  = params[2].get_str();
+    string strAddress  = request.params[0].get_str();
+    string strSign     = request.params[1].get_str();
+    string strMessage  = request.params[2].get_str();
 
     CBitcoinAddress addr(strAddress);
     if (!addr.IsValid())
@@ -378,9 +378,9 @@ UniValue verifymessage(const UniValue& params, bool fHelp)
     return (pubkey.GetID() == keyID);
 }
 
-UniValue signmessagewithprivkey(const UniValue& params, bool fHelp)
+UniValue signmessagewithprivkey(const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() != 2)
+    if (request.fHelp || request.params.size() != 2)
         throw runtime_error(
             "signmessagewithprivkey \"privkey\" \"message\"\n"
             "\nSign a message with the private key of an address\n"
@@ -398,8 +398,8 @@ UniValue signmessagewithprivkey(const UniValue& params, bool fHelp)
             + HelpExampleRpc("signmessagewithprivkey", "\"privkey\", \"my message\"")
         );
 
-    string strPrivkey = params[0].get_str();
-    string strMessage = params[1].get_str();
+    string strPrivkey = request.params[0].get_str();
+    string strMessage = request.params[1].get_str();
 
     CBitcoinSecret vchSecret;
     bool fGood = vchSecret.SetString(strPrivkey);
@@ -420,9 +420,9 @@ UniValue signmessagewithprivkey(const UniValue& params, bool fHelp)
     return EncodeBase64(&vchSig[0], vchSig.size());
 }
 
-UniValue setmocktime(const UniValue& params, bool fHelp)
+UniValue setmocktime(const JSONRPCRequest& request)
 {
-    if (fHelp || params.size() != 1)
+    if (request.fHelp || request.params.size() != 1)
         throw runtime_error(
             "setmocktime timestamp\n"
             "\nSet the local time to given timestamp (-regtest only)\n"
@@ -440,8 +440,8 @@ UniValue setmocktime(const UniValue& params, bool fHelp)
     // in a long time.
     LOCK(cs_main);
 
-    RPCTypeCheck(params, boost::assign::list_of(UniValue::VNUM));
-    SetMockTime(params[0].get_int64());
+    RPCTypeCheck(request.params, boost::assign::list_of(UniValue::VNUM));
+    SetMockTime(request.params[0].get_int64());
 
     uint64_t t = GetTime();
     if(g_connman) {
@@ -453,10 +453,52 @@ UniValue setmocktime(const UniValue& params, bool fHelp)
     return NullUniValue;
 }
 
-UniValue
-getstatsforheight (const UniValue& params, bool fHelp)
+static UniValue RPCLockedMemoryInfo()
 {
-  if (fHelp || params.size() != 1)
+    LockedPool::Stats stats = LockedPoolManager::Instance().stats();
+    UniValue obj(UniValue::VOBJ);
+    obj.push_back(Pair("used", uint64_t(stats.used)));
+    obj.push_back(Pair("free", uint64_t(stats.free)));
+    obj.push_back(Pair("total", uint64_t(stats.total)));
+    obj.push_back(Pair("locked", uint64_t(stats.locked)));
+    obj.push_back(Pair("chunks_used", uint64_t(stats.chunks_used)));
+    obj.push_back(Pair("chunks_free", uint64_t(stats.chunks_free)));
+    return obj;
+}
+
+UniValue getmemoryinfo(const JSONRPCRequest& request)
+{
+    /* Please, avoid using the word "pool" here in the RPC interface or help,
+     * as users will undoubtedly confuse it with the other "memory pool"
+     */
+    if (request.fHelp || request.params.size() != 0)
+        throw runtime_error(
+            "getmemoryinfo\n"
+            "Returns an object containing information about memory usage.\n"
+            "\nResult:\n"
+            "{\n"
+            "  \"locked\": {               (json object) Information about locked memory manager\n"
+            "    \"used\": xxxxx,          (numeric) Number of bytes used\n"
+            "    \"free\": xxxxx,          (numeric) Number of bytes available in current arenas\n"
+            "    \"total\": xxxxxxx,       (numeric) Total number of bytes managed\n"
+            "    \"locked\": xxxxxx,       (numeric) Amount of bytes that succeeded locking. If this number is smaller than total, locking pages failed at some point and key data could be swapped to disk.\n"
+            "    \"chunks_used\": xxxxx,   (numeric) Number allocated chunks\n"
+            "    \"chunks_free\": xxxxx,   (numeric) Number unused chunks\n"
+            "  }\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("getmemoryinfo", "")
+            + HelpExampleRpc("getmemoryinfo", "")
+        );
+    UniValue obj(UniValue::VOBJ);
+    obj.push_back(Pair("locked", RPCLockedMemoryInfo()));
+    return obj;
+}
+
+UniValue
+getstatsforheight (const JSONRPCRequest& request)
+{
+  if (request.fHelp || request.params.size() != 1)
     throw runtime_error (
       "getstatsforheight height\n"
       "\nGet basic blockchain statistics about the block at height\n"
@@ -485,7 +527,7 @@ getstatsforheight (const UniValue& params, bool fHelp)
 
   LOCK(cs_main);
 
-  const int nHeight = params[0].get_int ();
+  const int nHeight = request.params[0].get_int ();
   if (nHeight < 0 || nHeight > chainActive.Height ())
     throw JSONRPCError (RPC_INVALID_PARAMETER, "Block height out of range");
 
@@ -496,7 +538,7 @@ getstatsforheight (const UniValue& params, bool fHelp)
                         "Block not available (pruned data)");
 
   CBlock block;
-  std::vector<CTransaction> vGameTx;
+  std::vector<CTransactionRef> vGameTx;
   if(!ReadBlockFromDisk (block, vGameTx, pblockindex,
                          Params ().GetConsensus ()))
     throw JSONRPCError (RPC_INTERNAL_ERROR, "Can't read block from disk");
@@ -505,10 +547,10 @@ getstatsforheight (const UniValue& params, bool fHelp)
   UniValue transactions(UniValue::VOBJ);
   unsigned nCurrencyTx = 0;
   unsigned nNameTx = 0;
-  BOOST_FOREACH (const CTransaction& tx, block.vtx)
+  for (const auto& tx : block.vtx)
     {
       bool isNameTx = false;
-      BOOST_FOREACH (const CTxOut& txout, tx.vout)
+      for (const auto& txout : tx->vout)
         {
           const CNameScript op(txout.scriptPubKey);
           if (op.isNameOp ())
@@ -555,6 +597,7 @@ static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafeMode
   //  --------------------- ------------------------  -----------------------  ----------
     { "control",            "getinfo",                &getinfo,                true  }, /* uses wallet if enabled */
+    { "control",            "getmemoryinfo",          &getmemoryinfo,          true  },
     { "util",               "validateaddress",        &validateaddress,        true  }, /* uses wallet if enabled */
     { "util",               "createmultisig",         &createmultisig,         true  },
     { "util",               "verifymessage",          &verifymessage,          true  },

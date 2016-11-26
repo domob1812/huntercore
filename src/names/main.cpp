@@ -112,7 +112,7 @@ CNameMemPool::remove (const CTxMemPoolEntry& entry)
 
 void
 CNameMemPool::removeConflicts (const CTransaction& tx,
-                               std::list<CTransaction>& removed)
+                               std::vector<CTransactionRef>* removed)
 {
   AssertLockHeld (pool.cs);
 
@@ -138,7 +138,7 @@ CNameMemPool::removeConflicts (const CTransaction& tx,
 
 void
 CNameMemPool::removeReviveConflicts (const std::set<valtype>& revived,
-                                     std::list<CTransaction>& removed)
+                                     std::vector<CTransactionRef>* removed)
 {
   AssertLockHeld (pool.cs);
 

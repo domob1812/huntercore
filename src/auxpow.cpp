@@ -79,10 +79,9 @@ int CMerkleTx::GetBlocksToMaturity() const
 }
 
 
-bool CMerkleTx::AcceptToMemoryPool(bool fLimitFree, CAmount nAbsurdFee)
+bool CMerkleTx::AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state)
 {
-    CValidationState state;
-    return ::AcceptToMemoryPool(mempool, state, *this, fLimitFree, NULL, false, nAbsurdFee);
+    return ::AcceptToMemoryPool(mempool, state, *this, true, NULL, false, nAbsurdFee);
 }
 
 /* ************************************************************************** */
@@ -236,7 +235,7 @@ CAuxPow::initAuxPow (CBlockHeader& header)
   CBlock parent;
   parent.nVersion = 1;
   parent.vtx.resize (1);
-  parent.vtx[0] = coinbase;
+  parent.vtx[0] = MakeTransactionRef(coinbase);
   parent.hashMerkleRoot = BlockMerkleRoot (parent);
 
   /* Construct the auxpow object.  */

@@ -159,8 +159,7 @@ struct LootInfo
     ADD_SERIALIZE_METHODS;
 
     template<typename Stream, typename Operation>
-      inline void SerializationOp (Stream& s, Operation ser_action,
-                                   int nType, int nVersion)
+      inline void SerializationOp (Stream& s, Operation ser_action)
     {
       READWRITE (nAmount);
       READWRITE (firstBlock);
@@ -180,8 +179,7 @@ struct CollectedLootInfo : public LootInfo
     ADD_SERIALIZE_METHODS;
 
     template<typename Stream, typename Operation>
-      inline void SerializationOp (Stream& s, Operation ser_action,
-                                   int nType, int nVersion)
+      inline void SerializationOp (Stream& s, Operation ser_action)
     {
       READWRITE (*static_cast<LootInfo*> (this));
       READWRITE (collectedFirstBlock);
@@ -276,8 +274,7 @@ struct CharacterState
     ADD_SERIALIZE_METHODS;
 
     template<typename Stream, typename Operation>
-      inline void SerializationOp (Stream& s, Operation ser_action,
-                                   int nType, int nVersion)
+      inline void SerializationOp (Stream& s, Operation ser_action)
     {
       READWRITE (coord);
       READWRITE (dir);
@@ -344,8 +341,7 @@ struct PlayerState
     ADD_SERIALIZE_METHODS;
 
     template<typename Stream, typename Operation>
-      inline void SerializationOp (Stream& s, Operation ser_action,
-                                   int nType, int nVersion)
+      inline void SerializationOp (Stream& s, Operation ser_action)
     {
       READWRITE (color);
       READWRITE (characters);
@@ -420,12 +416,8 @@ struct GameState
     ADD_SERIALIZE_METHODS;
 
     template<typename Stream, typename Operation>
-      inline void SerializationOp (Stream& s, Operation ser_action,
-                                   int nType, int nVersion)
+      inline void SerializationOp (Stream& s, Operation ser_action)
     {
-      /* Should be only ever written to disk.  */
-      assert (nType & SER_DISK);
-
       READWRITE (players);
       READWRITE (dead_players_chat);
       READWRITE (loot);

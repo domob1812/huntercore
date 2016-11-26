@@ -72,7 +72,7 @@ class GameMempoolTest (GameTestFramework):
     assert_equal (self.players (0), ["foobar", "killer"])
     assert_equal (self.nodes[0].getrawmempool (), [txidKill])
     data = self.nodes[0].gettransaction (txidReg)
-    assert_equal (data['confirmations'], 0)
+    assert_equal (data['confirmations'], -1)
     assert_equal (data['walletconflicts'], [])
 
 if __name__ == '__main__':

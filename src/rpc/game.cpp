@@ -120,9 +120,9 @@ error:
 /* ************************************************************************** */
 
 UniValue
-game_getplayerstate (const UniValue& params, bool fHelp)
+game_getplayerstate (const JSONRPCRequest& request)
 {
-  if (fHelp || params.size () < 1 || params.size () > 2)
+  if (request.fHelp || request.params.size () < 1 || request.params.size () > 2)
     throw std::runtime_error (
         "game_getplayerstate \"name\" (\"hash\")\n"
         "\nLook up and return the player state for \"name\" either the latest"
@@ -141,8 +141,8 @@ game_getplayerstate (const UniValue& params, bool fHelp)
   uint256 hash;
   {
     LOCK (cs_main);
-    if (params.size () >= 2)
-      hash = uint256S (params[1].get_str ());
+    if (request.params.size () >= 2)
+      hash = uint256S (request.params[1].get_str ());
     else
       hash = *chainActive.Tip ()->phashBlock;
 
@@ -154,7 +154,7 @@ game_getplayerstate (const UniValue& params, bool fHelp)
   if (!pgameDb->get (hash, state))
     throw JSONRPCError (RPC_DATABASE_ERROR, "Failed to fetch game state");
 
-  const PlayerID name = params[0].get_str ();
+  const PlayerID name = request.params[0].get_str ();
   PlayerStateMap::const_iterator mi = state.players.find (name);
   if (mi == state.players.end ())
     throw JSONRPCError (RPC_INVALID_ADDRESS_OR_KEY, "No such player");
@@ -167,9 +167,9 @@ game_getplayerstate (const UniValue& params, bool fHelp)
 }
 
 UniValue
-game_getstate (const UniValue& params, bool fHelp)
+game_getstate (const JSONRPCRequest& request)
 {
-  if (fHelp || params.size () > 1)
+  if (request.fHelp || request.params.size () > 1)
     throw std::runtime_error (
         "game_getstate (\"hash\")\n"
         "\nLook up and return the game state for either the latest block"
@@ -187,8 +187,8 @@ game_getstate (const UniValue& params, bool fHelp)
   uint256 hash;
   {
     LOCK (cs_main);
-    if (params.size () >= 1)
-      hash = uint256S (params[0].get_str ());
+    if (request.params.size () >= 1)
+      hash = uint256S (request.params[0].get_str ());
     else
       hash = *chainActive.Tip ()->phashBlock;
 
@@ -206,9 +206,9 @@ game_getstate (const UniValue& params, bool fHelp)
 /* ************************************************************************** */
 
 UniValue
-game_waitforchange (const UniValue& params, bool fHelp)
+game_waitforchange (const JSONRPCRequest& request)
 {
-  if (fHelp || params.size () > 1)
+  if (request.fHelp || request.params.size () > 1)
     throw std::runtime_error (
         "game_waitforchange (\"hash\")\n"
         "\nDo not use this call in new applications.  Instead, -blocknotify\n"
@@ -218,8 +218,8 @@ game_waitforchange (const UniValue& params, bool fHelp)
   uint256 hash;
   {
     LOCK (cs_main);
-    if (params.size () >= 1)
-      hash = uint256S (params[0].get_str ());
+    if (request.params.size () >= 1)
+      hash = uint256S (request.params[0].get_str ());
     else
       hash = *chainActive.Tip ()->phashBlock;
 
@@ -257,9 +257,9 @@ game_waitforchange (const UniValue& params, bool fHelp)
 /* ************************************************************************** */
 
 UniValue
-game_getpath (const UniValue& params, bool fHelp)
+game_getpath (const JSONRPCRequest& request)
 {
-  if (fHelp || params.size () != 2)
+  if (request.fHelp || request.params.size () != 2)
     throw std::runtime_error (
         "game_getpath [fromX,fromY] [toX,toY]\n"
         "\nReturn a set of way points that travels in a shortest path"
@@ -279,13 +279,15 @@ game_getpath (const UniValue& params, bool fHelp)
         + HelpExampleRpc ("game_getpath", "[0,0] [100,100]")
       );
 
-  if (!params[0].isArray () || !params[1].isArray ())
+  if (!request.params[0].isArray () || !request.params[1].isArray ())
     throw std::runtime_error ("arguments must be arrays");
-  if (params[0].size () != 2 || params[1].size () != 2)
+  if (request.params[0].size () != 2 || request.params[1].size () != 2)
     throw std::runtime_error ("invalid coordinates given");
 
-  const Coord fromC(params[0][0].get_int (), params[0][1].get_int ());
-  const Coord toC(params[1][0].get_int (), params[1][1].get_int ());
+  const Coord fromC(request.params[0][0].get_int (),
+                    request.params[0][1].get_int ());
+  const Coord toC(request.params[1][0].get_int (),
+                  request.params[1][1].get_int ());
 
   const std::vector<Coord> path = FindPath (fromC, toC);
 

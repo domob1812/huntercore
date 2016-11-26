@@ -30,7 +30,7 @@
 bool
 CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
                         const StepResult& stepResult,
-                        std::vector<CTransaction>& vGameTx)
+                        std::vector<CTransactionRef>& vGameTx)
 {
   vGameTx.clear ();
 
@@ -111,8 +111,8 @@ CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
     }
   if (haveTxKills)
     {
-      const CTransaction tx(txKills);
-      assert (tx.IsGameTx () && !tx.IsBountyTx ());
+      CTransactionRef tx = MakeTransactionRef (std::move (txKills));
+      assert (tx->IsGameTx () && !tx->IsBountyTx ());
       vGameTx.push_back (tx);
     }
 
@@ -169,8 +169,8 @@ CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
     }
   if (haveTxBounties)
     {
-      const CTransaction tx(txBounties);
-      assert (tx.IsGameTx () && tx.IsBountyTx ());
+      CTransactionRef tx = MakeTransactionRef (std::move (txBounties));
+      assert (tx->IsGameTx () && tx->IsBountyTx ());
       vGameTx.push_back (tx);
     }
 
@@ -189,14 +189,14 @@ CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
 }
 
 void
-ApplyGameTransactions (const std::vector<CTransaction>& vGameTx,
+ApplyGameTransactions (const std::vector<CTransactionRef>& vGameTx,
                        const StepResult& stepResult, unsigned nHeight,
                        CCoinsViewCache& view, CBlockUndo& undo)
 {
   for (unsigned i = 0; i < vGameTx.size (); ++i)
     {
       undo.vtxundo.push_back (CTxUndo ());
-      UpdateCoins (vGameTx[i], view, undo.vtxundo.back (), nHeight);
+      UpdateCoins (*vGameTx[i], view, undo.vtxundo.back (), nHeight);
     }
 
   /* Update name db for killed players.  */
@@ -204,7 +204,7 @@ ApplyGameTransactions (const std::vector<CTransaction>& vGameTx,
   if (!victims.empty ())
     {
       assert (!vGameTx.empty ());
-      const CTransaction& txKills = vGameTx.front ();
+      const CTransaction& txKills = *vGameTx.front ();
       assert (txKills.vout.empty ());
       assert (txKills.vin.size () == victims.size ());
 

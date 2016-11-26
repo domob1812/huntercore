@@ -13,6 +13,7 @@
 
 #include <list>
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 
@@ -58,8 +59,7 @@ public:
   ADD_SERIALIZE_METHODS;
 
   template<typename Stream, typename Operation>
-    inline void SerializationOp (Stream& s, Operation ser_action,
-                                 int nType, int nVersion)
+    inline void SerializationOp (Stream& s, Operation ser_action)
   {
     READWRITE (name);
     READWRITE (isNew);
@@ -195,7 +195,7 @@ public:
    * @param removed Put removed tx here.
    */
   void removeConflicts (const CTransaction& tx,
-                        std::list<CTransaction>& removed);
+                        std::vector<CTransactionRef>* removed);
 
   /**
    * Remove conflicts in the mempool due to revived players.  This removes
@@ -204,7 +204,7 @@ public:
    * @param removed Put removed tx here.
    */
   void removeReviveConflicts (const std::set<valtype>& revived,
-                              std::list<CTransaction>& removed);
+                              std::vector<CTransactionRef>* removed);
 
   /**
    * Perform sanity checks.  Throws if it fails.

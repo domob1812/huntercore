@@ -68,12 +68,12 @@ enum
  */
 bool CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
                              const StepResult& stepResult,
-                             std::vector<CTransaction>& vGameTx);
+                             std::vector<CTransactionRef>& vGameTx);
 
 /**
  * Apply game transactions to the coins view and name db.
  */
-void ApplyGameTransactions (const std::vector<CTransaction>& vGameTx,
+void ApplyGameTransactions (const std::vector<CTransactionRef>& vGameTx,
                             const StepResult& stepResult, unsigned nHeight,
                             CCoinsViewCache& view, CBlockUndo& undo);
 

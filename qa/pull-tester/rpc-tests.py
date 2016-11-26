@@ -144,11 +144,13 @@ testScripts = [
     'abandonconflict.py',
     # FIXME: Reenable and possibly fix once the BIP9 mining is activated.
     #'p2p-versionbits-warning.py',
+    'preciousblock.py',
     'importprunedfunds.py',
     'signmessages.py',
     'p2p-compactblocks.py',
     # FIXME: Reenable and possibly fix once the BIP9 mining is activated.
     #'nulldummy.py',
+    'importmulti.py',
 
     # auxpow tests
     'getauxblock.py',
@@ -274,6 +276,10 @@ class RPCTestHandler:
         self.test_list = test_list
         self.flags = flags
         self.num_running = 0
+        # In case there is a graveyard of zombie bitcoinds, we can apply a
+        # pseudorandom offset to hopefully jump over them.
+        # (625 is PORT_RANGE/MAX_NODES)
+        self.portseed_offset = int(time.time() * 1000) % 625
         self.jobs = []
 
     def get_next(self):
@@ -281,7 +287,7 @@ class RPCTestHandler:
             # Add tests
             self.num_running += 1
             t = self.test_list.pop(0)
-            port_seed = ["--portseed=%s" % len(self.test_list)]
+            port_seed = ["--portseed={}".format(len(self.test_list) + self.portseed_offset)]
             log_stdout = tempfile.SpooledTemporaryFile(max_size=2**16)
             log_stderr = tempfile.SpooledTemporaryFile(max_size=2**16)
             self.jobs.append((t,

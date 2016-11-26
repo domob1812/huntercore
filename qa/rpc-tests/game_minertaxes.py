@@ -84,7 +84,7 @@ class GameMinerTaxesTest (GameTestFramework):
     txs = blkdata['tx']
 
     coinbase = self.nodes[node].getrawtransaction (txs[0], 1)
-    assert_equal (len (coinbase['vout']), 1)
+    assert len (coinbase['vout']) >= 1
     coinbaseValue = coinbase['vout'][0]['value']
     print ("Coinbase value: %.8f HUC" % coinbaseValue)
 

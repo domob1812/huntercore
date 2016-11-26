@@ -8,6 +8,7 @@
 #define BITCOIN_AUXPOW_H
 
 #include "consensus/params.h"
+#include "consensus/validation.h"
 #include "primitives/pureheader.h"
 #include "primitives/transaction.h"
 #include "serialize.h"
@@ -62,9 +63,8 @@ public:
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+    inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(*(CTransaction*)this);
-        nVersion = this->nVersion;
         READWRITE(hashBlock);
         READWRITE(vMerkleBranch);
         READWRITE(nIndex);
@@ -91,7 +91,7 @@ public:
     bool IsInMainChain() const { const CBlockIndex *pindexRet; return GetDepthInMainChain(pindexRet) > 0; }
     int GetBlocksToMaturity() const;
     /** Pass this transaction to the mempool. Fails if absolute fee exceeds absurd fee. */
-    bool AcceptToMemoryPool(bool fLimitFree, const CAmount nAbsurdFee);
+    bool AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state);
     bool hashUnset() const { return (hashBlock.IsNull() || hashBlock == ABANDON_HASH); }
     bool isAbandoned() const { return (hashBlock == ABANDON_HASH); }
     void setAbandoned() { hashBlock = ABANDON_HASH; }
@@ -133,11 +133,9 @@ public:
 
   template<typename Stream, typename Operation>
     inline void
-    SerializationOp (Stream& s, Operation ser_action, int nType, int nVersion)
+    SerializationOp (Stream& s, Operation ser_action)
   {
     READWRITE (*static_cast<CMerkleTx*> (this));
-    nVersion = this->nVersion;
-
     READWRITE (vChainMerkleBranch);
     READWRITE (nChainIndex);
     READWRITE (parentBlock);

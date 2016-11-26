@@ -79,9 +79,12 @@ install necessary parts of boost:
 
         sudo apt-get install libboost-all-dev
 
-BerkeleyDB is required for the wallet. db4.8 packages are available [here](https://launchpad.net/~bitcoin/+archive/bitcoin).
+BerkeleyDB is required for the wallet.
+
+**For Ubuntu only:** db4.8 packages are available [here](https://launchpad.net/~bitcoin/+archive/bitcoin).
 You can add the repository and install using the following commands:
 
+    sudo apt-get install software-properties-common
     sudo add-apt-repository ppa:bitcoin/bitcoin
     sudo apt-get update
     sudo apt-get install libdb4.8-dev libdb4.8++-dev
@@ -93,13 +96,13 @@ pass `--with-incompatible-bdb` to configure.
 
 See the section "Disable-wallet mode" to build Bitcoin Core without wallet.
 
-Optional:
+Optional (see --with-miniupnpc and --enable-upnp-default):
 
-    sudo apt-get install libminiupnpc-dev (see --with-miniupnpc and --enable-upnp-default)
+    sudo apt-get install libminiupnpc-dev
 
-ZMQ dependencies:
+ZMQ dependencies (provides ZMQ API 4.x):
 
-    sudo apt-get install libzmq3-dev (provides ZMQ API 4.x)
+    sudo apt-get install libzmq3-dev
 
 Dependencies for the GUI: Ubuntu & Debian
 -----------------------------------------

@@ -34,30 +34,24 @@ public:
       : txout(txoutIn), fCoinBase(fCoinBaseIn), fGameTx(fGameTxIn),
         nHeight(nHeightIn), nVersion(nVersionIn) { }
 
-    unsigned int GetSerializeSize(int nType, int nVersion) const {
-        return ::GetSerializeSize(VARINT(nHeight*4+(fCoinBase ? 1 : 0)+(fGameTx ? 2 : 0)), nType, nVersion) +
-               (nHeight > 0 ? ::GetSerializeSize(VARINT(this->nVersion), nType, nVersion) : 0) +
-               ::GetSerializeSize(CTxOutCompressor(REF(txout)), nType, nVersion);
-    }
-
     template<typename Stream>
-    void Serialize(Stream &s, int nType, int nVersion) const {
-        ::Serialize(s, VARINT(nHeight*4+(fCoinBase ? 1 : 0)+(fGameTx ? 2 : 0)), nType, nVersion);
+    void Serialize(Stream &s) const {
+        ::Serialize(s, VARINT(nHeight*4+(fCoinBase ? 1 : 0)+(fGameTx ? 2 : 0)));
         if (nHeight > 0)
-            ::Serialize(s, VARINT(this->nVersion), nType, nVersion);
-        ::Serialize(s, CTxOutCompressor(REF(txout)), nType, nVersion);
+            ::Serialize(s, VARINT(this->nVersion));
+        ::Serialize(s, CTxOutCompressor(REF(txout)));
     }
 
     template<typename Stream>
-    void Unserialize(Stream &s, int nType, int nVersion) {
+    void Unserialize(Stream &s) {
         unsigned int nCode = 0;
-        ::Unserialize(s, VARINT(nCode), nType, nVersion);
+        ::Unserialize(s, VARINT(nCode));
         nHeight = nCode / 4;
         fCoinBase = nCode & 1;
         fGameTx = nCode & 2;
         if (nHeight > 0)
-            ::Unserialize(s, VARINT(this->nVersion), nType, nVersion);
-        ::Unserialize(s, REF(CTxOutCompressor(REF(txout))), nType, nVersion);
+            ::Unserialize(s, VARINT(this->nVersion));
+        ::Unserialize(s, REF(CTxOutCompressor(REF(txout))));
     }
 };
 
@@ -71,7 +65,7 @@ public:
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+    inline void SerializationOp(Stream& s, Operation ser_action) {
         READWRITE(vprevout);
     }
 };
@@ -92,12 +86,12 @@ public:
      * required to perform the undo.  Their position on disk in the undo
      * file is also used for looking up game tx.
      */
-    std::vector<CTransaction> vgametx;
+    std::vector<CTransactionRef> vgametx;
 
     ADD_SERIALIZE_METHODS;
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+    inline void SerializationOp(Stream& s, Operation ser_action) {
 
         /* Store the vgametx first.  This allows us to compute the appropriate
            offsets most easily.  */

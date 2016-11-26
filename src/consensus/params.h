@@ -101,7 +101,7 @@ public:
             case FORK_LIFESTEAL:
                 return nHeight >= 795000;
             case FORK_TIMESAVE:
-                return nHeight >= 1999999;
+                return nHeight >= 1521500;
             default:
                 assert (false);
         }

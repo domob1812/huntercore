@@ -16,7 +16,7 @@
 #include "game/move.h"
 #include "game/state.h"
 #include "hash.h"
-#include "main.h"
+#include "validation.h"
 #include "net.h"
 #include "policy/policy.h"
 #include "pow.h"

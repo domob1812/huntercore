@@ -19,10 +19,10 @@
 #include "game/movecreator.h"
 #include "game/state.h"
 #include "game/tx.h"
-#include "main.h"
 #include "rpc/server.h"
 #include "script/script.h"
 #include "uint256.h"
+#include "validation.h"
 
 #include <univalue.h>
 

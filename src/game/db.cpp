@@ -1,4 +1,4 @@
-// Copyright (C) 2015 Crypto Realities Ltd
+// Copyright (C) 2015-2016 Crypto Realities Ltd
 
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -20,8 +20,8 @@
 #include "consensus/validation.h"
 #include "game/move.h"
 #include "game/state.h"
-#include "main.h"
 #include "util.h"
+#include "validation.h"
 
 #include <vector>
 #include <memory>

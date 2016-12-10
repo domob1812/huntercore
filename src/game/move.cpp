@@ -5,7 +5,6 @@
 #include "game/db.h"
 #include "game/map.h"
 #include "game/state.h"
-#include "main.h"
 #include "names/common.h"
 #include "names/main.h"
 #include "primitives/block.h"
@@ -13,6 +12,7 @@
 #include "script/names.h"
 #include "util.h"
 #include "utilstrencodings.h"
+#include "validation.h"
 
 #include <boost/foreach.hpp>
 #include <boost/xpressive/xpressive_dynamic.hpp>

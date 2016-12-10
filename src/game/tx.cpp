@@ -18,12 +18,12 @@
 #include "base58.h"
 #include "coins.h"
 #include "game/state.h"
-#include "../main.h"
 #include "names/common.h"
 #include "primitives/transaction.h"
 #include "script/standard.h"
 #include "undo.h"
 #include "util.h"
+#include "validation.h"
 
 #include <boost/foreach.hpp>
 

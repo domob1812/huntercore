@@ -9,7 +9,6 @@
 #include "game/state.h"
 #include "game/tx.h"
 #include "init.h"
-#include "main.h"
 #include "names/common.h"
 #include "names/main.h"
 #include "primitives/transaction.h"
@@ -18,6 +17,7 @@
 #include "script/names.h"
 #include "txmempool.h"
 #include "util.h"
+#include "validation.h"
 #include "wallet/wallet.h"
 
 #include <univalue.h>
@@ -188,11 +188,10 @@ name_list (const JSONRPCRequest& request)
 
   {
   LOCK2 (cs_main, pwalletMain->cs_wallet);
-  BOOST_FOREACH (const PAIRTYPE(const uint256, CWalletTx)& item,
-                 pwalletMain->mapWallet)
+  for (const auto& item : pwalletMain->mapWallet)
     {
       const CWalletTx& tx = item.second;
-      if (!tx.IsNamecoin () && !tx.IsKillTx ())
+      if (!tx.tx->IsNamecoin () && !tx.IsKillTx ())
         continue;
 
       if (!builder.startTx (tx))
@@ -200,13 +199,13 @@ name_list (const JSONRPCRequest& request)
 
       if (tx.IsKillTx ())
         {
-          for (unsigned i = 0; i < tx.vin.size (); ++i)
+          for (const auto& txIn : tx.tx->vin)
             {
-              if (!pwalletMain->IsMine (tx.vin[i]))
+              if (!pwalletMain->IsMine (txIn))
                 continue;
 
               valtype name;
-              if (!NameFromGameTransactionInput (tx.vin[i].scriptSig, name))
+              if (!NameFromGameTransactionInput (txIn.scriptSig, name))
                 {
                   LogPrintf ("ERROR: failed to get name from kill input");
                   continue;
@@ -223,9 +222,9 @@ name_list (const JSONRPCRequest& request)
 
       CNameScript nameOp;
       int nOut = -1;
-      for (unsigned i = 0; i < tx.vout.size (); ++i)
+      for (unsigned i = 0; i < tx.tx->vout.size (); ++i)
         {
-          const CNameScript cur(tx.vout[i].scriptPubKey);
+          const CNameScript cur(tx.tx->vout[i].scriptPubKey);
           if (cur.isNameOp ())
             {
               if (nOut != -1)

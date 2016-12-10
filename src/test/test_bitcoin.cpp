@@ -11,8 +11,9 @@
 #include "consensus/validation.h"
 #include "game/db.h"
 #include "key.h"
-#include "main.h"
+#include "validation.h"
 #include "miner.h"
+#include "net_processing.h"
 #include "pubkey.h"
 #include "random.h"
 #include "txdb.h"
@@ -134,7 +135,8 @@ TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransaction>&
 
     while (!CheckProofOfWork(block.GetHash(), block.nBits, block.GetAlgo(), chainparams.GetConsensus())) ++block.nNonce;
 
-    ProcessNewBlock(chainparams, &block, true, NULL, NULL);
+    std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(block);
+    ProcessNewBlock(chainparams, shared_pblock, true, NULL, NULL);
 
     CBlock result = block;
     return result;

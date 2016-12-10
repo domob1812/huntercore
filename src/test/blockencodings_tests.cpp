@@ -5,9 +5,9 @@
 #include "blockencodings.h"
 #include "consensus/merkle.h"
 #include "chainparams.h"
-#include "main.h"
 #include "primitives/pureheader.h"
 #include "random.h"
+#include "validation.h"
 
 #include "test/test_bitcoin.h"
 

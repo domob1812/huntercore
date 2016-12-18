@@ -119,7 +119,7 @@ CNameMemPool::removeConflicts (const CTransaction& tx,
   if (!tx.IsNamecoin ())
     return;
 
-  BOOST_FOREACH (const CTxOut& txout, tx.vout)
+  for (const auto& txout : tx.vout)
     {
       const CNameScript nameOp(txout.scriptPubKey);
       if (nameOp.isNameOp () && nameOp.getNameOp () == OP_NAME_FIRSTUPDATE)
@@ -130,7 +130,9 @@ CNameMemPool::removeConflicts (const CTransaction& tx,
             {
               const CTxMemPool::txiter mit2 = pool.mapTx.find (mit->second);
               assert (mit2 != pool.mapTx.end ());
-              pool.removeRecursive (mit2->GetTx (), removed);
+              if (removed)
+                removed->push_back (MakeTransactionRef (mit2->GetTx ()));
+              pool.removeRecursive (mit2->GetTx ());
             }
         }
     }
@@ -142,7 +144,7 @@ CNameMemPool::removeReviveConflicts (const std::set<valtype>& revived,
 {
   AssertLockHeld (pool.cs);
 
-  BOOST_FOREACH (const valtype& name, revived)
+  for (const auto& name : revived)
     {
       LogPrint ("names", "revived: %s, mempool: %u\n",
                 ValtypeToString (name).c_str (), mapNameRegs.count (name));
@@ -152,7 +154,9 @@ CNameMemPool::removeReviveConflicts (const std::set<valtype>& revived,
         {
           const CTxMemPool::txiter mit2 = pool.mapTx.find (mit->second);
           assert (mit2 != pool.mapTx.end ());
-          pool.removeRecursive (mit2->GetTx (), removed);
+          if (removed)
+            removed->push_back (MakeTransactionRef (mit2->GetTx ()));
+          pool.removeRecursive (mit2->GetTx ());
         }
     }
 }

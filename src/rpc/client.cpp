@@ -119,6 +119,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "name_filter", 1 },
     { "name_filter", 2 },
     { "name_filter", 3 },
+    { "name_firstupdate", 5 },
     { "sendtoname", 1 },
     { "sendtoname", 4 },
     { "game_getpath", 0 },

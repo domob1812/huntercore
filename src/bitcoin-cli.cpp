@@ -1,5 +1,5 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2009-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,15 +17,15 @@
 #include <boost/filesystem/operations.hpp>
 #include <stdio.h>
 
-#include <event2/event.h>
-#include <event2/http.h>
 #include <event2/buffer.h>
 #include <event2/keyvalq_struct.h>
+#include "support/events.h"
 
 #include <univalue.h>
 
 static const char DEFAULT_RPCCONNECT[] = "127.0.0.1";
 static const int DEFAULT_HTTP_CLIENT_TIMEOUT=900;
+static const bool DEFAULT_NAMED=false;
 static const int CONTINUE_EXECUTION=-1;
 
 std::string HelpMessageCli()
@@ -36,6 +36,7 @@ std::string HelpMessageCli()
     strUsage += HelpMessageOpt("-conf=<file>", strprintf(_("Specify configuration file (default: %s)"), BITCOIN_CONF_FILENAME));
     strUsage += HelpMessageOpt("-datadir=<dir>", _("Specify data directory"));
     AppendParamsHelpMessages(strUsage);
+    strUsage += HelpMessageOpt("-named", strprintf(_("Pass named instead of positional arguments (default: %s)"), DEFAULT_NAMED));
     strUsage += HelpMessageOpt("-rpcconnect=<ip>", strprintf(_("Send commands to node running on <ip> (default: %s)"), DEFAULT_RPCCONNECT));
     strUsage += HelpMessageOpt("-rpcport=<port>", strprintf(_("Connect to JSON-RPC on <port> (default: %u or testnet: %u)"), BaseParams(CBaseChainParams::MAIN).RPCPort(), BaseParams(CBaseChainParams::TESTNET).RPCPort()));
     strUsage += HelpMessageOpt("-rpcwait", _("Wait for RPC server to start"));
@@ -76,11 +77,12 @@ static int AppInitRPC(int argc, char* argv[])
     // Parameters
     //
     ParseParameters(argc, argv);
-    if (argc<2 || mapArgs.count("-?") || mapArgs.count("-h") || mapArgs.count("-help") || mapArgs.count("-version")) {
+    if (argc<2 || IsArgSet("-?") || IsArgSet("-h") || IsArgSet("-help") || IsArgSet("-version")) {
         std::string strUsage = strprintf(_("%s RPC client version"), _(PACKAGE_NAME)) + " " + FormatFullVersion() + "\n";
-        if (!mapArgs.count("-version")) {
+        if (!IsArgSet("-version")) {
             strUsage += "\n" + _("Usage:") + "\n" +
                   "  huntercoin-cli [options] <command> [params]  " + strprintf(_("Send command to %s"), _(PACKAGE_NAME)) + "\n" +
+                  "  huntercoin-cli [options] -named <command> [name=value] ... " + strprintf(_("Send command to %s (with named arguments)"), _(PACKAGE_NAME)) + "\n" +
                   "  huntercoin-cli [options] help                " + _("List commands") + "\n" +
                   "  huntercoin-cli [options] help <command>      " + _("Get help for a command") + "\n";
 
@@ -95,11 +97,11 @@ static int AppInitRPC(int argc, char* argv[])
         return EXIT_SUCCESS;
     }
     if (!boost::filesystem::is_directory(GetDataDir(false))) {
-        fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n", mapArgs["-datadir"].c_str());
+        fprintf(stderr, "Error: Specified data directory \"%s\" does not exist.\n", GetArg("-datadir", "").c_str());
         return EXIT_FAILURE;
     }
     try {
-        ReadConfigFile(GetArg("-conf", BITCOIN_CONF_FILENAME), mapArgs, mapMultiArgs);
+        ReadConfigFile(GetArg("-conf", BITCOIN_CONF_FILENAME));
     } catch (const std::exception& e) {
         fprintf(stderr,"Error reading configuration file: %s\n", e.what());
         return EXIT_FAILURE;
@@ -190,28 +192,24 @@ UniValue CallRPC(const std::string& strMethod, const UniValue& params)
     std::string host = GetArg("-rpcconnect", DEFAULT_RPCCONNECT);
     int port = GetArg("-rpcport", BaseParams().RPCPort());
 
-    // Create event base
-    struct event_base *base = event_base_new(); // TODO RAII
-    if (!base)
-        throw std::runtime_error("cannot create event_base");
+    // Obtain event base
+    raii_event_base base = obtain_event_base();
 
     // Synchronously look up hostname
-    struct evhttp_connection *evcon = evhttp_connection_base_new(base, NULL, host.c_str(), port); // TODO RAII
-    if (evcon == NULL)
-        throw std::runtime_error("create connection failed");
-    evhttp_connection_set_timeout(evcon, GetArg("-rpcclienttimeout", DEFAULT_HTTP_CLIENT_TIMEOUT));
+    raii_evhttp_connection evcon = obtain_evhttp_connection_base(base.get(), host, port);
+    evhttp_connection_set_timeout(evcon.get(), GetArg("-rpcclienttimeout", DEFAULT_HTTP_CLIENT_TIMEOUT));
 
     HTTPReply response;
-    struct evhttp_request *req = evhttp_request_new(http_request_done, (void*)&response); // TODO RAII
+    raii_evhttp_request req = obtain_evhttp_request(http_request_done, (void*)&response);
     if (req == NULL)
         throw std::runtime_error("create http request failed");
 #if LIBEVENT_VERSION_NUMBER >= 0x02010300
-    evhttp_request_set_error_cb(req, http_error_cb);
+    evhttp_request_set_error_cb(req.get(), http_error_cb);
 #endif
 
     // Get credentials
     std::string strRPCUserColonPass;
-    if (mapArgs["-rpcpassword"] == "") {
+    if (GetArg("-rpcpassword", "") == "") {
         // Try fall back to cookie-based authentication if no password is provided
         if (!GetAuthCookie(&strRPCUserColonPass)) {
             throw std::runtime_error(strprintf(
@@ -220,10 +218,10 @@ UniValue CallRPC(const std::string& strMethod, const UniValue& params)
 
         }
     } else {
-        strRPCUserColonPass = mapArgs["-rpcuser"] + ":" + mapArgs["-rpcpassword"];
+        strRPCUserColonPass = GetArg("-rpcuser", "") + ":" + GetArg("-rpcpassword", "");
     }
 
-    struct evkeyvalq *output_headers = evhttp_request_get_output_headers(req);
+    struct evkeyvalq* output_headers = evhttp_request_get_output_headers(req.get());
     assert(output_headers);
     evhttp_add_header(output_headers, "Host", host.c_str());
     evhttp_add_header(output_headers, "Connection", "close");
@@ -231,20 +229,17 @@ UniValue CallRPC(const std::string& strMethod, const UniValue& params)
 
     // Attach request data
     std::string strRequest = JSONRPCRequestObj(strMethod, params, 1).write() + "\n";
-    struct evbuffer * output_buffer = evhttp_request_get_output_buffer(req);
+    struct evbuffer* output_buffer = evhttp_request_get_output_buffer(req.get());
     assert(output_buffer);
     evbuffer_add(output_buffer, strRequest.data(), strRequest.size());
 
-    int r = evhttp_make_request(evcon, req, EVHTTP_REQ_POST, "/");
+    int r = evhttp_make_request(evcon.get(), req.get(), EVHTTP_REQ_POST, "/");
+    req.release(); // ownership moved to evcon in above call
     if (r != 0) {
-        evhttp_connection_free(evcon);
-        event_base_free(base);
         throw CConnectionFailed("send http request failed");
     }
 
-    event_base_dispatch(base);
-    evhttp_connection_free(evcon);
-    event_base_free(base);
+    event_base_dispatch(base.get());
 
     if (response.status == 0)
         throw CConnectionFailed(strprintf("couldn't connect to server: %s (code %d)\n(make sure server is running and you are connecting to the correct RPC port)", http_errorstring(response.error), response.error));
@@ -286,7 +281,14 @@ int CommandLineRPC(int argc, char *argv[])
         if (args.size() < 1)
             throw std::runtime_error("too few parameters (need at least command)");
         std::string strMethod = args[0];
-        UniValue params = RPCConvertValues(strMethod, std::vector<std::string>(args.begin()+1, args.end()));
+        args.erase(args.begin()); // Remove trailing method name from arguments vector
+
+        UniValue params;
+        if(GetBoolArg("-named", DEFAULT_NAMED)) {
+            params = RPCConvertNamedValues(strMethod, args);
+        } else {
+            params = RPCConvertValues(strMethod, args);
+        }
 
         // Execute and handle connection failures with -rpcwait
         const bool fWait = GetBoolArg("-rpcwait", false);

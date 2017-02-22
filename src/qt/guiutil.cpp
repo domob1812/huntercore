@@ -1,4 +1,4 @@
-// Copyright (c) 2011-2015 The Bitcoin Core developers
+// Copyright (c) 2011-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -955,7 +955,7 @@ QString formatTimeOffset(int64_t nTimeOffset)
   return QString(QObject::tr("%1 s")).arg(QString::number((int)nTimeOffset, 10));
 }
 
-QString formateNiceTimeOffset(qint64 secs)
+QString formatNiceTimeOffset(qint64 secs)
 {
     // Represent time from last generated block in human readable text
     QString timeBehindText;
@@ -965,11 +965,11 @@ QString formateNiceTimeOffset(qint64 secs)
     const int YEAR_IN_SECONDS = 31556952; // Average length of year in Gregorian calendar
     if(secs < 60)
     {
-        timeBehindText = QObject::tr("%n seconds(s)","",secs);
+        timeBehindText = QObject::tr("%n second(s)","",secs);
     }
     else if(secs < 2*HOUR_IN_SECONDS)
     {
-        timeBehindText = QObject::tr("%n minutes(s)","",secs/60);
+        timeBehindText = QObject::tr("%n minute(s)","",secs/60);
     }
     else if(secs < 2*DAY_IN_SECONDS)
     {

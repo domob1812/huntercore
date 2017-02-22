@@ -1,5 +1,5 @@
 // Copyright (c) 2010 Satoshi Nakamoto
-// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2009-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -170,7 +170,10 @@ public:
 
         checkpointData = (CCheckpointData) {
             boost::assign::map_list_of
-            (     0, uint256S("00000000db7eb7a9e1a06cf995363dcdc4c28e8ae04827a961942657db9a1631")),
+            (     0, uint256S("00000000db7eb7a9e1a06cf995363dcdc4c28e8ae04827a961942657db9a1631"))
+        };
+
+        chainTxData = ChainTxData{
             0, // * UNIX timestamp of last checkpoint block
             0, // * total number of transactions between genesis and last checkpoint
                //   (the tx=... number in the SetBestChain debug.log lines)
@@ -265,7 +268,10 @@ public:
 
         checkpointData = (CCheckpointData) {
             boost::assign::map_list_of
-            (     0, uint256S("000000492c361a01ce7558a3bfb198ea3ff2f86f8b0c2e00d26135c53f4acbf7")),
+            (     0, uint256S("000000492c361a01ce7558a3bfb198ea3ff2f86f8b0c2e00d26135c53f4acbf7"))
+        };
+
+        chainTxData = ChainTxData{
             0,
             0,
             0
@@ -340,11 +346,15 @@ public:
 
         checkpointData = (CCheckpointData){
             boost::assign::map_list_of
-            ( 0, uint256S("3867dcd08712d9b49de33d4ab145d57ad14a78c7843c51f8c5d782d5f102fb4a")),
+            ( 0, uint256S("3867dcd08712d9b49de33d4ab145d57ad14a78c7843c51f8c5d782d5f102fb4a"))
+        };
+
+        chainTxData = ChainTxData{
             0,
             0,
             0
         };
+
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,100);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196); // FIXME: Update.
         base58Prefixes[SECRET_KEY] =     std::vector<unsigned char>(1,228);

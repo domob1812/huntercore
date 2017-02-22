@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2016 Daniel Kraft
+# Copyright (c) 2016-2017 Daniel Kraft
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -46,9 +46,9 @@ class GameFeePolicyTest (NameTestFramework):
     """
     self.generate(3, 1)
     data = self.nodes[0].gettransaction (txid)
-    assert_equal (data['confirmations'], 1)
     fee = -Decimal (data['fee'])
     print ("%s: %.8f" % (name, fee))
+    assert_equal (data['confirmations'], 1)
     assert fee >= minFee and fee <= maxFee
 
 if __name__ == '__main__':

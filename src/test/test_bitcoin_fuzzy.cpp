@@ -1,4 +1,4 @@
-// Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2009-2016 The Bitcoin Core developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -240,12 +240,12 @@ int main(int argc, char **argv)
         case CTXOUTCOMPRESSOR_DESERIALIZE:
         {
             CTxOut to;
+            CTxOutCompressor toc(to);
             try
             {
-                ds >> to;
+                ds >> toc;
             } catch (const std::ios_base::failure& e) {return 0;}
 
-            CTxOutCompressor toc(to);
             break;
         }
         default:

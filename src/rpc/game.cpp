@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2016 Crypto Realities Ltd
+// Copyright (C) 2015-2017 Crypto Realities Ltd
 
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -313,10 +313,10 @@ game_getpath (const JSONRPCRequest& request)
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafeMode
   //  --------------------- ------------------------  -----------------------  ----------
-    { "game",               "game_getplayerstate",    &game_getplayerstate,    true },
-    { "game",               "game_getstate",          &game_getstate,          true },
-    { "game",               "game_getpath",           &game_getpath,           true },
-    { "game",               "game_waitforchange",     &game_waitforchange,     true },
+    { "game",               "game_getplayerstate",    &game_getplayerstate,    true,  {"name","hash"} },
+    { "game",               "game_getstate",          &game_getstate,          true,  {"hash"} },
+    { "game",               "game_getpath",           &game_getpath,           true,  {"from","to"} },
+    { "game",               "game_waitforchange",     &game_waitforchange,     true,  {"hash"} },
 };
 
 void RegisterGameRPCCommands(CRPCTable &tableRPC)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2015 The Bitcoin Core developers
+# Copyright (c) 2015-2016 The Bitcoin Core developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -102,7 +102,7 @@ class PreciousTest(BitcoinTestFramework):
         assert_equal(self.nodes[2].getblockcount(), 6)
         hashL = self.nodes[2].getbestblockhash()
         print("Connect nodes and check no reorg occurs")
-        node_sync_via_rpc(self.nodes[0:3])
+        node_sync_via_rpc(self.nodes[1:3])
         connect_nodes_bi(self.nodes,1,2)
         connect_nodes_bi(self.nodes,0,2)
         assert_equal(self.nodes[0].getbestblockhash(), hashH)

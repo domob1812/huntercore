@@ -127,6 +127,9 @@ public:
         // d38feb2df0fc1b64bd3b3fe5b1e90d15a5d8ca17a13b735db381d16ce359393f
         consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000326ede22d6f88e27b6e95");
 
+        // By default assume that the signatures in ancestors of this block are valid.
+        consensus.defaultAssumeValid = uint256S("0x4bf3a4e732a8ef2c8d93c996f9ffc9e8c9044ec687b13defb9b86cd33b7428e2"); //1500000
+
         consensus.nAuxpowChainId[ALGO_SHA256D] = 0x0006;
         consensus.nAuxpowChainId[ALGO_SCRYPT] = 0x0002;
         consensus.fStrictChainId = true;
@@ -227,6 +230,9 @@ public:
         // 884920fb406847e9ebaac69305d97d6df9fa125603fd7d3e26c00a0d79c29ddc
         consensus.nMinimumChainWork = uint256S("0x00000000000000000000000000000000000000000000000000038998cea702f2");
 
+        // By default assume that the signatures in ancestors of this block are valid.
+        consensus.defaultAssumeValid = uint256S("0xdabe819758cfe24c960d335ed420f77bdaf7aa98e4beea51ea7c9f14448f6a3a"); //300000
+
         consensus.nAuxpowChainId[ALGO_SHA256D] = 0x0006;
         consensus.nAuxpowChainId[ALGO_SCRYPT] = 0x0002;
         consensus.fStrictChainId = false;
@@ -317,6 +323,9 @@ public:
 
         // The best chain should have at least this much work.
         consensus.nMinimumChainWork = uint256S("0x00");
+
+        // By default assume that the signatures in ancestors of this block are valid.
+        consensus.defaultAssumeValid = uint256S("0x00");
 
         consensus.nAuxpowChainId[ALGO_SHA256D] = 0x0006;
         consensus.nAuxpowChainId[ALGO_SCRYPT] = 0x0002;

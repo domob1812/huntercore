@@ -951,7 +951,6 @@ class SegWitTest(BitcoinTestFramework):
         tx.rehash()
 
         tx_hash = tx.sha256
-        tx_value = tx.vout[0].nValue
 
         # Verify that unnecessary witnesses are rejected.
         self.test_node.announce_tx_and_wait_for_getdata(tx)
@@ -1662,7 +1661,7 @@ class SegWitTest(BitcoinTestFramework):
         # too many sigops (contributing to legacy sigop count).
         checksig_count = (extra_sigops_available // 4) + 1
         scriptPubKey_checksigs = CScript([OP_CHECKSIG]*checksig_count)
-        tx2.vout.append(CTxOut(0, scriptPubKey_checksigs));
+        tx2.vout.append(CTxOut(0, scriptPubKey_checksigs))
         tx2.vin.pop()
         tx2.wit.vtxinwit.pop()
         tx2.vout[0].nValue -= tx.vout[-2].nValue

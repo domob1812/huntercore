@@ -19,107 +19,19 @@ To receive security and update notifications, please subscribe to:
 Compatibility
 ==============
 
-Microsoft ended support for Windows XP on [April 8th, 2014](https://www.microsoft.com/en-us/WindowsForBusiness/end-of-xp-support),
-an OS initially released in 2001. This means that not even critical security
-updates will be released anymore. Without security updates, using a bitcoin
-wallet on a XP machine is irresponsible at least.
+Bitcoin Core is extensively tested on multiple operating systems using
+the Linux kernel, macOS 10.8+, and Windows Vista and later.
 
-In addition to that, with 0.12.x there have been varied reports of Bitcoin Core
-randomly crashing on Windows XP. It is [not clear](https://github.com/bitcoin/bitcoin/issues/7681#issuecomment-217439891)
-what the source of these crashes is, but it is likely that upstream
-libraries such as Qt are no longer being tested on XP.
+Microsoft ended support for Windows XP on [April 8th, 2014](https://www.microsoft.com/en-us/WindowsForBusiness/end-of-xp-support).
+No attempt is made to prevent installing or running the software on Windows XP, you
+can still do so at your own risk but be aware that there are known instabilities.
+Please do not report issues about Windows XP to the issue tracker.
 
-We do not have time nor resources to provide support for an OS that is
-end-of-life. From 0.13.0 on, Windows XP is no longer supported. Users are
-suggested to upgrade to a newer version of Windows, or install an alternative OS
-that is supported.
-
-No attempt is made to prevent installing or running the software on Windows XP,
-you can still do so at your own risk, but do not expect it to work: do not
-report issues about Windows XP to the issue tracker.
+Bitcoin Core should also work on most other Unix-like systems but is not
+frequently tested on them.
 
 Notable changes
 ===============
-
-Low-level RPC changes
-----------------------
-
-- `importprunedfunds` only accepts two required arguments. Some versions accept
-  an optional third arg, which was always ignored. Make sure to never pass more
-  than two arguments.
-
-Fee Estimation Changes
-----------------------
-
-- Since 0.13.2 fee estimation for a confirmation target of 1 block has been
-  disabled. This is only a minor behavior change as there was often insufficient
-  data for this target anyway. `estimatefee 1` will now always return -1 and
-  `estimatesmartfee 1` will start searching at a target of 2.
-
-- The default target for fee estimation is changed to 6 blocks in both the GUI
-  (previously 25) and for RPC calls (previously 2).
-
-Removal of Priority Estimation
-------------------------------
-
-- Estimation of "priority" needed for a transaction to be included within a target
-  number of blocks has been removed.  The rpc calls are deprecated and will either
-  return -1 or 1e24 appropriately. The format for `fee_estimates.dat` has also
-  changed to no longer save these priority estimates. It will automatically be
-  converted to the new format which is not readable by prior versions of the
-  software.
-
-- The concept of "priority" (coin age) transactions is planned to be removed in
-  the next major version. To prepare for this, the default for the rate limit of
-  priority transactions (`-limitfreerelay`) has been set to `0` kB/minute. This
-  is not to be confused with the `prioritisetransaction` RPC which will remain
-  supported for adding fee deltas to transactions.
-
-P2P connection management
---------------------------
-
-- Peers manually added through the addnode option or addnode RPC now have their own
-  limit of eight connections which does not compete with other inbound or outbound
-  connection usage and is not subject to the maxconnections limitation.
-
-- New connections to manually added peers are much faster.
-
-
-0.14.0 Change log
-=================
-
-Detailed release notes follow. This overview includes changes that affect
-behavior, not code moves, refactors and string updates. For convenience in locating
-the code changes and accompanying discussion, both the pull request and
-git merge commit are mentioned.
-
-### RPC and REST
-
-UTXO set query (`GET /rest/getutxos/<checkmempool>/<txid>-<n>/<txid>-<n>/.../<txid>-<n>.<bin|hex|json>`) responses
-were changed to return status code HTTP_BAD_REQUEST (400) instead of HTTP_INTERNAL_SERVER_ERROR (500) when requests
-contain invalid parameters.
-
-The first boolean argument to `getaddednodeinfo` has been removed. This is an incompatible change.
-
-Call "getmininginfo" loses the "testnet" field in favor of the more generic "chain" (which has been present for years).
-
-### Configuration and command-line options
-
-### Block and transaction handling
-
-### P2P protocol and network code
-
-### Validation
-
-### Build system
-
-### Wallet
-
-### GUI
-
-### Tests
-
-### Miscellaneous
 
 Credits
 =======

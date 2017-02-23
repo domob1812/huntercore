@@ -157,7 +157,10 @@ testScripts = [
     # FIXME: Reenable and possibly fix once the BIP9 mining is activated.
     #'nulldummy.py',
     'import-rescan.py',
+    'bumpfee.py',
     'rpcnamedargs.py',
+    'listsinceblock.py',
+    'p2p-leaktests.py',
 
     # auxpow tests
     'getauxblock.py',
@@ -199,6 +202,7 @@ testScriptsExt = [
     # vv Tests less than 2m vv
     'bip68-sequence.py',
     'getblocktemplate_longpoll.py',
+    'p2p-timeouts.py',
     # vv Tests less than 60s vv
     'bip9-softforks.py',
     'p2p-feefilter.py',

@@ -441,10 +441,6 @@
         <source>Processing blocks on disk...</source>
         <translation>正在处理数据块...</translation>
     </message>
-    <message>
-        <source>No block source available...</source>
-        <translation>沒有可用的区块来源...</translation>
-    </message>
     <message numerus="yes">
         <source>Processed %n block(s) of transaction history.</source>
         <translation><numerusform>已处理 %n 个交易历史数据块。</numerusform></translation>
@@ -484,6 +480,10 @@
     <message>
         <source>%1 client</source>
         <translation>%1 客戶</translation>
+    </message>
+    <message>
+        <source>Connecting to peers...</source>
+        <translation>正在连接到节点……</translation>
     </message>
     <message>
         <source>Catching up...</source>
@@ -1931,7 +1931,11 @@
         <source>(no amount requested)</source>
         <translation>（无请求金额）</translation>
     </message>
-    </context>
+    <message>
+        <source>Requested</source>
+        <translation>总额</translation>
+    </message>
+</context>
 <context>
     <name>SendCoinsDialog</name>
     <message>
@@ -2181,6 +2185,10 @@
     <message>
         <source>Warning: Unknown change address</source>
         <translation>警告：未知的更改地址</translation>
+    </message>
+    <message>
+        <source>The address you selected for change is not part of this wallet. Any or all funds in your wallet may be sent to this address. Are you sure?</source>
+        <translation>你选择的找零地址未被包含在本钱包中，你钱包中的部分或全部金额将被发送至该地址。你确定要这样做吗？</translation>
     </message>
     <message>
         <source>(no label)</source>
@@ -2462,6 +2470,14 @@
     <message>
         <source>0/unconfirmed, %1</source>
         <translation>0/未确认，%1</translation>
+    </message>
+    <message>
+        <source>in memory pool</source>
+        <translation>在内存池中</translation>
+    </message>
+    <message>
+        <source>not in memory pool</source>
+        <translation>不在内存池中</translation>
     </message>
     <message>
         <source>abandoned</source>
@@ -2971,10 +2987,6 @@
         <translation>修剪：最后的钱包同步超过了修剪的数据。你需要通过 -reindex (重新下载整个区块链以防修剪节点)</translation>
     </message>
     <message>
-        <source>Reduce storage requirements by pruning (deleting) old blocks. This mode is incompatible with -txindex and -rescan. Warning: Reverting this setting requires re-downloading the entire blockchain. (default: 0 = disable pruning blocks, &gt;%u = target size in MiB to use for block files)</source>
-        <translation>通过修剪(删除)旧数据块减少存储需求。此模式与 -txindex 和 -rescan不兼容。警告：还原此设置需要重新下载整个区块链。(默认: 0 = 禁用修剪数据块， &gt;%u = 数据块文件目标大小，单位 MiB)</translation>
-    </message>
-    <message>
         <source>Rescans are not possible in pruned mode. You will need to use -reindex which will download the whole blockchain again.</source>
         <translation>无法在开启修剪的状态下重扫描，请使用 -reindex重新下载完整的区块链。</translation>
     </message>
@@ -3207,6 +3219,10 @@
     <message>
         <source>Use UPnP to map the listening port (default: %u)</source>
         <translation>使用UPnp映射监听端口 (默认: %u) </translation>
+    </message>
+    <message>
+        <source>Use the test chain</source>
+        <translation>使用测试链</translation>
     </message>
     <message>
         <source>User Agent comment (%s) contains unsafe characters.</source>
@@ -3504,10 +3520,6 @@
     <message>
         <source>Use separate SOCKS5 proxy to reach peers via Tor hidden services (default: %s)</source>
         <translation>通过Tor隐藏服务连接节点时 使用不同的SOCKS5代理 (默认: %s)</translation>
-    </message>
-    <message>
-        <source>Username and hashed password for JSON-RPC connections. The field &lt;userpw&gt; comes in the format: &lt;USERNAME&gt;:&lt;SALT&gt;$&lt;HASH&gt;. A canonical python script is included in share/rpcuser. This option can be specified multiple times</source>
-        <translation>JSON-RPC 连接要使用的用户名和散列密码。&lt;userpw&gt; 的格式是：&lt;用户名&gt;:&lt;盐&gt;$&lt;散列值&gt;。在 share/rpcuser 目录下有一个示范的 python 脚本。这个选项可以被多次指定。</translation>
     </message>
     <message>
         <source>Warning: Unknown block versions being mined! It's possible unknown rules are in effect</source>

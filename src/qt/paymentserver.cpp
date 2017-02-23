@@ -10,7 +10,7 @@
 
 #include "base58.h"
 #include "chainparams.h"
-#include "validation.h" // For minRelayTxFee
+#include "policy/policy.h"
 #include "ui_interface.h"
 #include "util.h"
 #include "wallet/wallet.h"
@@ -55,8 +55,6 @@ const char* BIP70_MESSAGE_PAYMENTREQUEST = "PaymentRequest";
 const char* BIP71_MIMETYPE_PAYMENT = "application/bitcoin-payment";
 const char* BIP71_MIMETYPE_PAYMENTACK = "application/bitcoin-paymentack";
 const char* BIP71_MIMETYPE_PAYMENTREQUEST = "application/bitcoin-paymentrequest";
-// BIP70 max payment request size in bytes (DoS protection)
-const qint64 BIP70_MAX_PAYMENTREQUEST_SIZE = 50000;
 
 struct X509StoreDeleter {
       void operator()(X509_STORE* b) {
@@ -582,7 +580,7 @@ bool PaymentServer::processPaymentRequest(const PaymentRequestPlus& request, Sen
 
         // Extract and check amounts
         CTxOut txOut(sendingTo.second, sendingTo.first);
-        if (txOut.IsDust(::minRelayTxFee)) {
+        if (txOut.IsDust(dustRelayFee)) {
             Q_EMIT message(tr("Payment request error"), tr("Requested payment amount of %1 is too small (considered dust).")
                 .arg(BitcoinUnits::formatWithUnit(optionsModel->getDisplayUnit(), sendingTo.second)),
                 CClientUIInterface::MSG_ERROR);

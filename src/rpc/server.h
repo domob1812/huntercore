@@ -161,7 +161,7 @@ private:
 public:
     CRPCTable();
     const CRPCCommand* operator[](const std::string& name) const;
-    std::string help(const std::string& name) const;
+    std::string help(const std::string& name, const JSONRPCRequest& helpreq) const;
 
     /**
      * Execute a method.
@@ -197,18 +197,12 @@ extern uint256 ParseHashO(const UniValue& o, std::string strKey);
 extern std::vector<unsigned char> ParseHexV(const UniValue& v, std::string strName);
 extern std::vector<unsigned char> ParseHexO(const UniValue& o, std::string strKey);
 
-extern int64_t nWalletUnlockTime;
 extern CAmount AmountFromValue(const UniValue& value);
 extern UniValue ValueFromAmount(const CAmount& amount);
 extern double GetDifficulty(const CBlockIndex* blockindex);
 extern double GetDifficulty(PowAlgo algo);
-extern std::string HelpRequiringPassphrase();
 extern std::string HelpExampleCli(const std::string& methodname, const std::string& args);
 extern std::string HelpExampleRpc(const std::string& methodname, const std::string& args);
-
-extern bool EnsureWalletIsAvailable(bool avoidException);
-extern void EnsureWalletIsUnlocked();
-extern void SendMoneyToScript(const CScript& scriptPubKey, const CTxIn* withInput, CAmount nValue, bool fSubtractFeeFromAmount, CWalletTx& wtxNew);
 
 extern void AddRawTxNameOperation(CMutableTransaction& tx, const UniValue& obj);
 extern UniValue getNameInfo(const valtype& name, const valtype& value, bool dead, const COutPoint& outp, const CScript& addr, int height);

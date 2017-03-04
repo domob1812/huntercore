@@ -295,7 +295,7 @@ bool CWallet::LoadWatchOnly(const CScript &dest)
 bool CWallet::Unlock(const SecureString& strWalletPassphrase)
 {
     CCrypter crypter;
-    CKeyingMaterial vMasterKey;
+    CKeyingMaterial _vMasterKey;
 
     {
         LOCK(cs_wallet);
@@ -303,9 +303,9 @@ bool CWallet::Unlock(const SecureString& strWalletPassphrase)
         {
             if(!crypter.SetKeyFromPassphrase(strWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
                 return false;
-            if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, vMasterKey))
+            if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, _vMasterKey))
                 continue; // try another master key
-            if (CCryptoKeyStore::Unlock(vMasterKey))
+            if (CCryptoKeyStore::Unlock(_vMasterKey))
                 return true;
         }
     }
@@ -321,14 +321,14 @@ bool CWallet::ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase,
         Lock();
 
         CCrypter crypter;
-        CKeyingMaterial vMasterKey;
+        CKeyingMaterial _vMasterKey;
         BOOST_FOREACH(MasterKeyMap::value_type& pMasterKey, mapMasterKeys)
         {
             if(!crypter.SetKeyFromPassphrase(strOldWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
                 return false;
-            if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, vMasterKey))
+            if (!crypter.Decrypt(pMasterKey.second.vchCryptedKey, _vMasterKey))
                 return false;
-            if (CCryptoKeyStore::Unlock(vMasterKey))
+            if (CCryptoKeyStore::Unlock(_vMasterKey))
             {
                 int64_t nStartTime = GetTimeMillis();
                 crypter.SetKeyFromPassphrase(strNewWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod);
@@ -345,7 +345,7 @@ bool CWallet::ChangeWalletPassphrase(const SecureString& strOldWalletPassphrase,
 
                 if (!crypter.SetKeyFromPassphrase(strNewWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod))
                     return false;
-                if (!crypter.Encrypt(vMasterKey, pMasterKey.second.vchCryptedKey))
+                if (!crypter.Encrypt(_vMasterKey, pMasterKey.second.vchCryptedKey))
                     return false;
                 CWalletDB(strWalletFile).WriteMasterKey(pMasterKey.first, pMasterKey.second);
                 if (fWasLocked)
@@ -584,10 +584,10 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)
     if (IsCrypted())
         return false;
 
-    CKeyingMaterial vMasterKey;
+    CKeyingMaterial _vMasterKey;
 
-    vMasterKey.resize(WALLET_CRYPTO_KEY_SIZE);
-    GetStrongRandBytes(&vMasterKey[0], WALLET_CRYPTO_KEY_SIZE);
+    _vMasterKey.resize(WALLET_CRYPTO_KEY_SIZE);
+    GetStrongRandBytes(&_vMasterKey[0], WALLET_CRYPTO_KEY_SIZE);
 
     CMasterKey kMasterKey;
 
@@ -610,7 +610,7 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)
 
     if (!crypter.SetKeyFromPassphrase(strWalletPassphrase, kMasterKey.vchSalt, kMasterKey.nDeriveIterations, kMasterKey.nDerivationMethod))
         return false;
-    if (!crypter.Encrypt(vMasterKey, kMasterKey.vchCryptedKey))
+    if (!crypter.Encrypt(_vMasterKey, kMasterKey.vchCryptedKey))
         return false;
 
     {
@@ -628,7 +628,7 @@ bool CWallet::EncryptWallet(const SecureString& strWalletPassphrase)
             pwalletdbEncryption->WriteMasterKey(nMasterKeyMaxID, kMasterKey);
         }
 
-        if (!EncryptKeys(vMasterKey))
+        if (!EncryptKeys(_vMasterKey))
         {
             if (fFileBacked) {
                 pwalletdbEncryption->TxnAbort();
@@ -1030,7 +1030,7 @@ bool CWallet::LoadToWallet(const CWalletTx& wtxIn)
  * TODO: One exception to this is that the abandoned state is cleared under the
  * assumption that any further notification of a transaction that was considered
  * abandoned is an indication that it is not safe to be considered abandoned.
- * Abandoned state should probably be more carefuly tracked via different
+ * Abandoned state should probably be more carefully tracked via different
  * posInBlock signals or by checking mempool presence when necessary.
  */
 bool CWallet::AddToWalletIfInvolvingMe(const CTransaction& tx, const CBlockIndex* pIndex, int posInBlock, bool fUpdate)
@@ -1614,10 +1614,14 @@ void CWalletTx::GetAccountAmounts(const string& strAccount, CAmount& nReceived,
  * Scan the block chain (starting in pindexStart) for transactions
  * from or to us. If fUpdate is true, found transactions that already
  * exist in the wallet will be updated.
+ *
+ * Returns pointer to the first block in the last contiguous range that was
+ * successfully scanned.
+ *
  */
-int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
+CBlockIndex* CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 {
-    int ret = 0;
+    CBlockIndex* ret = nullptr;
     int64_t nNow = GetTime();
     const CChainParams& chainParams = Params();
 
@@ -1640,17 +1644,17 @@ int CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
 
             CBlock block;
             std::vector<CTransactionRef> vGameTx;
-            ReadBlockFromDisk(block, vGameTx, pindex, Params().GetConsensus());
-            int posInBlock;
-            for (posInBlock = 0; posInBlock < (int)block.vtx.size(); posInBlock++)
-            {
-                if (AddToWalletIfInvolvingMe(*block.vtx[posInBlock], pindex, posInBlock, fUpdate))
-                    ret++;
-            }
-            for (unsigned i = 0; i < vGameTx.size(); ++i)
-            {
-                if (AddToWalletIfInvolvingMe(*vGameTx[i], pindex, block.vtx.size() + i, fUpdate))
-                    ret++;
+            if (ReadBlockFromDisk(block, vGameTx, pindex, Params().GetConsensus())) {
+                for (size_t posInBlock = 0; posInBlock < block.vtx.size(); ++posInBlock) {
+                    AddToWalletIfInvolvingMe(*block.vtx[posInBlock], pindex, posInBlock, fUpdate);
+                }
+                for (unsigned i = 0; i < vGameTx.size(); ++i)
+                    AddToWalletIfInvolvingMe(*vGameTx[i], pindex, block.vtx.size() + i, fUpdate);
+                if (!ret) {
+                    ret = pindex;
+                }
+            } else {
+                ret = nullptr;
             }
             pindex = chainActive.Next(pindex);
             if (GetTime() >= nNow + 60) {
@@ -3003,12 +3007,16 @@ DBErrors CWallet::ZapSelectTx(vector<uint256>& vHashIn, vector<uint256>& vHashOu
 {
     if (!fFileBacked)
         return DB_LOAD_OK;
-    DBErrors nZapSelectTxRet = CWalletDB(strWalletFile,"cr+").ZapSelectTx(this, vHashIn, vHashOut);
+    AssertLockHeld(cs_wallet); // mapWallet
+    vchDefaultKey = CPubKey();
+    DBErrors nZapSelectTxRet = CWalletDB(strWalletFile,"cr+").ZapSelectTx(vHashIn, vHashOut);
+    for (uint256 hash : vHashOut)
+        mapWallet.erase(hash);
+
     if (nZapSelectTxRet == DB_NEED_REWRITE)
     {
         if (CDB::Rewrite(strWalletFile, "\x04pool"))
         {
-            LOCK(cs_wallet);
             setKeyPool.clear();
             // Note: can't top-up keypool here, because wallet is locked.
             // User will be prompted to unlock wallet the next operation
@@ -3029,7 +3037,8 @@ DBErrors CWallet::ZapWalletTx(std::vector<CWalletTx>& vWtx)
 {
     if (!fFileBacked)
         return DB_LOAD_OK;
-    DBErrors nZapWalletTxRet = CWalletDB(strWalletFile,"cr+").ZapWalletTx(this, vWtx);
+    vchDefaultKey = CPubKey();
+    DBErrors nZapWalletTxRet = CWalletDB(strWalletFile,"cr+").ZapWalletTx(vWtx);
     if (nZapWalletTxRet == DB_NEED_REWRITE)
     {
         if (CDB::Rewrite(strWalletFile, "\x04pool"))
@@ -3899,6 +3908,12 @@ bool CWallet::InitLoadWallet()
 
     std::string walletFile = GetArg("-wallet", DEFAULT_WALLET_DAT);
 
+    if (walletFile.find_first_of("/\\") != std::string::npos) {
+        return InitError(_("-wallet parameter must only specify a filename (not a path)"));
+    } else if (SanitizeString(walletFile, SAFE_CHARS_FILENAME) != walletFile) {
+        return InitError(_("Invalid characters in -wallet filename"));
+    }
+
     CWallet * const pwallet = CreateWalletFromFile(walletFile);
     if (!pwallet) {
         return false;
@@ -4033,11 +4048,7 @@ bool CWallet::BackupWallet(const std::string& strDest)
                     pathDest /= strWalletFile;
 
                 try {
-#if BOOST_VERSION >= 104000
                     boost::filesystem::copy_file(pathSrc, pathDest, boost::filesystem::copy_option::overwrite_if_exists);
-#else
-                    boost::filesystem::copy_file(pathSrc, pathDest);
-#endif
                     LogPrintf("copied %s to %s\n", strWalletFile, pathDest.string());
                     return true;
                 } catch (const boost::filesystem::filesystem_error& e) {

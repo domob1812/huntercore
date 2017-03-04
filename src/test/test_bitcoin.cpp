@@ -71,11 +71,11 @@ TestingSetup::TestingSetup(const std::string& chainName) : BasicTestingSetup(cha
         pcoinsdbview = new CCoinsViewDB(1 << 23, true);
         pcoinsTip = new CCoinsViewCache(pcoinsdbview);
         pgameDb = new CGameDB(false, false);
-        InitBlockIndex(chainparams);
+        BOOST_REQUIRE(InitBlockIndex(chainparams));
         {
             CValidationState state;
             bool ok = ActivateBestChain(state, chainparams);
-            BOOST_CHECK(ok);
+            BOOST_REQUIRE(ok);
         }
         nScriptCheckThreads = 3;
         for (int i=0; i < nScriptCheckThreads-1; i++)
@@ -164,12 +164,12 @@ CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CTransaction &txn, CTxMemPo
 
 void Shutdown(void* parg)
 {
-  exit(0);
+  exit(EXIT_SUCCESS);
 }
 
 void StartShutdown()
 {
-  exit(0);
+  exit(EXIT_SUCCESS);
 }
 
 bool ShutdownRequested()

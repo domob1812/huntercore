@@ -1,4 +1,4 @@
-// Copyright (C) 2016 Crypto Realities Ltd
+// Copyright (C) 2016-2017 Crypto Realities Ltd
 
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -266,11 +266,11 @@ bool CheckLinearPath(const Coord &start, const Coord &target)
     return tmp.coord == target;
 }
 
-std::vector<Coord> FindPath(const Coord &start, const Coord &goal)
+std::vector<Coord> FindPath(const Coord &startPt, const Coord &goal)
 {
     std::vector<Coord> waypoints;
 
-    if (!WalkableCoord(start) || !WalkableCoord(goal))
+    if (!WalkableCoord(startPt) || !WalkableCoord(goal))
         return waypoints;
 
     boost::static_property_map<int> weight(1);
@@ -283,7 +283,7 @@ std::vector<Coord> FindPath(const Coord &start, const Coord &goal)
     typedef boost::associative_property_map< default_map<Coord, int> > DistanceMap;
     typedef default_map<Coord, int> WrappedDistanceMap;
     WrappedDistanceMap wrappedMap = WrappedDistanceMap(std::numeric_limits<int>::max());
-    wrappedMap[start] = 0;
+    wrappedMap[startPt] = 0;
     DistanceMap d = DistanceMap(wrappedMap);
 
     MazeGoal maze_goal(goal);
@@ -296,7 +296,7 @@ std::vector<Coord> FindPath(const Coord &start, const Coord &goal)
     try
     {
         astar_search_no_init(
-                Maze(), start, maze_goal,
+                Maze(), startPt, maze_goal,
                 boost::weight_map(weight)
                     .predecessor_map(pred_pmap)
                     .distance_map(d)
@@ -319,11 +319,11 @@ std::vector<Coord> FindPath(const Coord &start, const Coord &goal)
     // Walk backwards from the goal through the predecessor chain adding
     // vertices to the solution path.
     std::deque<Coord> solution;
-    for (Coord u = goal; u != start; u = predecessor[u])
+    for (Coord u = goal; u != startPt; u = predecessor[u])
         solution.push_front(u);
 
     // Generate waypoints by linearizing parts of path
-    waypoints.push_back(start);
+    waypoints.push_back(startPt);
     while (!solution.empty())
     {
         // Find prefix of solution that can be linearized

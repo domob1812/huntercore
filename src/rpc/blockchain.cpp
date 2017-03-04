@@ -45,10 +45,15 @@ static CUpdatedBlock latestblock;
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);
 void ScriptPubKeyToJSON(const CScript& scriptPubKey, UniValue& out, bool fIncludeHex);
 
+/**
+ * Get the difficulty of the net wrt to the given block index, or the chain tip if
+ * not provided.
+ *
+ * @return A floating point number that is a multiple of the main net minimum
+ * difficulty (4295032833 hashes).
+ */
 double GetDifficulty(const CBlockIndex* blockindex)
 {
-    // Floating point number that is a multiple of the minimum difficulty,
-    // minimum difficulty = 1.0.
     if (blockindex == NULL)
     {
         if (chainActive.Tip() == NULL)
@@ -93,10 +98,6 @@ double GetDifficulty(PowAlgo algo)
 
 static UniValue AuxpowToJSON(const CAuxPow& auxpow)
 {
-    UniValue tx(UniValue::VOBJ);
-    tx.push_back(Pair("hex", EncodeHexTx(auxpow)));
-    TxToJSON(auxpow, auxpow.parentBlock.GetHash(), tx);
-
     UniValue result(UniValue::VOBJ);
 
     {

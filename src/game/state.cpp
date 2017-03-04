@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2016 Crypto Realities Ltd
+// Copyright (C) 2015-2017 Crypto Realities Ltd
 
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -20,8 +20,6 @@
 #include "rpc/server.h"
 #include "util.h"
 #include "utilstrencodings.h"
-
-#include <boost/foreach.hpp>
 
 #include <functional>
 
@@ -275,8 +273,8 @@ CharactersOnTiles::EnsureIsBuilt (const GameState& state)
     return;
   assert (tiles.empty ());
 
-  BOOST_FOREACH (const PAIRTYPE(PlayerID, PlayerState)& p, state.players)
-    BOOST_FOREACH (const PAIRTYPE(int, CharacterState)& pc, p.second.characters)
+  for (const auto& p : state.players)
+    for (const auto& pc : p.second.characters)
       {
         // newly spawned hunters not attackable
         if (state.ForkInEffect (FORK_TIMESAVE))
@@ -300,7 +298,7 @@ void
 CharactersOnTiles::ApplyAttacks (const GameState& state,
                                  const std::vector<Move>& moves)
 {
-  BOOST_FOREACH(const Move& m, moves)
+  for (const auto& m : moves)
     {
       if (m.destruct.empty ())
         continue;
@@ -308,7 +306,7 @@ CharactersOnTiles::ApplyAttacks (const GameState& state,
       const PlayerStateMap::const_iterator miPl = state.players.find (m.player);
       assert (miPl != state.players.end ());
       const PlayerState& pl = miPl->second;
-      BOOST_FOREACH(int i, m.destruct)
+      for (const int i : m.destruct)
         {
           const std::map<int, CharacterState>::const_iterator miCh
             = pl.characters.find (i);
@@ -360,7 +358,7 @@ CharactersOnTiles::DrawLife (GameState& state, StepResult& result)
   const bool lifeSteal = state.ForkInEffect (FORK_LIFESTEAL);
   const CAmount damage = GetNameCoinAmount (*state.param, state.nHeight);
 
-  BOOST_FOREACH (PAIRTYPE(const Coord, AttackableCharacter)& tile, tiles)
+  for (auto& tile : tiles)
     {
       AttackableCharacter& a = tile.second;
       if (a.attackers.empty ())
@@ -440,7 +438,7 @@ CharactersOnTiles::DefendMutualAttacks (const GameState& state)
 
   typedef std::pair<CharacterID, CharacterID> Attack;
   std::set<Attack> attacks;
-  BOOST_FOREACH (const PAIRTYPE(const Coord, AttackableCharacter)& tile, tiles)
+  for (const auto& tile : tiles)
     {
       const AttackableCharacter& a = tile.second;
       for (std::set<CharacterID>::const_iterator mi = a.attackers.begin ();
@@ -448,7 +446,7 @@ CharactersOnTiles::DefendMutualAttacks (const GameState& state)
         attacks.insert (std::make_pair (*mi, a.chid));
     }
 
-  BOOST_FOREACH (PAIRTYPE(const Coord, AttackableCharacter)& tile, tiles)
+  for (auto& tile : tiles)
     {
       AttackableCharacter& a = tile.second;
 
@@ -478,7 +476,7 @@ CharactersOnTiles::DistributeDrawnLife (RandomGenerator& rnd,
      from each attacked character back to its attackers.  For this,
      we first find the still alive players and assemble them in a map.  */
   std::map<CharacterID, PlayerState*> alivePlayers;
-  BOOST_FOREACH (const PAIRTYPE(const Coord, AttackableCharacter)& tile, tiles)
+  for (const auto& tile : tiles)
     {
       const AttackableCharacter& a = tile.second;
       assert (alivePlayers.count (a.chid) == 0);
@@ -497,7 +495,7 @@ CharactersOnTiles::DistributeDrawnLife (RandomGenerator& rnd,
     }
 
   /* Now go over all attacks and distribute life to the attackers.  */
-  BOOST_FOREACH (const PAIRTYPE(const Coord, AttackableCharacter)& tile, tiles)
+  for (const auto& tile : tiles)
     {
       const AttackableCharacter& a = tile.second;
       if (a.attackers.empty () || a.drawnLife == 0)
@@ -873,12 +871,12 @@ UniValue PlayerState::ToJsonValue(int crown_index, bool dead /* = false*/) const
         obj.push_back(Pair("dead", 1));
     }
 
-    BOOST_FOREACH(const PAIRTYPE(int, CharacterState) &pc, characters)
-    {
+    for (const auto& pc : characters)
+      {
         int i = pc.first;
         const CharacterState &ch = pc.second;
         obj.push_back(Pair(strprintf("%d", i), ch.ToJsonValue(i == crown_index)));
-    }
+      }
 
     return obj;
 }
@@ -931,7 +929,7 @@ SetOriginalBanks (std::map<Coord, unsigned>& banks)
     }
 
   assert (banks.size () == 4 * (2 * SPAWN_AREA_LENGTH - 1));
-  BOOST_FOREACH (const PAIRTYPE(Coord, unsigned)& b, banks)
+  for (const auto& b : banks)
     {
       assert (IsOriginalSpawnAreaCoord (b.first));
       assert (b.second == 0);
@@ -955,21 +953,21 @@ UniValue GameState::ToJsonValue() const
     UniValue obj(UniValue::VOBJ);
 
     UniValue jsonPlayers(UniValue::VOBJ);
-    BOOST_FOREACH(const PAIRTYPE(PlayerID, PlayerState) &p, players)
-    {
+    for (const auto& p : players)
+      {
         int crown_index = p.first == crownHolder.player ? crownHolder.index : -1;
         jsonPlayers.push_back(Pair(p.first, p.second.ToJsonValue(crown_index)));
-    }
+      }
 
     // Save chat messages of dead players
-    BOOST_FOREACH(const PAIRTYPE(PlayerID, PlayerState) &p, dead_players_chat)
+    for (const auto& p : dead_players_chat)
         jsonPlayers.push_back(Pair(p.first, p.second.ToJsonValue(-1, true)));
 
     obj.push_back(Pair("players", jsonPlayers));
 
     UniValue jsonLoot(UniValue::VARR);
-    BOOST_FOREACH(const PAIRTYPE(Coord, LootInfo) &p, loot)
-    {
+    for (const auto& p : loot)
+      {
         UniValue subobj(UniValue::VOBJ);
         subobj.push_back(Pair("x", p.first.x));
         subobj.push_back(Pair("y", p.first.y));
@@ -979,11 +977,11 @@ UniValue GameState::ToJsonValue() const
         blk_rng.push_back(p.second.lastBlock);
         subobj.push_back(Pair("blockRange", blk_rng));
         jsonLoot.push_back(subobj);
-    }
+      }
     obj.push_back(Pair("loot", jsonLoot));
 
     UniValue jsonHearts(UniValue::VARR);
-    BOOST_FOREACH (const Coord& c, hearts)
+    for (const auto& c : hearts)
       {
         UniValue subobj(UniValue::VOBJ);
         subobj.push_back (Pair ("x", c.x));
@@ -993,7 +991,7 @@ UniValue GameState::ToJsonValue() const
     obj.push_back (Pair ("hearts", jsonHearts));
 
     UniValue jsonBanks(UniValue::VARR);
-    BOOST_FOREACH (const PAIRTYPE(Coord, unsigned)& b, banks)
+    for (const auto& b : banks)
       {
         UniValue subobj(UniValue::VOBJ);
         subobj.push_back (Pair ("x", b.first.x));
@@ -1119,9 +1117,8 @@ void GameState::DivideLootAmongPlayers()
 {
     std::map<Coord, int> playersOnLootTile;
     std::vector<CharacterOnLootTile> collectors;
-    BOOST_FOREACH (PAIRTYPE(const PlayerID, PlayerState)& p, players)
-      BOOST_FOREACH (PAIRTYPE(const int, CharacterState)& pc,
-                     p.second.characters)
+    for (auto& p : players)
+      for (auto& pc : p.second.characters)
         {
           CharacterOnLootTile tileChar;
 
@@ -1224,10 +1221,10 @@ GameState::CrownBonus (CAmount nAmount)
       PlayerState& p = players[crownHolder.player];
       CharacterState& ch = p.characters[crownHolder.index];
 
-      const LootInfo loot(nAmount, nHeight);
+      const LootInfo crownLoot(nAmount, nHeight);
       const CAmount cap = GetCarryingCapacity (*this, crownHolder.index == 0,
                                                true);
-      const CAmount rem = ch.CollectLoot (loot, nHeight, cap);
+      const CAmount rem = ch.CollectLoot (crownLoot, nHeight, cap);
 
       /* We keep to the logic of "crown on the floor -> game fund" and
          don't distribute coins that can not be hold by the crown holder
@@ -1255,13 +1252,12 @@ CAmount
 GameState::GetCoinsOnMap () const
 {
   CAmount onMap = 0;
-  BOOST_FOREACH(const PAIRTYPE(Coord, LootInfo)& l, loot)
+  for (const auto& l : loot)
     onMap += l.second.nAmount;
-  BOOST_FOREACH(const PAIRTYPE(PlayerID, PlayerState)& p, players)
+  for (const auto& p : players)
     {
       onMap += p.second.value;
-      BOOST_FOREACH(const PAIRTYPE(int, CharacterState)& pc,
-                    p.second.characters)
+      for (const auto& pc : p.second.characters)
         onMap += pc.second.loot.nAmount;
     }
 
@@ -1276,13 +1272,13 @@ void GameState::CollectHearts(RandomGenerator &rnd)
         PlayerState *pl = &mi->second;
         if (!pl->CanSpawnCharacter())
             continue;
-        BOOST_FOREACH(PAIRTYPE(const int, CharacterState) &pc, pl->characters)
-        {
+        for (const auto& pc : pl->characters)
+          {
             const CharacterState &ch = pc.second;
 
             if (hearts.count(ch.coord))
                 playersOnHeartTile[ch.coord].push_back(pl);
-        }
+          }
     }
     for (std::map<Coord, std::vector<PlayerState*> >::iterator mi = playersOnHeartTile.begin(); mi != playersOnHeartTile.end(); mi++)
     {
@@ -1327,14 +1323,10 @@ void GameState::CollectCrown(RandomGenerator &rnd, bool respawn_crown)
     }
 
     std::vector<CharacterID> charactersOnCrownTile;
-    BOOST_FOREACH(const PAIRTYPE(PlayerID, PlayerState) &pl, players)
-    {
-        BOOST_FOREACH(const PAIRTYPE(int, CharacterState) &pc, pl.second.characters)
-        {
-            if (pc.second.coord == crownPos)
-                charactersOnCrownTile.push_back(CharacterID(pl.first, pc.first));
-        }
-    }
+    for (const auto& pl : players)
+      for (const auto& pc : pl.second.characters)
+        if (pc.second.coord == crownPos)
+          charactersOnCrownTile.push_back(CharacterID(pl.first, pc.first));
     int n = charactersOnCrownTile.size();
     if (!n)
         return;
@@ -1393,9 +1385,9 @@ GameState::HandleKilledLoot (const PlayerID& pId, int chInd,
   bool refunded = false;
   if (chInd == 0 && info.CanRefund (*this, pc))
     {
-      CollectedLootInfo loot;
-      loot.SetRefund (pc.value, nHeight);
-      CollectedBounty b(pId, chInd, loot, pc.address);
+      CollectedLootInfo collectedLoot;
+      collectedLoot.SetRefund (pc.value, nHeight);
+      CollectedBounty b(pId, chInd, collectedLoot, pc.address);
       step.bounties.push_back (b);
       refunded = true;
     }
@@ -1442,7 +1434,7 @@ GameState::FinaliseKills (StepResult& step)
   const KilledByMap& killedBy = step.GetKilledBy ();
 
   /* Kill depending characters.  */
-  BOOST_FOREACH(const PlayerID& victim, killedPlayers)
+  for (const auto& victim : killedPlayers)
     {
       const PlayerState& victimState = players.find (victim)->second;
 
@@ -1453,13 +1445,12 @@ GameState::FinaliseKills (StepResult& step)
       const KilledByInfo& info = iter->second;
 
       /* Kill all alive characters of the player.  */
-      BOOST_FOREACH(const PAIRTYPE(int, CharacterState)& pc,
-                    victimState.characters)
+      for (const auto& pc : victimState.characters)
         HandleKilledLoot (victim, pc.first, info, step);
     }
 
   /* Erase killed players from the state.  */
-  BOOST_FOREACH(const PlayerID& victim, killedPlayers)
+  for (const auto& victim : killedPlayers)
     players.erase (victim);
 }
 
@@ -1489,11 +1480,10 @@ GameState::KillSpawnArea (StepResult& step)
      we still want to do the loop (but not actually kill players)
      because it keeps stay_in_spawn_area up-to-date.  */
 
-  BOOST_FOREACH(PAIRTYPE(const PlayerID, PlayerState) &p, players)
+  for (auto& p : players)
     {
       std::set<int> toErase;
-      BOOST_FOREACH(PAIRTYPE(const int, CharacterState) &pc,
-                    p.second.characters)
+      for (auto& pc : p.second.characters)
         {
           const int i = pc.first;
           CharacterState &ch = pc.second;
@@ -1555,7 +1545,7 @@ GameState::KillSpawnArea (StepResult& step)
              iterator 'pc'.  */
           toErase.insert(i);
         }
-      BOOST_FOREACH(int i, toErase)
+      for (const int i : toErase)
         p.second.characters.erase(i);
     }
 }
@@ -1564,7 +1554,7 @@ void
 GameState::ApplyDisaster (RandomGenerator& rng)
 {
   /* Set random life expectations for every player on the map.  */
-  BOOST_FOREACH(PAIRTYPE(const PlayerID, PlayerState)& p, players)
+  for (auto& p : players)
     {
       /* Disasters should be so far apart, that all currently alive players
          are not yet poisoned.  Check this.  In case we introduce a general
@@ -1586,7 +1576,7 @@ GameState::ApplyDisaster (RandomGenerator& rng)
 void
 GameState::DecrementLife (StepResult& step)
 {
-  BOOST_FOREACH(PAIRTYPE(const PlayerID, PlayerState)& p, players)
+  for (auto& p : players)
     {
       if (p.second.remainingLife == -1)
         continue;
@@ -1611,11 +1601,10 @@ GameState::RemoveHeartedCharacters (StepResult& step)
   hearts.clear ();
 
   /* Immediately kill all hearted characters.  */
-  BOOST_FOREACH (PAIRTYPE(const PlayerID, PlayerState)& p, players)
+  for (auto& p : players)
     {
       std::set<int> toErase;
-      BOOST_FOREACH (PAIRTYPE(const int, CharacterState)& pc,
-                     p.second.characters)
+      for (const auto& pc : p.second.characters)
         {
           const int i = pc.first;
           if (i == 0)
@@ -1628,7 +1617,7 @@ GameState::RemoveHeartedCharacters (StepResult& step)
              iterator 'pc'.  */
           toErase.insert (i);
         }
-      BOOST_FOREACH (int i, toErase)
+      for (const int i : toErase)
         p.second.characters.erase (i);
     }
 }
@@ -1652,7 +1641,7 @@ GameState::UpdateBanks (RandomGenerator& rng)
       assert (banks.size () == DYNBANKS_NUM_BANKS);
       assert (newBanks.empty ());
 
-      BOOST_FOREACH (const PAIRTYPE(Coord, unsigned)& b, banks)
+      for (const auto& b : banks)
       {
         assert (b.second >= 1);
 
@@ -1678,7 +1667,7 @@ GameState::UpdateBanks (RandomGenerator& rng)
   {
     FillWalkableTiles ();
     std::set<Coord> optionsSet(walkableTiles_ts_banks.begin (), walkableTiles_ts_banks.end ());
-    BOOST_FOREACH (const PAIRTYPE(Coord, unsigned)& b, newBanks)
+    for (const auto& b : newBanks)
     {
       assert (optionsSet.count (b.first) == 1);
       optionsSet.erase (b.first);
@@ -1706,7 +1695,7 @@ GameState::UpdateBanks (RandomGenerator& rng)
   {
     FillWalkableTiles ();
     std::set<Coord> optionsSet(walkableTiles.begin (), walkableTiles.end ());
-    BOOST_FOREACH (const PAIRTYPE(Coord, unsigned)& b, newBanks)
+    for (const auto& b : newBanks)
     {
       assert (optionsSet.count (b.first) == 1);
       optionsSet.erase (b.first);
@@ -1750,7 +1739,7 @@ CollectedBounty::UpdateAddress (const GameState& state)
 
 bool PerformStep(const GameState &inState, const StepData &stepData, GameState &outState, StepResult &stepResult)
 {
-    BOOST_FOREACH(const Move &m, stepData.vMoves)
+    for (const auto& m : stepData.vMoves)
         if (!m.IsValid(inState))
             return false;
 
@@ -1769,7 +1758,7 @@ bool PerformStep(const GameState &inState, const StepData &stepData, GameState &
     /* Pay out game fees (except for spawns) to the game fund.  This also
        keeps track of the total fees paid into the game world by moves.  */
     CAmount moneyIn = 0;
-    BOOST_FOREACH(const Move& m, stepData.vMoves)
+    for (const auto& m : stepData.vMoves)
       if (!m.IsSpawn ())
         {
           const PlayerStateMap::iterator mi = outState.players.find (m.player);
@@ -1809,13 +1798,13 @@ bool PerformStep(const GameState &inState, const StepData &stepData, GameState &
 
     /* Apply updates to target coordinate.  This ignores already
        killed players.  */
-    BOOST_FOREACH(const Move &m, stepData.vMoves)
+    for (const auto& m : stepData.vMoves)
         if (!m.IsSpawn())
             m.ApplyWaypoints(outState);
 
     // For all alive players perform path-finding
-    BOOST_FOREACH(PAIRTYPE(const PlayerID, PlayerState) &p, outState.players)
-        BOOST_FOREACH(PAIRTYPE(const int, CharacterState) &pc, p.second.characters)
+    for (auto& p : outState.players)
+      for (auto& pc : p.second.characters)
         {
             // can't move in spectator mode, moving will lose spawn protection
             if ((outState.ForkInEffect (FORK_TIMESAVE)) &&
@@ -1836,8 +1825,8 @@ bool PerformStep(const GameState &inState, const StepData &stepData, GameState &
     // miners won't be able to compute tax amount if it depends on the hash.
 
     // Banking
-    BOOST_FOREACH(PAIRTYPE(const PlayerID, PlayerState) &p, outState.players)
-        BOOST_FOREACH(PAIRTYPE(const int, CharacterState) &pc, p.second.characters)
+    for (auto& p : outState.players)
+      for (auto& pc : p.second.characters)
         {
             int i = pc.first;
             CharacterState &ch = pc.second;
@@ -1882,28 +1871,28 @@ bool PerformStep(const GameState &inState, const StepData &stepData, GameState &
       attackedTiles.DistributeDrawnLife (rnd, outState);
 
     // Spawn new players
-    BOOST_FOREACH(const Move &m, stepData.vMoves)
+    for (const auto& m : stepData.vMoves)
         if (m.IsSpawn())
             m.ApplySpawn(outState, rnd);
 
     // Apply address & message updates
-    BOOST_FOREACH(const Move &m, stepData.vMoves)
+    for (const auto& m : stepData.vMoves)
         m.ApplyCommon(outState);
 
     /* In the (rare) case that a player collected a bounty, is still alive
        and changed the reward address at the same time, make sure that the
        bounty is paid to the new address to match the old network behaviour.  */
-    BOOST_FOREACH(CollectedBounty& bounty, stepResult.bounties)
+    for (auto& bounty : stepResult.bounties)
       bounty.UpdateAddress (outState);
 
     // Set colors for dead players, so their messages can be shown in the chat window
-    BOOST_FOREACH(PAIRTYPE(const PlayerID, PlayerState) &p, outState.dead_players_chat)
-    {
+    for (auto& p : outState.dead_players_chat)
+      {
         std::map<PlayerID, PlayerState>::const_iterator mi = inState.players.find(p.first);
         assert(mi != inState.players.end());
         const PlayerState &pl = mi->second;
         p.second.color = pl.color;
-    }
+      }
 
     // Drop a random rewards onto the harvest areas
     const CAmount nCrownBonus
@@ -1948,7 +1937,7 @@ bool PerformStep(const GameState &inState, const StepData &stepData, GameState &
 
     /* Compute total money out of the game world via bounties paid.  */
     CAmount moneyOut = stepResult.nTaxAmount;
-    BOOST_FOREACH(const CollectedBounty& b, stepResult.bounties)
+    for (const auto& b : stepResult.bounties)
       moneyOut += b.loot.nAmount;
 
     /* Compare total money before and after the step.  If there is a mismatch,

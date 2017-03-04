@@ -106,12 +106,12 @@ IsValidReceiveAddress (const std::string& str)
   return addr.IsValid () && !addr.IsScript ();
 }
 
-bool Move::Parse(const PlayerID &player, const std::string &json)
+bool Move::Parse(const PlayerID &p, const std::string &json)
 {
     try
     {
 
-    if (!IsValidPlayerName(player))
+    if (!IsValidPlayerName(p))
         return false;
         
     UniValue obj;
@@ -143,13 +143,13 @@ bool Move::Parse(const PlayerID &player, const std::string &json)
             return false;
         if (!obj.empty()) // Extra fields are not allowed in JSON string
             return false;
-        this->player = player;
+        player = p;
         return true;
     }
 
     const std::vector<std::string> keys = obj.getKeys ();
     std::set<int> character_indices;
-    BOOST_FOREACH(const std::string& key, keys)
+    for (const auto& key : keys)
     {
         const int i = atoi(key.c_str());
         if (i < 0 || strprintf("%d", i) != key)
@@ -177,7 +177,7 @@ bool Move::Parse(const PlayerID &player, const std::string &json)
             return false;
     }
         
-    this->player = player;
+    player = p;
     return true;
 
     } catch (const std::runtime_error& exc)

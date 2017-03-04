@@ -319,8 +319,8 @@ static const CRPCCommand commands[] =
     { "game",               "game_waitforchange",     &game_waitforchange,     true,  {"hash"} },
 };
 
-void RegisterGameRPCCommands(CRPCTable &tableRPC)
+void RegisterGameRPCCommands(CRPCTable &t)
 {
     for (unsigned int vcidx = 0; vcidx < ARRAYLEN(commands); vcidx++)
-        tableRPC.appendCommand(commands[vcidx].name, &commands[vcidx]);
+        t.appendCommand(commands[vcidx].name, &commands[vcidx]);
 }

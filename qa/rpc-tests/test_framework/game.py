@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2016 Crypto Realities Ltd
+# Copyright (c) 2016-2017 Crypto Realities Ltd
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -85,12 +85,12 @@ class GameTestFramework (NameTestFramework):
       txid = self.pendingTxid (node, name)
       assert txid is not None
       txids.append (txid)
-      self.nodes[node].prioritisetransaction (txid, 0, -100000000)
+      self.nodes[node].prioritisetransaction (txid, -100000000)
 
     self.generate (node, numBlocks)
 
     for txid in txids:
-      self.nodes[node].prioritisetransaction (txid, 0, 100000000)
+      self.nodes[node].prioritisetransaction (txid, 100000000)
 
   def finishMove (self, node, name, ind, advanceFirst = True):
     """

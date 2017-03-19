@@ -19,8 +19,8 @@ class MempoolPackagesTest(BitcoinTestFramework):
 
     def setup_network(self):
         self.nodes = []
-        self.nodes.append(start_node(0, self.options.tmpdir, ["-maxorphantx=1000", "-debug"]))
-        self.nodes.append(start_node(1, self.options.tmpdir, ["-maxorphantx=1000", "-limitancestorcount=5", "-debug"]))
+        self.nodes.append(start_node(0, self.options.tmpdir, ["-maxorphantx=1000"]))
+        self.nodes.append(start_node(1, self.options.tmpdir, ["-maxorphantx=1000", "-limitancestorcount=5"]))
         connect_nodes(self.nodes[0], 1)
         self.is_network_split = False
         self.sync_all()
@@ -103,7 +103,7 @@ class MempoolPackagesTest(BitcoinTestFramework):
 
         # Check that descendant modified fees includes fee deltas from
         # prioritisetransaction
-        self.nodes[0].prioritisetransaction(chain[-1], 0, 1000)
+        self.nodes[0].prioritisetransaction(chain[-1], 1000)
         mempool = self.nodes[0].getrawmempool(True)
 
         descendant_fees = 0
@@ -112,10 +112,7 @@ class MempoolPackagesTest(BitcoinTestFramework):
             assert_equal(mempool[x]['descendantfees'], descendant_fees * COIN + 1000)
 
         # Adding one more transaction on to the chain should fail.
-        try:
-            self.chain_transaction(self.nodes[0], txid, vout, value, fee, 1)
-        except JSONRPCException as e:
-            print("too-long-ancestor-chain successfully rejected")
+        assert_raises_jsonrpc(-26, "too-long-mempool-chain", self.chain_transaction, self.nodes[0], txid, vout, value, fee, 1)
 
         # Check that prioritising a tx before it's added to the mempool works
         # First clear the mempool by mining a block.
@@ -124,7 +121,7 @@ class MempoolPackagesTest(BitcoinTestFramework):
         assert_equal(len(self.nodes[0].getrawmempool()), 0)
         # Prioritise a transaction that has been mined, then add it back to the
         # mempool by using invalidateblock.
-        self.nodes[0].prioritisetransaction(chain[-1], 0, 2000)
+        self.nodes[0].prioritisetransaction(chain[-1], 2000)
         self.nodes[0].invalidateblock(self.nodes[0].getbestblockhash())
         # Keep node1's tip synced with node0
         self.nodes[1].invalidateblock(self.nodes[1].getbestblockhash())
@@ -155,19 +152,19 @@ class MempoolPackagesTest(BitcoinTestFramework):
         for i in range(10):
             transaction_package.append({'txid': txid, 'vout': i, 'amount': sent_value})
 
-        for i in range(MAX_DESCENDANTS):
+        # Sign and send up to MAX_DESCENDANT transactions chained off the parent tx
+        for i in range(MAX_DESCENDANTS - 1):
             utxo = transaction_package.pop(0)
-            try:
-                (txid, sent_value) = self.chain_transaction(self.nodes[0], utxo['txid'], utxo['vout'], utxo['amount'], fee, 10)
-                for j in range(10):
-                    transaction_package.append({'txid': txid, 'vout': j, 'amount': sent_value})
-                if i == MAX_DESCENDANTS - 2:
-                    mempool = self.nodes[0].getrawmempool(True)
-                    assert_equal(mempool[parent_transaction]['descendantcount'], MAX_DESCENDANTS)
-            except JSONRPCException as e:
-                print(e.error['message'])
-                assert_equal(i, MAX_DESCENDANTS - 1)
-                print("tx that would create too large descendant package successfully rejected")
+            (txid, sent_value) = self.chain_transaction(self.nodes[0], utxo['txid'], utxo['vout'], utxo['amount'], fee, 10)
+            for j in range(10):
+                transaction_package.append({'txid': txid, 'vout': j, 'amount': sent_value})
+
+        mempool = self.nodes[0].getrawmempool(True)
+        assert_equal(mempool[parent_transaction]['descendantcount'], MAX_DESCENDANTS)
+
+        # Sending one more chained transaction will fail
+        utxo = transaction_package.pop(0)
+        assert_raises_jsonrpc(-26, "too-long-mempool-chain", self.chain_transaction, self.nodes[0], utxo['txid'], utxo['vout'], utxo['amount'], fee, 10)
 
         # TODO: check that node1's mempool is as expected
 

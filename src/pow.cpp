@@ -13,8 +13,7 @@
 static const CBlockIndex*
 GetLastBlockIndex(const CBlockIndex* pindex, PowAlgo algo)
 {
-    if (!pindex)
-        return NULL;
+    assert(pindex != nullptr);
 
     while (pindex && (pindex->GetAlgo() != algo))
         pindex = pindex->pprev;
@@ -28,8 +27,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
     const arith_uint256 bnProofOfWorkLimit = UintToArith256(params.powLimit[algo]);
     const unsigned nProofOfWorkLimit = bnProofOfWorkLimit.GetCompact();
 
-    if (!pindexLast)
-        return nProofOfWorkLimit;
+    assert(pindexLast != nullptr);
     if (params.fPowNoRetargeting)
         return pindexLast->nBits;
 

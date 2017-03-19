@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2016 Daniel Kraft
+# Copyright (c) 2016-2017 Daniel Kraft
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -77,11 +77,8 @@ class GameKillsTest (GameTestFramework):
 
     # Verify wallet handling for the new tx.
     self.checkKillTx (0, txidNew, blkhash, 0, "a", 1)
-    try:
-      self.nodes[1].gettransaction (txidNew)
-      raise AssertionError ("new tx should not be in b's wallet")
-    except JSONRPCException as exc:
-      assert_equal (exc.error['code'], -5)
+    assert_raises_jsonrpc (-5, 'Invalid or non-wallet transaction',
+                           self.nodes[1].gettransaction, txidNew)
 
     # Check wallet conflicts settings.
     txA = self.nodes[0].gettransaction (txid)

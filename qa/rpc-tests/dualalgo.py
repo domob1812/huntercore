@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2015-2016 Daniel Kraft
+# Copyright (c) 2015-2017 Daniel Kraft
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -34,11 +34,7 @@ class DualAlgoTest (BitcoinTestFramework):
     assert_equal (diffSHA, dual[0]['difficulty_sha256d'])
     diffScrypt = self.nodes[0].getdifficulty (1)
     assert_equal (diffScrypt, dual[0]['difficulty_scrypt'])
-    try:
-      self.nodes[0].getdifficulty ()
-      raise AssertionError ("getdifficulty without arg accepted")
-    except JSONRPCException as exc:
-      assert_equal (exc.error['code'], -1)
+    assert_raises_jsonrpc (-1, None, self.nodes[0].getdifficulty)
 
     # Generate a few blocks with SHA256D.  Ensure that they are, indeed,
     # with the correct algo.
@@ -63,11 +59,7 @@ class DualAlgoTest (BitcoinTestFramework):
 
     # Verify check for algo parameter.
     for p in [-1, 2]:
-      try:
-        self.nodes[0].generate (1, p)
-        raise AssertionError ("invalid algo parameter accepted")
-      except JSONRPCException as exc:
-        assert_equal (exc.error['code'], -8)
+      assert_raises_jsonrpc (-8, 'invalid algo', self.nodes[0].generate, 1, p)
 
     # Briefly test generatetoaddress as well.
     for algo in [0, 1]:

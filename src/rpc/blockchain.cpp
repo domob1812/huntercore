@@ -4,6 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "amount.h"
+#include "base58.h"
 #include "chain.h"
 #include "chainparams.h"
 #include "checkpoints.h"
@@ -13,6 +14,7 @@
 #include "validation.h"
 #include "policy/policy.h"
 #include "primitives/transaction.h"
+#include "pubkey.h"
 #include "rpc/server.h"
 #include "streams.h"
 #include "sync.h"
@@ -1492,6 +1494,118 @@ UniValue reconsiderblock(const JSONRPCRequest& request)
     return NullUniValue;
 }
 
+UniValue
+getcoinsnapshot (const JSONRPCRequest& request)
+{
+    if (request.fHelp || request.params.size () != 1)
+        throw std::runtime_error (
+            "getcoinsnapshot minamount\n"
+            "\nReturns statistics about the unspent transaction output set.\n"
+            "Note this call may take some time.\n"
+            "\nArguments:\n"
+            "1. minamount   (numeric, required) minimum amount of coins in an address\n"
+            "\nResult:\n"
+            "{\n"
+            "  \"hashblock\": \"hex\",    (string) the best block hash hex\n"
+            "  \"strange\": x.xxx,      (numeric) coins in outputs with non-address scripts\n"
+            "  \"toosmall\": x.xxx,     (numeric) coins in addresses with too small balance\n"
+            "  \"innames\": x.xxx,      (numeric) coins locked in names\n"
+            "  \"amount\": x.xxx,       (numeric) total coins in snapshot addresses\n"
+            "  \"addresses\": {         (object) all addresses in the snapshot\n"
+            "     \"addr\": x.xxx,\n"
+            "     ...\n"
+            "  }\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli ("getcoinsnapshot", "1000")
+            + HelpExampleRpc ("getcoinsnapshot", "1000")
+        );
+
+    const CAmount minAmount = AmountFromValue (request.params[0]);
+
+    FlushStateToDisk ();
+    std::unique_ptr<CCoinsViewCursor> pcursor(pcoinsTip->Cursor ());
+
+    UniValue ret(UniValue::VOBJ);
+    ret.push_back (Pair ("hashblock", pcursor->GetBestBlock ().GetHex ()));
+
+    CAmount nStrange = 0;
+    CAmount nTooSmall = 0;
+    CAmount nInNames = 0;
+    CAmount nTotal = 0;
+
+    std::map<std::string, CAmount> balances;
+    for (; pcursor->Valid (); pcursor->Next ())
+      {
+        boost::this_thread::interruption_point ();
+
+        uint256 txid;
+        CCoins coins;
+        if (!pcursor->GetKey (txid) || !pcursor->GetValue (coins))
+          throw JSONRPCError (RPC_INTERNAL_ERROR, "Unable to read UTXO set");
+
+        for (unsigned i = 0; i < coins.vout.size (); ++i)
+          {
+            const CTxOut& out = coins.vout[i];
+            if (out.IsNull ())
+              continue;
+
+            // The UTXO set only contains spendable outputs.
+            assert (!out.scriptPubKey.IsUnspendable ());
+            assert (out.nValue >= 0);
+
+            const CNameScript nameOp(out.scriptPubKey);
+            if (nameOp.isNameOp ())
+              {
+                nInNames += out.nValue;
+                continue;
+              }
+
+            txnouttype type;
+            std::vector<CTxDestination> addresses;
+            int nRequired;
+            if (!ExtractDestinations (out.scriptPubKey, type, addresses,
+                                      nRequired)
+                  || (type != TX_PUBKEY && type != TX_PUBKEYHASH)
+                  || nRequired != 1)
+              {
+                LogPrintf ("Strange: %s %d\n  script = %s\n  value = %d\n",
+                           txid.GetHex (), i,
+                           HexStr (out.scriptPubKey.begin(),
+                                   out.scriptPubKey.end ()),
+                           out.nValue);
+                nStrange += out.nValue;
+                continue;
+              }
+
+            assert (addresses.size () == 1);
+            const std::string key = CBitcoinAddress (addresses[0]).ToString ();
+            const auto mi = balances.find (key);
+            if (mi == balances.end ())
+              balances.insert (std::make_pair (key, out.nValue));
+            else
+              mi->second += out.nValue;
+          }
+      }
+
+    UniValue addr(UniValue::VOBJ);
+    for (const auto& entry : balances)
+      if (entry.second >= minAmount)
+        {
+          nTotal += entry.second;
+          addr.push_back (Pair (entry.first, ValueFromAmount (entry.second)));
+        }
+      else
+        nTooSmall += entry.second;
+    ret.push_back (Pair ("addresses", addr));
+
+    ret.push_back (Pair ("strange", ValueFromAmount (nStrange)));
+    ret.push_back (Pair ("toosmall", ValueFromAmount (nTooSmall)));
+    ret.push_back (Pair ("innames", ValueFromAmount (nInNames)));
+    ret.push_back (Pair ("amount", ValueFromAmount (nTotal)));
+    return ret;
+}
+
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafe argNames
   //  --------------------- ------------------------  -----------------------  ------ ----------
@@ -1512,6 +1626,7 @@ static const CRPCCommand commands[] =
     { "blockchain",         "gettxoutsetinfo",        &gettxoutsetinfo,        true,  {} },
     { "blockchain",         "pruneblockchain",        &pruneblockchain,        true,  {"height"} },
     { "blockchain",         "verifychain",            &verifychain,            true,  {"checklevel","nblocks"} },
+    { "blockchain",         "getcoinsnapshot",        &getcoinsnapshot,        true,  {"minamount"} },
 
     { "blockchain",         "preciousblock",          &preciousblock,          true,  {"blockhash"} },
 

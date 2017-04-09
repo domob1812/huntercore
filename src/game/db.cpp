@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2016 Crypto Realities Ltd
+// Copyright (C) 2015-2017 Crypto Realities Ltd
 
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -109,7 +109,8 @@ CGameDB::get (const uint256& hash, GameState& state)
           needed.push_back (pprev);
         }
 
-      LogPrint ("game", "Integrating game state from height %d to height %d.\n",
+      LogPrint (BCLog::GAME,
+                "Integrating game state from height %d to height %d.\n",
                 stateIn.nHeight, needed.front ()->nHeight);
 
       while (!needed.empty ())
@@ -165,7 +166,7 @@ void
 CGameDB::flush (bool saveAll)
 {
   AssertLockHeld (cs_cache);
-  LogPrint ("game", "Flushing game db to disk...\n");
+  LogPrint (BCLog::GAME, "Flushing game db to disk...\n");
 
   /* Find blocks that we want to continue to hold in memory.  These are
      main-chain blocks with recent height.  */
@@ -222,7 +223,7 @@ CGameDB::flush (bool saveAll)
        i != toErase.end (); ++i)
     cache.erase (*i);
   assert (!saveAll || cache.empty ());
-  LogPrint ("game", "  wrote %u game states, discarded %u\n",
+  LogPrint (BCLog::GAME, "  wrote %u game states, discarded %u\n",
             written, discarded);
 
   /* Purge unwanted elements from the database on disk.  They may have been
@@ -265,7 +266,7 @@ CGameDB::flush (bool saveAll)
           batch.Erase (key);
         }
     }
-  LogPrint ("game", "  pruning %u game states from disk\n", discarded);
+  LogPrint (BCLog::GAME, "  pruning %u game states from disk\n", discarded);
 
   /* Finalise by writing the database batch.  */
   const bool ok = db.WriteBatch (batch);

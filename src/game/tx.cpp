@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2016 Crypto Realities Ltd
+// Copyright (C) 2015-2017 Crypto Realities Ltd
 
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -177,11 +177,12 @@ CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
   /* Print log chatter.  */
   if (haveTxKills || haveTxBounties)
     {
-      LogPrint ("game", "Game transactions @%d:\n", nHeight);
+      LogPrint (BCLog::GAME, "Game transactions @%d:\n", nHeight);
       if (haveTxKills)
-        LogPrint ("game", "  kills:    %s\n", txKills.GetHash ().ToString ());
+        LogPrint (BCLog::GAME, "  kills:    %s\n",
+                  txKills.GetHash ().ToString ());
       if (haveTxBounties)
-        LogPrint ("game", "  bounties: %s\n",
+        LogPrint (BCLog::GAME, "  bounties: %s\n",
                   txBounties.GetHash ().ToString ());
     }
 
@@ -211,7 +212,7 @@ ApplyGameTransactions (const std::vector<CTransactionRef>& vGameTx,
       BOOST_FOREACH(const PlayerID& name, victims)
         {
           const valtype& vchName = ValtypeFromString (name);
-          LogPrint ("names", "Killing player at height %d: %s\n",
+          LogPrint (BCLog::NAMES, "Killing player at height %d: %s\n",
                     nHeight, name.c_str ());
 
           CNameTxUndo opUndo;

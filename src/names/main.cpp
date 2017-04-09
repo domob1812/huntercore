@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2016 Daniel Kraft
+// Copyright (c) 2014-2017 Daniel Kraft
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -146,7 +146,7 @@ CNameMemPool::removeReviveConflicts (const std::set<valtype>& revived,
 
   for (const auto& name : revived)
     {
-      LogPrint ("names", "revived: %s, mempool: %u\n",
+      LogPrint (BCLog::NAMES, "revived: %s, mempool: %u\n",
                 ValtypeToString (name).c_str (), mapNameRegs.count (name));
 
       const NameTxMap::const_iterator mit = mapNameRegs.find (name);
@@ -541,7 +541,7 @@ ApplyNameTransaction (const CTransaction& tx, unsigned nHeight,
       if (op.isNameOp () && op.isAnyUpdate ())
         {
           const valtype& name = op.getOpName ();
-          LogPrint ("names", "Updating name at height %d: %s\n",
+          LogPrint (BCLog::NAMES, "Updating name at height %d: %s\n",
                     nHeight, ValtypeToString (name).c_str ());
 
           CNameTxUndo opUndo;

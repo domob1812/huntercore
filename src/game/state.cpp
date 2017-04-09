@@ -1860,7 +1860,8 @@ bool PerformStep(const GameState &inState, const StepData &stepData, GameState &
     const bool isDisaster = outState.CheckForDisaster (rnd);
     if (isDisaster)
       {
-        LogPrint ("game", "Disaster happening at @%d.\n", outState.nHeight);
+        LogPrint (BCLog::GAME, "Disaster happening at @%d.\n",
+                  outState.nHeight);
         outState.ApplyDisaster (rnd);
         assert (outState.nHeight == outState.nDisasterHeight);
       }

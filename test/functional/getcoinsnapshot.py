@@ -25,10 +25,13 @@ class GetStatsForHeightTest (BitcoinTestFramework):
     # the 2 HUC address shows up while the 1 HUC does not if we set the
     # minAmount accordingly.  Create the addresses on a different node so that
     # we won't accidentally spend these coins again with future transactions.
+    # We send the 2 HUC in parts below the threshold, to verify that all balance
+    # of an address counts, not individual outputs.
     addrOne = self.nodes[1].getnewaddress ()
     addrTwo = self.nodes[1].getnewaddress ()
     self.nodes[0].sendtoaddress (addrOne, 1)
-    self.nodes[0].sendtoaddress (addrTwo, 2)
+    self.nodes[0].sendtoaddress (addrTwo, 0.75)
+    self.nodes[0].sendtoaddress (addrTwo, 1.25)
     self.nodes[0].generate (1)
 
     # Send coins to a multisig ("strange") address.
@@ -60,6 +63,7 @@ class GetStatsForHeightTest (BitcoinTestFramework):
     assert_equal (strange, snapshot['strange'])
     assert addrOne not in snapshot['addresses']
     assert addrTwo in snapshot['addresses']
+    assert_equal (2, snapshot['addresses'][addrTwo])
     total = snapshot['innames']
     total += snapshot['strange']
     total += snapshot['toosmall']

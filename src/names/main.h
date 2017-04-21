@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2016 Daniel Kraft
+// Copyright (c) 2014-2017 Daniel Kraft
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -194,8 +194,7 @@ public:
    * @param tx The transaction for which we look for conflicts.
    * @param removed Put removed tx here.
    */
-  void removeConflicts (const CTransaction& tx,
-                        std::vector<CTransactionRef>* removed);
+  void removeConflicts (const CTransaction& tx);
 
   /**
    * Remove conflicts in the mempool due to revived players.  This removes
@@ -203,8 +202,7 @@ public:
    * @param revived The set of revived names.
    * @param removed Put removed tx here.
    */
-  void removeReviveConflicts (const std::set<valtype>& revived,
-                              std::vector<CTransactionRef>* removed);
+  void removeReviveConflicts (const std::set<valtype>& revived);
 
   /**
    * Perform sanity checks.  Throws if it fails.
@@ -219,6 +217,36 @@ public:
    * @return True if it doesn't conflict.
    */
   bool checkTx (const CTransaction& tx) const;
+
+};
+
+/* ************************************************************************** */
+/* CNameConflictTracker.  */
+
+/**
+ * Utility class that listens to a mempool's removal notifications to track
+ * name conflicts.  This is used for DisconnectTip and unit testing.
+ */
+class CNameConflictTracker
+{
+
+private:
+
+  std::vector<CTransactionRef> txNameConflicts;
+  CTxMemPool& pool;
+
+public:
+
+  explicit CNameConflictTracker (CTxMemPool &p);
+  ~CNameConflictTracker ();
+
+  inline const std::vector<CTransactionRef>&
+  GetNameConflicts () const
+  {
+    return txNameConflicts;
+  }
+
+  void AddConflictedEntry (CTransactionRef txRemoved);
 
 };
 

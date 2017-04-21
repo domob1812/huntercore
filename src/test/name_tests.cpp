@@ -919,10 +919,13 @@ BOOST_AUTO_TEST_CASE (name_mempool)
   BOOST_CHECK (mempool.registersName (nameReg));
   BOOST_CHECK (!mempool.checkNameOps (txReg2));
 
-  std::vector<CTransactionRef> removed;
-  mempool.removeConflicts (txReg2, &removed);
-  BOOST_CHECK (removed.size () == 1);
-  BOOST_CHECK (removed.front ()->GetHash () == txReg1.GetHash ());
+  {
+    CNameConflictTracker tracker(mempool);
+    mempool.removeConflicts (txReg2);
+    BOOST_CHECK (tracker.GetNameConflicts ().size () == 1);
+    BOOST_CHECK (tracker.GetNameConflicts ().front ()->GetHash ()
+                  == txReg1.GetHash ());
+  }
   BOOST_CHECK (!mempool.registersName (nameReg));
   BOOST_CHECK (mempool.mapTx.empty ());
 
@@ -934,10 +937,13 @@ BOOST_AUTO_TEST_CASE (name_mempool)
 
   std::set<valtype> names;
   names.insert (nameReg);
-  removed.clear ();
-  mempool.removeReviveConflicts (names, &removed);
-  BOOST_CHECK (removed.size () == 1);
-  BOOST_CHECK (removed.front ()->GetHash () == txReg1.GetHash ());
+  {
+    CNameConflictTracker tracker(mempool);
+    mempool.removeReviveConflicts (names);
+    BOOST_CHECK (tracker.GetNameConflicts ().size () == 1);
+    BOOST_CHECK (tracker.GetNameConflicts ().front ()->GetHash ()
+                  == txReg1.GetHash ());
+  }
   BOOST_CHECK (!mempool.registersName (nameReg));
   BOOST_CHECK (mempool.mapTx.empty ());
 }

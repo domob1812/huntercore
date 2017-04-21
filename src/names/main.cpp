@@ -111,8 +111,7 @@ CNameMemPool::remove (const CTxMemPoolEntry& entry)
 }
 
 void
-CNameMemPool::removeConflicts (const CTransaction& tx,
-                               std::vector<CTransactionRef>* removed)
+CNameMemPool::removeConflicts (const CTransaction& tx)
 {
   AssertLockHeld (pool.cs);
 
@@ -130,17 +129,15 @@ CNameMemPool::removeConflicts (const CTransaction& tx,
             {
               const CTxMemPool::txiter mit2 = pool.mapTx.find (mit->second);
               assert (mit2 != pool.mapTx.end ());
-              if (removed)
-                removed->push_back (MakeTransactionRef (mit2->GetTx ()));
-              pool.removeRecursive (mit2->GetTx ());
+              pool.removeRecursive (mit2->GetTx (),
+                                    MemPoolRemovalReason::NAME_CONFLICT);
             }
         }
     }
 }
 
 void
-CNameMemPool::removeReviveConflicts (const std::set<valtype>& revived,
-                                     std::vector<CTransactionRef>* removed)
+CNameMemPool::removeReviveConflicts (const std::set<valtype>& revived)
 {
   AssertLockHeld (pool.cs);
 
@@ -154,9 +151,8 @@ CNameMemPool::removeReviveConflicts (const std::set<valtype>& revived,
         {
           const CTxMemPool::txiter mit2 = pool.mapTx.find (mit->second);
           assert (mit2 != pool.mapTx.end ());
-          if (removed)
-            removed->push_back (MakeTransactionRef (mit2->GetTx ()));
-          pool.removeRecursive (mit2->GetTx ());
+          pool.removeRecursive (mit2->GetTx (),
+                                MemPoolRemovalReason::NAME_CONFLICT);
         }
     }
 }
@@ -279,6 +275,42 @@ CNameMemPool::checkTx (const CTransaction& tx) const
     }
 
   return true;
+}
+
+/* ************************************************************************** */
+/* CNameConflictTracker.  */
+
+namespace
+{
+
+void
+ConflictTrackerNotifyEntryRemoved (CNameConflictTracker* tracker,
+                                   CTransactionRef txRemoved,
+                                   MemPoolRemovalReason reason)
+{
+  if (reason == MemPoolRemovalReason::NAME_CONFLICT)
+    tracker->AddConflictedEntry (txRemoved);
+}
+
+} // anonymous namespace
+
+CNameConflictTracker::CNameConflictTracker (CTxMemPool &p)
+  : txNameConflicts(), pool(p)
+{
+  pool.NotifyEntryRemoved.connect (
+    boost::bind (&ConflictTrackerNotifyEntryRemoved, this, _1, _2));
+}
+
+CNameConflictTracker::~CNameConflictTracker ()
+{
+  pool.NotifyEntryRemoved.disconnect (
+    boost::bind (&ConflictTrackerNotifyEntryRemoved, this, _1, _2));
+}
+
+void
+CNameConflictTracker::AddConflictedEntry (CTransactionRef txRemoved)
+{
+  txNameConflicts.emplace_back (std::move (txRemoved));
 }
 
 /* ************************************************************************** */

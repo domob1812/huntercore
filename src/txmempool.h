@@ -355,6 +355,7 @@ enum class MemPoolRemovalReason {
     REORG,       //! Removed for reorganization
     BLOCK,       //! Removed for block
     CONFLICT,    //! Removed for conflict with in-block transaction
+    NAME_CONFLICT, //! Removed due to a name-operation conflict
     REPLACED     //! Removed for replacement
 };
 
@@ -552,10 +553,8 @@ public:
 
     void removeRecursive(const CTransaction &tx, MemPoolRemovalReason reason = MemPoolRemovalReason::UNKNOWN);
     void removeForReorg(const CCoinsViewCache *pcoins, unsigned int nMemPoolHeight, int flags);
-    void removeConflicts(const CTransaction &tx,
-                         std::vector<CTransactionRef>* removedNames = nullptr);
-    void removeForBlock(const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight,
-                        std::vector<CTransactionRef>* nameConflicts = nullptr);
+    void removeConflicts(const CTransaction &tx);
+    void removeForBlock(const std::vector<CTransactionRef>& vtx, unsigned int nBlockHeight);
 
     void clear();
     void _clear(); //lock free
@@ -572,11 +571,10 @@ public:
 
     /* Remove conflicts due to "revived" players.  */
     inline void
-    removeReviveConflicts (const std::set<valtype>& revived,
-                           std::vector<CTransactionRef>* removed)
+    removeReviveConflicts (const std::set<valtype>& revived)
     {
         LOCK(cs);
-        names.removeReviveConflicts (revived, removed);
+        names.removeReviveConflicts (revived);
     }
 
     /** Affect CreateNewBlock prioritisation of transactions */

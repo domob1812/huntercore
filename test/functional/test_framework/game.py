@@ -62,7 +62,7 @@ class GameTestFramework (NameTestFramework):
         self.nodes[nind].name_update (name, json.dumps (op))
     self.batched = {}
 
-    self.sync_all ('mempool')
+    self.sync_with_mode ('mempool')
 
   def advance (self, node, numBlocks, doNotMine = []):
     """

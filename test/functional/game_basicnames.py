@@ -38,7 +38,7 @@ class GameBasicNamesTest (NameTestFramework):
 
     # Register the player and verify that it appears on the map.
     self.firstupdateName (0, testname, new, '{"color":0}')
-    self.sync_all ()
+    self.sync_with_mode ('both')
     assert_equal ([], self.nodes[0].name_list ())
     self.generate (1, 1)
     self.checkName (2, testname, '{"color":0}', False)
@@ -53,7 +53,7 @@ class GameBasicNamesTest (NameTestFramework):
     # Issue a move command.  Wait long enough for the other hunters
     # to be killed in spawn.
     self.nodes[0].name_update (testname, '{"0":{"wp":[2,2]}}')
-    self.sync_all ()
+    self.sync_with_mode ('both')
     self.generate (1, 35)
 
     # Verify that the player is at the position we expect it to be.

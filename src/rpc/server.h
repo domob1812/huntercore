@@ -207,7 +207,6 @@ extern UniValue getNameInfo(const valtype& name, const CNameData& data);
 extern std::string getNameInfoHelp(const std::string& indent, const std::string& trailing);
 
 extern PowAlgo DecodeAlgoParam(const UniValue& param);
-extern UniValue GameInputToJSON(const CScript& scriptSig);
 
 bool StartRPC();
 void InterruptRPC();

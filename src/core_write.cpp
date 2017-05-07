@@ -5,7 +5,10 @@
 #include "core_io.h"
 
 #include "base58.h"
+#include "game/tx.h"
+#include "names/common.h"
 #include "primitives/transaction.h"
+#include "script/names.h"
 #include "script/script.h"
 #include "script/standard.h"
 #include "serialize.h"
@@ -17,6 +20,95 @@
 
 #include <boost/assign/list_of.hpp>
 #include <boost/foreach.hpp>
+
+/* Decode an integer (could be encoded as OP_x or a bignum)
+   from the script.  Returns -1 in case of error.  */
+static int
+GetScriptUint (const CScript& script, CScript::const_iterator& pc)
+{
+  opcodetype opcode;
+  valtype vch;
+  if (!script.GetOp (pc, opcode, vch))
+    return -1;
+
+  if (opcode >= OP_1 && opcode <= OP_16)
+    return opcode - OP_1 + 1;
+
+  /* Convert byte vector to integer.  */
+  int res = 0;
+  for (unsigned i = 0; i < vch.size (); ++i)
+    res += (1 << (i * 8)) * vch[i];
+
+  return res;
+}
+
+/**
+ * Convert a game tx input script to a JSON representation.  This is used
+ * by decoderawtransaction.
+ */
+UniValue
+GameInputToUniv (const CScript& scriptSig)
+{
+  UniValue res(UniValue::VOBJ);
+
+  CScript::const_iterator pc = scriptSig.begin ();
+  opcodetype opcode;
+  valtype vch;
+  if (!scriptSig.GetOp (pc, opcode, vch))
+    goto error;
+  res.push_back (Pair ("player", ValtypeToString (vch)));
+
+  if (!scriptSig.GetOp (pc, opcode))
+    goto error;
+
+  switch (opcode - OP_1 + 1)
+    {
+    case GAMEOP_KILLED_BY:
+      {
+        UniValue killers(UniValue::VARR);
+        while (scriptSig.GetOp (pc, opcode, vch))
+          killers.push_back (ValtypeToString (vch));
+
+        if (killers.empty ())
+          res.push_back (Pair ("op", "spawn_death"));
+        else
+          {
+            res.push_back (Pair ("op", "killed_by"));
+            res.push_back (Pair ("killers", killers));
+          }
+
+        break;
+      }
+
+    case GAMEOP_KILLED_POISON:
+      res.push_back (Pair ("op", "poison_death"));
+      break;
+
+    case GAMEOP_COLLECTED_BOUNTY:
+      res.push_back (Pair ("op", "banking"));
+      res.push_back (Pair ("index", GetScriptUint (scriptSig, pc)));
+      res.push_back (Pair ("first_block", GetScriptUint (scriptSig, pc)));
+      res.push_back (Pair ("last_block", GetScriptUint (scriptSig, pc)));
+      res.push_back (Pair ("first_collected", GetScriptUint (scriptSig, pc)));
+      res.push_back (Pair ("last_collected", GetScriptUint (scriptSig, pc)));
+      break;
+
+    case GAMEOP_REFUND:
+      res.push_back (Pair ("op", "refund"));
+      res.push_back (Pair ("index", GetScriptUint (scriptSig, pc)));
+      res.push_back (Pair ("height", GetScriptUint (scriptSig, pc)));
+      break;
+
+    default:
+      goto error;
+    }
+
+  return res;
+
+error:
+  res.push_back (Pair ("error", "could not decode game tx"));
+  return res;
+}
 
 std::string FormatScript(const CScript& script)
 {
@@ -128,6 +220,52 @@ void ScriptPubKeyToUniv(const CScript& scriptPubKey,
     std::vector<CTxDestination> addresses;
     int nRequired;
 
+    const CNameScript nameOp(scriptPubKey);
+    if (nameOp.isNameOp ())
+    {
+        UniValue jsonOp(UniValue::VOBJ);
+        switch (nameOp.getNameOp ())
+        {
+        case OP_NAME_NEW:
+            jsonOp.push_back (Pair("op", "name_new"));
+            jsonOp.push_back (Pair("hash", HexStr (nameOp.getOpHash ())));
+            break;
+
+        case OP_NAME_FIRSTUPDATE:
+        {
+            const std::string name = ValtypeToString (nameOp.getOpName ());
+            const std::string value = ValtypeToString (nameOp.getOpValue ());
+            const bool newStyle = nameOp.isNewStyleRegistration ();
+
+            if (newStyle)
+              jsonOp.push_back (Pair("op", "name_register"));
+            else
+              jsonOp.push_back (Pair("op", "name_firstupdate"));
+            jsonOp.push_back (Pair("name", name));
+            jsonOp.push_back (Pair("value", value));
+            if (!newStyle)
+              jsonOp.push_back (Pair("rand", HexStr (nameOp.getOpRand ())));
+            break;
+        }
+
+        case OP_NAME_UPDATE:
+        {
+            const std::string name = ValtypeToString (nameOp.getOpName ());
+            const std::string value = ValtypeToString (nameOp.getOpValue ());
+
+            jsonOp.push_back (Pair("op", "name_update"));
+            jsonOp.push_back (Pair("name", name));
+            jsonOp.push_back (Pair("value", value));
+            break;
+        }
+
+        default:
+            assert (false);
+        }
+
+        out.push_back (Pair("nameOp", jsonOp));
+    }
+
     out.pushKV("asm", ScriptToAsmStr(scriptPubKey));
     if (fIncludeHex)
         out.pushKV("hex", HexStr(scriptPubKey.begin(), scriptPubKey.end()));
@@ -151,6 +289,8 @@ void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry)
     entry.pushKV("txid", tx.GetHash().GetHex());
     entry.pushKV("hash", tx.GetWitnessHash().GetHex());
     entry.pushKV("version", tx.nVersion);
+    entry.pushKV("size", (int)::GetSerializeSize(tx, SER_NETWORK, PROTOCOL_VERSION));
+    entry.pushKV("vsize", (GetTransactionWeight(tx) + WITNESS_SCALE_FACTOR - 1) / WITNESS_SCALE_FACTOR);
     entry.pushKV("locktime", (int64_t)tx.nLockTime);
 
     UniValue vin(UniValue::VARR);
@@ -160,8 +300,14 @@ void TxToUniv(const CTransaction& tx, const uint256& hashBlock, UniValue& entry)
         if (tx.IsCoinBase())
             in.pushKV("coinbase", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()));
         else {
-            in.pushKV("txid", txin.prevout.hash.GetHex());
-            in.pushKV("vout", (int64_t)txin.prevout.n);
+            if (tx.IsGameTx()) {
+                const UniValue gametx = GameInputToUniv(txin.scriptSig);
+                in.pushKV("gametx", gametx);
+            }
+            else {
+                in.pushKV("txid", txin.prevout.hash.GetHex());
+                in.pushKV("vout", (int64_t)txin.prevout.n);
+            }
             UniValue o(UniValue::VOBJ);
             o.pushKV("asm", ScriptToAsmStr(txin.scriptSig, true));
             o.pushKV("hex", HexStr(txin.scriptSig.begin(), txin.scriptSig.end()));

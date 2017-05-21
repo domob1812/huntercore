@@ -56,7 +56,7 @@ GameInputToUniv (const CScript& scriptSig)
   valtype vch;
   if (!scriptSig.GetOp (pc, opcode, vch))
     goto error;
-  res.push_back (Pair ("player", ValtypeToString (vch)));
+  res.pushKV ("player", ValtypeToString (vch));
 
   if (!scriptSig.GetOp (pc, opcode))
     goto error;
@@ -70,33 +70,33 @@ GameInputToUniv (const CScript& scriptSig)
           killers.push_back (ValtypeToString (vch));
 
         if (killers.empty ())
-          res.push_back (Pair ("op", "spawn_death"));
+          res.pushKV ("op", "spawn_death");
         else
           {
-            res.push_back (Pair ("op", "killed_by"));
-            res.push_back (Pair ("killers", killers));
+            res.pushKV ("op", "killed_by");
+            res.pushKV ("killers", killers);
           }
 
         break;
       }
 
     case GAMEOP_KILLED_POISON:
-      res.push_back (Pair ("op", "poison_death"));
+      res.pushKV ("op", "poison_death");
       break;
 
     case GAMEOP_COLLECTED_BOUNTY:
-      res.push_back (Pair ("op", "banking"));
-      res.push_back (Pair ("index", GetScriptUint (scriptSig, pc)));
-      res.push_back (Pair ("first_block", GetScriptUint (scriptSig, pc)));
-      res.push_back (Pair ("last_block", GetScriptUint (scriptSig, pc)));
-      res.push_back (Pair ("first_collected", GetScriptUint (scriptSig, pc)));
-      res.push_back (Pair ("last_collected", GetScriptUint (scriptSig, pc)));
+      res.pushKV ("op", "banking");
+      res.pushKV ("index", GetScriptUint (scriptSig, pc));
+      res.pushKV ("first_block", GetScriptUint (scriptSig, pc));
+      res.pushKV ("last_block", GetScriptUint (scriptSig, pc));
+      res.pushKV ("first_collected", GetScriptUint (scriptSig, pc));
+      res.pushKV ("last_collected", GetScriptUint (scriptSig, pc));
       break;
 
     case GAMEOP_REFUND:
-      res.push_back (Pair ("op", "refund"));
-      res.push_back (Pair ("index", GetScriptUint (scriptSig, pc)));
-      res.push_back (Pair ("height", GetScriptUint (scriptSig, pc)));
+      res.pushKV ("op", "refund");
+      res.pushKV ("index", GetScriptUint (scriptSig, pc));
+      res.pushKV ("height", GetScriptUint (scriptSig, pc));
       break;
 
     default:
@@ -106,7 +106,7 @@ GameInputToUniv (const CScript& scriptSig)
   return res;
 
 error:
-  res.push_back (Pair ("error", "could not decode game tx"));
+  res.pushKV ("error", "could not decode game tx");
   return res;
 }
 
@@ -227,8 +227,8 @@ void ScriptPubKeyToUniv(const CScript& scriptPubKey,
         switch (nameOp.getNameOp ())
         {
         case OP_NAME_NEW:
-            jsonOp.push_back (Pair("op", "name_new"));
-            jsonOp.push_back (Pair("hash", HexStr (nameOp.getOpHash ())));
+            jsonOp.pushKV ("op", "name_new");
+            jsonOp.pushKV ("hash", HexStr (nameOp.getOpHash ()));
             break;
 
         case OP_NAME_FIRSTUPDATE:
@@ -238,13 +238,13 @@ void ScriptPubKeyToUniv(const CScript& scriptPubKey,
             const bool newStyle = nameOp.isNewStyleRegistration ();
 
             if (newStyle)
-              jsonOp.push_back (Pair("op", "name_register"));
+              jsonOp.pushKV ("op", "name_register");
             else
-              jsonOp.push_back (Pair("op", "name_firstupdate"));
-            jsonOp.push_back (Pair("name", name));
-            jsonOp.push_back (Pair("value", value));
+              jsonOp.pushKV ("op", "name_firstupdate");
+            jsonOp.pushKV ("name", name);
+            jsonOp.pushKV ("value", value);
             if (!newStyle)
-              jsonOp.push_back (Pair("rand", HexStr (nameOp.getOpRand ())));
+              jsonOp.pushKV ("rand", HexStr (nameOp.getOpRand ()));
             break;
         }
 
@@ -253,9 +253,9 @@ void ScriptPubKeyToUniv(const CScript& scriptPubKey,
             const std::string name = ValtypeToString (nameOp.getOpName ());
             const std::string value = ValtypeToString (nameOp.getOpValue ());
 
-            jsonOp.push_back (Pair("op", "name_update"));
-            jsonOp.push_back (Pair("name", name));
-            jsonOp.push_back (Pair("value", value));
+            jsonOp.pushKV ("op", "name_update");
+            jsonOp.pushKV ("name", name);
+            jsonOp.pushKV ("value", value);
             break;
         }
 
@@ -263,7 +263,7 @@ void ScriptPubKeyToUniv(const CScript& scriptPubKey,
             assert (false);
         }
 
-        out.push_back (Pair("nameOp", jsonOp));
+        out.pushKV ("nameOp", jsonOp);
     }
 
     out.pushKV("asm", ScriptToAsmStr(scriptPubKey));

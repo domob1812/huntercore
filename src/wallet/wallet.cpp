@@ -2065,12 +2065,15 @@ CAmount CWallet::GetLegacyBalance(const isminefilter& filter, int minDepth, cons
     return balance;
 }
 
-void CWallet::AvailableCoins(std::vector<COutput>& vCoins, bool fOnlySafe, const CCoinControl *coinControl, bool fIncludeZeroValue) const
+void CWallet::AvailableCoins(std::vector<COutput> &vCoins, bool fOnlySafe, const CCoinControl *coinControl, const CAmount &nMinimumAmount, const CAmount &nMaximumAmount, const CAmount &nMinimumSumAmount, const uint64_t &nMaximumCount, const int &nMinDepth, const int &nMaxDepth) const
 {
     vCoins.clear();
 
     {
         LOCK2(cs_main, cs_wallet);
+
+        CAmount nTotal = 0;
+
         for (std::map<uint256, CWalletTx>::const_iterator it = mapWallet.begin(); it != mapWallet.end(); ++it)
         {
             const uint256& wtxid = it->first;
@@ -2129,16 +2132,48 @@ void CWallet::AvailableCoins(std::vector<COutput>& vCoins, bool fOnlySafe, const
                 continue;
             }
 
+            if (nDepth < nMinDepth || nDepth > nMaxDepth)
+                continue;
+
             for (unsigned int i = 0; i < pcoin->tx->vout.size(); i++) {
+                if (pcoin->tx->vout[i].nValue < nMinimumAmount || pcoin->tx->vout[i].nValue > nMaximumAmount)
+                    continue;
+
+                if (coinControl && coinControl->HasSelected() && !coinControl->fAllowOtherInputs && !coinControl->IsSelected(COutPoint((*it).first, i)))
+                    continue;
+
+                if (IsLockedCoin((*it).first, i))
+                    continue;
+
+                if (IsSpent(wtxid, i))
+                    continue;
+
                 isminetype mine = IsMine(pcoin->tx->vout[i]);
-                if (!(IsSpent(wtxid, i)) && mine != ISMINE_NO &&
-                    !IsLockedCoin((*it).first, i) && (pcoin->tx->vout[i].nValue > 0 || fIncludeZeroValue) &&
-                    (!coinControl || !coinControl->HasSelected() || coinControl->fAllowOtherInputs || coinControl->IsSelected(COutPoint((*it).first, i)))
-                    && !CNameScript::isNameScript(pcoin->tx->vout[i].scriptPubKey))
-                        vCoins.push_back(COutput(pcoin, i, nDepth,
-                                                 ((mine & ISMINE_SPENDABLE) != ISMINE_NO) ||
-                                                  (coinControl && coinControl->fAllowWatchOnly && (mine & ISMINE_WATCH_SOLVABLE) != ISMINE_NO),
-                                                 (mine & (ISMINE_SPENDABLE | ISMINE_WATCH_SOLVABLE)) != ISMINE_NO, safeTx));
+
+                if (mine == ISMINE_NO) {
+                    continue;
+                }
+
+                bool fSpendableIn = ((mine & ISMINE_SPENDABLE) != ISMINE_NO) || (coinControl && coinControl->fAllowWatchOnly && (mine & ISMINE_WATCH_SOLVABLE) != ISMINE_NO);
+                if (CNameScript::isNameScript(pcoin->tx->vout[i].scriptPubKey))
+                    fSpendableIn = false;
+                bool fSolvableIn = (mine & (ISMINE_SPENDABLE | ISMINE_WATCH_SOLVABLE)) != ISMINE_NO;
+
+                vCoins.push_back(COutput(pcoin, i, nDepth, fSpendableIn, fSolvableIn, safeTx));
+
+                // Checks the sum amount of all UTXO's.
+                if (nMinimumSumAmount != MAX_MONEY) {
+                    nTotal += pcoin->tx->vout[i].nValue;
+
+                    if (nTotal >= nMinimumSumAmount) {
+                        return;
+                    }
+                }
+
+                // Checks the maximum number of UTXO's.
+                if (nMaximumCount > 0 && vCoins.size() >= nMaximumCount) {
+                    return;
+                }
             }
         }
     }
@@ -2367,6 +2402,8 @@ bool CWallet::SelectCoins(const std::vector<COutput>& vAvailableCoins, const CAm
 
 bool CWallet::SignTransaction(CMutableTransaction &tx)
 {
+    AssertLockHeld(cs_wallet); // mapWallet
+
     // sign the new tx
     CTransaction txNewConst(tx);
     int nIn = 0;
@@ -2593,7 +2630,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
                         }
                     }
 
-                    if (txout.IsDust(dustRelayFee))
+                    if (IsDust(txout, ::dustRelayFee))
                     {
                         if (recipient.fSubtractFeeFromAmount && nFeeRet > 0)
                         {
@@ -2660,16 +2697,16 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
                     // We do not move dust-change to fees, because the sender would end up paying more than requested.
                     // This would be against the purpose of the all-inclusive feature.
                     // So instead we raise the change and deduct from the recipient.
-                    if (nSubtractFeeFromAmount > 0 && newTxOut.IsDust(dustRelayFee))
+                    if (nSubtractFeeFromAmount > 0 && IsDust(newTxOut, ::dustRelayFee))
                     {
-                        CAmount nDust = newTxOut.GetDustThreshold(dustRelayFee) - newTxOut.nValue;
+                        CAmount nDust = GetDustThreshold(newTxOut, ::dustRelayFee) - newTxOut.nValue;
                         newTxOut.nValue += nDust; // raise change until no more dust
                         for (unsigned int i = 0; i < vecSend.size(); i++) // subtract from first recipient
                         {
                             if (vecSend[i].fSubtractFeeFromAmount)
                             {
                                 txNew.vout[i].nValue -= nDust;
-                                if (txNew.vout[i].IsDust(dustRelayFee))
+                                if (IsDust(txNew.vout[i], ::dustRelayFee))
                                 {
                                     strFailReason = _("The transaction amount is too small to send after the fee has been deducted");
                                     return false;
@@ -2681,7 +2718,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
 
                     // Never create dust outputs; if we would, just
                     // add the dust to the fee.
-                    if (newTxOut.IsDust(dustRelayFee))
+                    if (IsDust(newTxOut, ::dustRelayFee))
                     {
                         nChangePosInOut = -1;
                         nFeeRet += nChange;

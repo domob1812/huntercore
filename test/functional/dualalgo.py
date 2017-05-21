@@ -3,7 +3,7 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-# Test mining (generate and getauxblock) with dual-algo.
+# Test mining (generate and aux mining) with dual-algo.
 
 from test_framework import auxpow
 from test_framework.test_framework import BitcoinTestFramework
@@ -72,26 +72,27 @@ class DualAlgoTest (BitcoinTestFramework):
       utxo = self.nodes[0].gettxout (coinbaseTx, 0)
       assert_equal ([addr], utxo['scriptPubKey']['addresses'])
 
-    # Check updates of the returned block (or not) with getauxblock.
+    # Check updates of the returned block (or not) with aux mining.
     # Note that this behaviour needs not necessarily be exactly as tested,
     # but the test ensures that no change is introduced accidentally.
-    auxblock1 = self.nodes[0].getauxblock ()
-    auxblock2 = self.nodes[0].getauxblock (0)
+    coinbaseAddr = self.nodes[0].getnewaddress ()
+    auxblock1 = self.nodes[0].createauxblock (coinbaseAddr)
+    auxblock2 = self.nodes[0].createauxblock (coinbaseAddr, 0)
     assert_equal (auxblock1['hash'], auxblock2['hash'])
-    auxblock2 = self.nodes[0].getauxblock (1)
-    auxblock3 = self.nodes[0].getauxblock (1)
+    auxblock2 = self.nodes[0].createauxblock (coinbaseAddr, 1)
+    auxblock3 = self.nodes[0].createauxblock (coinbaseAddr, 1)
     assert_equal (auxblock2['hash'], auxblock3['hash'])
     assert auxblock2['hash'] != auxblock1['hash']
-    auxblock3 = self.nodes[0].getauxblock ()
+    auxblock3 = self.nodes[0].createauxblock (coinbaseAddr)
     assert auxblock1['hash'] != auxblock3['hash']
 
-    # Use getauxblock with explicit algo to mine a SHA256D block.
+    # Use createauxblock with explicit algo to mine a SHA256D block.
     # Assert that this works (the block is saved) even if we request
     # another scrypt block before.
-    auxblock = self.nodes[0].getauxblock ()
+    auxblock = self.nodes[0].createauxblock (coinbaseAddr)
     assert_equal (auxblock['chainid'], 6)
     assert_equal (auxblock['algo'], 0)
-    dummy = self.nodes[0].getauxblock (1)
+    dummy = self.nodes[0].createauxblock (coinbaseAddr, 1)
     assert_equal (dummy['chainid'], 2)
     assert_equal (dummy['algo'], 1)
 
@@ -99,7 +100,7 @@ class DualAlgoTest (BitcoinTestFramework):
     curcnt = self.nodes[0].getblockcount ()
     target = auxpow.reverseHex (auxblock['_target'])
     apow = auxpow.computeAuxpow (auxblock['hash'], target, True)
-    res = self.nodes[0].getauxblock (auxblock['hash'], apow)
+    res = self.nodes[0].submitauxblock (auxblock['hash'], apow)
     assert res
 
     # Check submitted data.
@@ -120,12 +121,12 @@ class DualAlgoTest (BitcoinTestFramework):
       trials += 1
 
       # Force an update of the block so we get a new trial.
-      self.nodes[0].getauxblock (0)
-      auxblock = self.nodes[0].getauxblock (1)
+      self.nodes[0].createauxblock (coinbaseAddr, 0)
+      auxblock = self.nodes[0].createauxblock (coinbaseAddr, 1)
 
       target = auxpow.reverseHex (auxblock['_target'])
       apow = auxpow.computeAuxpow (auxblock['hash'], target, False)
-      ok = self.nodes[0].getauxblock (auxblock['hash'], apow)
+      ok = self.nodes[0].submitauxblock (auxblock['hash'], apow)
     print ("Found scrypt block after %d trials." % trials)
 
     # Check submitted auxblock.

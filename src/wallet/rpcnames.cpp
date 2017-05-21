@@ -249,7 +249,7 @@ name_list (const JSONRPCRequest& request)
                        nameOp.getAddress (), builder.getHeight ());
 
       const bool mine = IsMine (*pwallet, nameOp.getAddress ());
-      obj.push_back (Pair ("transferred", !mine));
+      obj.pushKV ("transferred", !mine);
 
       builder.add (name, obj);
     }
@@ -621,7 +621,7 @@ name_register (const JSONRPCRequest& request)
 
   CReserveKey keyName(pwallet);
   CPubKey pubKeyReserve;
-  const bool ok = keyName.GetReservedKey (pubKeyReserve);
+  const bool ok = keyName.GetReservedKey (pubKeyReserve, true);
   assert (ok);
   bool usedKey = false;
 

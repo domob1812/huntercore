@@ -41,14 +41,14 @@ getNameInfo (const valtype& name, const valtype& value,
              const CScript& addr, int height)
 {
   UniValue obj(UniValue::VOBJ);
-  obj.push_back (Pair ("name", ValtypeToString (name)));
+  obj.pushKV ("name", ValtypeToString (name));
   if (!dead)
-    obj.push_back (Pair ("value", ValtypeToString (value)));
-  obj.push_back (Pair ("dead", dead));
-  obj.push_back (Pair ("height", height));
-  obj.push_back (Pair ("txid", outp.hash.GetHex ()));
+    obj.pushKV ("value", ValtypeToString (value));
+  obj.pushKV ("dead", dead);
+  obj.pushKV ("height", height);
+  obj.pushKV ("txid", outp.hash.GetHex ());
   if (!dead)
-    obj.push_back (Pair ("vout", static_cast<int> (outp.n)));
+    obj.pushKV ("vout", static_cast<int> (outp.n));
 
   /* Try to extract the address.  May fail if we can't parse the script
      as a "standard" script.  */
@@ -61,7 +61,7 @@ getNameInfo (const valtype& name, const valtype& value,
         addrStr = addrParsed.ToString ();
       else
         addrStr = "<nonstandard>";
-      obj.push_back (Pair ("address", addrStr));
+      obj.pushKV ("address", addrStr);
     }
 
   return obj;
@@ -412,8 +412,8 @@ name_filter (const JSONRPCRequest& request)
   if (stats)
     {
       UniValue res(UniValue::VOBJ);
-      res.push_back (Pair ("blocks", chainActive.Height ()));
-      res.push_back (Pair ("count", static_cast<int> (count)));
+      res.pushKV ("blocks", chainActive.Height ());
+      res.pushKV ("count", static_cast<int> (count));
 
       return res;
     }
@@ -501,17 +501,17 @@ name_pending (const JSONRPCRequest& request)
             }
 
           UniValue obj(UniValue::VOBJ);
-          obj.push_back (Pair ("op", strOp));
-          obj.push_back (Pair ("name", name));
-          obj.push_back (Pair ("value", value));
-          obj.push_back (Pair ("txid", tx->GetHash ().GetHex ()));
+          obj.pushKV ("op", strOp);
+          obj.pushKV ("name", name);
+          obj.pushKV ("value", value);
+          obj.pushKV ("txid", tx->GetHash ().GetHex ());
 
 #ifdef ENABLE_WALLET
           isminetype mine = ISMINE_NO;
           if (pwalletMain)
             mine = IsMine (*pwalletMain, op.getAddress ());
           const bool isMine = (mine & ISMINE_SPENDABLE);
-          obj.push_back (Pair ("ismine", isMine));
+          obj.pushKV ("ismine", isMine);
 #endif
 
           arr.push_back (obj);

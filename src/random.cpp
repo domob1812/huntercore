@@ -203,9 +203,42 @@ void GetRandBytes(unsigned char* buf, int num)
     }
 }
 
+static void AddDataToRng(void* data, size_t len);
+
+void RandAddSeedSleep()
+{
+    int64_t nPerfCounter1 = GetPerformanceCounter();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    int64_t nPerfCounter2 = GetPerformanceCounter();
+
+    // Combine with and update state
+    AddDataToRng(&nPerfCounter1, sizeof(nPerfCounter1));
+    AddDataToRng(&nPerfCounter2, sizeof(nPerfCounter2));
+
+    memory_cleanse(&nPerfCounter1, sizeof(nPerfCounter1));
+    memory_cleanse(&nPerfCounter2, sizeof(nPerfCounter2));
+}
+
+
 static std::mutex cs_rng_state;
 static unsigned char rng_state[32] = {0};
 static uint64_t rng_counter = 0;
+
+static void AddDataToRng(void* data, size_t len) {
+    CSHA512 hasher;
+    hasher.Write((const unsigned char*)&len, sizeof(len));
+    hasher.Write((const unsigned char*)data, len);
+    unsigned char buf[64];
+    {
+        std::unique_lock<std::mutex> lock(cs_rng_state);
+        hasher.Write(rng_state, sizeof(rng_state));
+        hasher.Write((const unsigned char*)&rng_counter, sizeof(rng_counter));
+        ++rng_counter;
+        hasher.Finalize(buf);
+        memcpy(rng_state, buf + 32, 32);
+    }
+    memory_cleanse(buf, 64);
+}
 
 void GetStrongRandBytes(unsigned char* out, int num)
 {
@@ -269,6 +302,26 @@ void FastRandomContext::RandomSeed()
     uint256 seed = GetRandHash();
     rng.SetKey(seed.begin(), 32);
     requires_seed = false;
+}
+
+uint256 FastRandomContext::rand256()
+{
+    if (bytebuf_size < 32) {
+        FillByteBuffer();
+    }
+    uint256 ret;
+    memcpy(ret.begin(), bytebuf + 64 - bytebuf_size, 32);
+    bytebuf_size -= 32;
+    return ret;
+}
+
+std::vector<unsigned char> FastRandomContext::randbytes(size_t len)
+{
+    std::vector<unsigned char> ret(len);
+    if (len > 0) {
+        rng.Output(&ret[0], len);
+    }
+    return ret;
 }
 
 FastRandomContext::FastRandomContext(const uint256& seed) : requires_seed(false), bytebuf_size(0), bitbuf_size(0)

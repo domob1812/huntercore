@@ -604,8 +604,8 @@ void CBlockPolicyEstimator::processBlock(unsigned int nBlockHeight,
 
     unsigned int countedTxs = 0;
     // Update averages with data points from current block
-    for (unsigned int i = 0; i < entries.size(); i++) {
-        if (processBlockTx(nBlockHeight, entries[i]))
+    for (const auto& entry : entries) {
+        if (processBlockTx(nBlockHeight, entry))
             countedTxs++;
     }
 
@@ -786,7 +786,7 @@ CFeeRate CBlockPolicyEstimator::estimateSmartFee(int confTarget, int *answerFoun
          * This is necessary to preserve monotonically increasing estimates.
          * For non-conservative estimates we do the same thing for 2*target, but
          * for conservative estimates we want to skip these shorter horizons
-         * checks for 2*target becuase we are taking the max over all time
+         * checks for 2*target because we are taking the max over all time
          * horizons so we already have monotonically increasing estimates and
          * the purpose of conservative estimates is not to let short term
          * fluctuations lower our estimates by too much.
@@ -855,13 +855,13 @@ bool CBlockPolicyEstimator::Read(CAutoFile& filein)
     try {
         LOCK(cs_feeEstimator);
         int nVersionRequired, nVersionThatWrote;
-        unsigned int nFileBestSeenHeight, nFileHistoricalFirst, nFileHistoricalBest;
         filein >> nVersionRequired >> nVersionThatWrote;
         if (nVersionRequired > CLIENT_VERSION)
             return error("CBlockPolicyEstimator::Read(): up-version (%d) fee estimate file", nVersionRequired);
 
         // Read fee estimates file into temporary variables so existing data
         // structures aren't corrupted if there is an exception.
+        unsigned int nFileBestSeenHeight;
         filein >> nFileBestSeenHeight;
 
         if (nVersionThatWrote < 149900) {
@@ -890,6 +890,7 @@ bool CBlockPolicyEstimator::Read(CAutoFile& filein)
             }
         }
         else { // nVersionThatWrote >= 149900
+            unsigned int nFileHistoricalFirst, nFileHistoricalBest;
             filein >> nFileHistoricalFirst >> nFileHistoricalBest;
             if (nFileHistoricalFirst > nFileHistoricalBest || nFileHistoricalBest > nFileBestSeenHeight) {
                 throw std::runtime_error("Corrupt estimates file. Historical block range for estimates is invalid");
@@ -944,7 +945,7 @@ void CBlockPolicyEstimator::FlushUnconfirmed(CTxMemPool& pool) {
         removeTx(txid, false);
     }
     int64_t endclear = GetTimeMicros();
-    LogPrint(BCLog::ESTIMATEFEE, "Recorded %u unconfirmed txs from mempool in %ld micros\n",txids.size(), endclear - startclear);
+    LogPrint(BCLog::ESTIMATEFEE, "Recorded %u unconfirmed txs from mempool in %gs\n",txids.size(), (endclear - startclear)*0.000001);
 }
 
 FeeFilterRounder::FeeFilterRounder(const CFeeRate& minIncrementalFee)

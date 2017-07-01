@@ -5,6 +5,7 @@
 """Base class for RPC testing."""
 
 from collections import deque
+from enum import Enum
 import logging
 import optparse
 import os
@@ -32,15 +33,24 @@ from .util import (
     p2p_port,
     rpc_url,
     set_node_times,
-    start_node,
-    start_nodes,
-    stop_node,
-    stop_nodes,
+    _start_node,
+    _start_nodes,
+    _stop_node,
+    _stop_nodes,
     sync_blocks,
     sync_mempools,
     wait_for_bitcoind_start,
 )
 from .authproxy import JSONRPCException
+
+class TestStatus(Enum):
+    PASSED = 1
+    FAILED = 2
+    SKIPPED = 3
+
+TEST_EXIT_PASSED = 0
+TEST_EXIT_FAILED = 1
+TEST_EXIT_SKIPPED = 77
 
 class BitcoinTestFramework(object):
     """Base class for a bitcoin test script.
@@ -58,11 +68,6 @@ class BitcoinTestFramework(object):
     This class also contains various public and private helper methods."""
 
     # Methods to override in subclass test scripts.
-
-    TEST_EXIT_PASSED = 0
-    TEST_EXIT_FAILED = 1
-    TEST_EXIT_SKIPPED = 77
-
     def __init__(self):
         self.num_nodes = 4
         self.setup_clean_chain = False
@@ -92,7 +97,7 @@ class BitcoinTestFramework(object):
         extra_args = None
         if hasattr(self, "extra_args"):
             extra_args = self.extra_args
-        self.nodes = start_nodes(self.num_nodes, self.options.tmpdir, extra_args)
+        self.nodes = _start_nodes(self.num_nodes, self.options.tmpdir, extra_args)
 
     def run_test(self):
         raise NotImplementedError
@@ -110,8 +115,7 @@ class BitcoinTestFramework(object):
                           help="Source directory containing huntercoind/huntercoin-cli (default: %default)")
         parser.add_option("--cachedir", dest="cachedir", default=os.path.normpath(os.path.dirname(os.path.realpath(__file__))+"/../../cache"),
                           help="Directory for caching pregenerated datadirs")
-        parser.add_option("--tmpdir", dest="tmpdir", default=tempfile.mkdtemp(prefix="test"),
-                          help="Root directory for datadirs")
+        parser.add_option("--tmpdir", dest="tmpdir", help="Root directory for datadirs")
         parser.add_option("-l", "--loglevel", dest="loglevel", default="INFO",
                           help="log events at this level and higher to the console. Can be set to DEBUG, INFO, WARNING, ERROR or CRITICAL. Passing --loglevel DEBUG will output all logs to console. Note that logs at all levels are always written to the test_framework.log file in the temporary test directory.")
         parser.add_option("--tracerpc", dest="trace_rpc", default=False, action="store_true",
@@ -125,9 +129,6 @@ class BitcoinTestFramework(object):
         self.add_options(parser)
         (self.options, self.args) = parser.parse_args()
 
-        # backup dir variable for removal at cleanup
-        self.options.root, self.options.tmpdir = self.options.tmpdir, self.options.tmpdir + '/' + str(self.options.port_seed)
-
         if self.options.coveragedir:
             enable_coverage(self.options.coveragedir)
 
@@ -138,18 +139,24 @@ class BitcoinTestFramework(object):
         check_json_precision()
 
         # Set up temp directory and start logging
-        os.makedirs(self.options.tmpdir, exist_ok=False)
+        if self.options.tmpdir:
+            os.makedirs(self.options.tmpdir, exist_ok=False)
+        else:
+            self.options.tmpdir = tempfile.mkdtemp(prefix="test")
         self._start_logging()
 
-        success = False
+        success = TestStatus.FAILED
 
         try:
             self.setup_chain()
             self.setup_network()
             self.run_test()
-            success = True
+            success = TestStatus.PASSED
         except JSONRPCException as e:
             self.log.exception("JSONRPC error")
+        except SkipTest as e:
+            self.log.warning("Test Skipped: %s" % e.message)
+            success = TestStatus.SKIPPED
         except AssertionError as e:
             self.log.exception("Assertion failed")
         except KeyError as e:
@@ -161,15 +168,14 @@ class BitcoinTestFramework(object):
 
         if not self.options.noshutdown:
             self.log.info("Stopping nodes")
-            self.stop_nodes()
+            if self.nodes:
+                self.stop_nodes()
         else:
             self.log.info("Note: huntercoinds were not stopped and may still be running")
 
-        if not self.options.nocleanup and not self.options.noshutdown and success:
+        if not self.options.nocleanup and not self.options.noshutdown and success != TestStatus.FAILED:
             self.log.info("Cleaning up")
             shutil.rmtree(self.options.tmpdir)
-            if not os.listdir(self.options.root):
-                os.rmdir(self.options.root)
         else:
             self.log.warning("Not cleaning up dir %s" % self.options.tmpdir)
             if os.getenv("PYTHON_DEBUG", ""):
@@ -187,27 +193,31 @@ class BitcoinTestFramework(object):
                     except OSError:
                         print("Opening file %s failed." % fn)
                         traceback.print_exc()
-        if success:
+
+        if success == TestStatus.PASSED:
             self.log.info("Tests successful")
-            sys.exit(self.TEST_EXIT_PASSED)
+            sys.exit(TEST_EXIT_PASSED)
+        elif success == TestStatus.SKIPPED:
+            self.log.info("Test skipped")
+            sys.exit(TEST_EXIT_SKIPPED)
         else:
             self.log.error("Test failed. Test logging available at %s/test_framework.log", self.options.tmpdir)
             logging.shutdown()
-            sys.exit(self.TEST_EXIT_FAILED)
+            sys.exit(TEST_EXIT_FAILED)
 
     # Public helper methods. These can be accessed by the subclass test scripts.
 
     def start_node(self, i, dirname, extra_args=None, rpchost=None, timewait=None, binary=None, stderr=None):
-        return start_node(i, dirname, extra_args, rpchost, timewait, binary, stderr)
+        return _start_node(i, dirname, extra_args, rpchost, timewait, binary, stderr)
 
     def start_nodes(self, num_nodes, dirname, extra_args=None, rpchost=None, timewait=None, binary=None):
-        return start_nodes(num_nodes, dirname, extra_args, rpchost, timewait, binary)
+        return _start_nodes(num_nodes, dirname, extra_args, rpchost, timewait, binary)
 
     def stop_node(self, num_node):
-        stop_node(self.nodes[num_node], num_node)
+        _stop_node(self.nodes[num_node], num_node)
 
     def stop_nodes(self):
-        stop_nodes(self.nodes)
+        _stop_nodes(self.nodes)
 
     def split_network(self):
         """
@@ -353,6 +363,11 @@ class BitcoinTestFramework(object):
 # 1 binary: test binary
 # 2 binaries: 1 test binary, 1 ref binary
 # n>2 binaries: 1 test binary, n-1 ref binaries
+
+class SkipTest(Exception):
+    """This exception is raised to skip a test"""
+    def __init__(self, message):
+        self.message = message
 
 class ComparisonTestFramework(BitcoinTestFramework):
 

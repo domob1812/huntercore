@@ -390,19 +390,17 @@ StepData::addTransaction (const CTransaction& tx, const CCoinsView* pview,
              has been signed by the address owner and thus authorizes the
              address change operation.  */
           bool found = false;
-          BOOST_FOREACH (const CTxIn& txi, tx.vin)
+          for (const auto& txi : tx.vin)
             {
               const COutPoint prevout = txi.prevout;
-              CCoins coins;
+              Coin coin;
 
-              if (!pview->GetCoins (prevout.hash, coins)
-                    || !coins.IsAvailable (prevout.n))
+              if (!pview->GetCoin (prevout, coin))
                 continue;
 
-              const CTxOut& prevTxo = coins.vout[prevout.n];
               CTxDestination dest;
               CBitcoinAddress addrParsed;
-              if (ExtractDestination (prevTxo.scriptPubKey, dest)
+              if (ExtractDestination (coin.out.scriptPubKey, dest)
                     && addrParsed.Set (dest)
                     && addrParsed.ToString () == addressLock)
                 {

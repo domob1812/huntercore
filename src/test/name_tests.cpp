@@ -15,6 +15,7 @@
 #include "validation.h"
 
 #include "test/test_bitcoin.h"
+#include "test/testutil.h"
 
 #include <boost/test/unit_test.hpp>
 
@@ -448,19 +449,22 @@ BOOST_AUTO_TEST_CASE (name_iteration)
  * @param scr The script that should be provided as output.
  * @param nHeight The height of the coin.
  * @param view Add it to this view.
- * @return The txid.
+ * @return The out point for the newly added coin.
  */
-static uint256
+static COutPoint
 addTestCoin (const CScript& scr, unsigned nHeight, CCoinsViewCache& view)
 {
+  const CTxOut txout(1000 * COIN, scr);
+
   CMutableTransaction mtx;
-  mtx.vout.push_back (CTxOut (1000 * COIN, scr));
+  mtx.vout.push_back (txout);
   const CTransaction tx(mtx);
 
-  CCoinsModifier entry = view.ModifyCoins (tx.GetHash ());
-  *entry = CCoins (tx, nHeight);
+  Coin coin(txout, nHeight, false, false);
+  const COutPoint outp(tx.GetHash (), 0);
+  view.AddCoin (outp, std::move (coin), false);
 
-  return tx.GetHash ();
+  return outp;
 }
 
 BOOST_AUTO_TEST_CASE (name_tx_verification)
@@ -492,14 +496,14 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
                                                               value);
   const CScript scrUpdate = CNameScript::buildNameUpdate (addr, name1, value);
 
-  const uint256 inCoin = addTestCoin (addr, 1, view);
-  const uint256 inNew = addTestCoin (scrNew, 100000, view);
-  const uint256 inFirst = addTestCoin (scrFirst, 100000, view);
-  const uint256 inReg = addTestCoin (scrRegister, 100000, view);
-  const uint256 inUpdate = addTestCoin (scrUpdate, 100000, view);
+  const COutPoint inCoin = addTestCoin (addr, 1, view);
+  const COutPoint inNew = addTestCoin (scrNew, 100000, view);
+  const COutPoint inFirst = addTestCoin (scrFirst, 100000, view);
+  const COutPoint inReg = addTestCoin (scrRegister, 100000, view);
+  const COutPoint inUpdate = addTestCoin (scrUpdate, 100000, view);
 
   CNameData data1;
-  data1.fromScript (100000, COutPoint (inFirst, 0), CNameScript (scrFirst));
+  data1.fromScript (100000, inFirst, CNameScript (scrFirst));
   view.SetName (name1, data1, false);
 
   /* ****************************************************** */
@@ -510,7 +514,7 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   CScript scr;
   std::string reason;
 
-  mtx.vin.push_back (CTxIn (COutPoint (inCoin, 0)));
+  mtx.vin.push_back (CTxIn (inCoin));
   mtx.vout.push_back (CTxOut (COIN, addr));
   const CTransaction baseTx(mtx);
 
@@ -521,10 +525,10 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
 
   /* Name tx should be Namecoin version.  */
   mtx = CMutableTransaction (baseTx);
-  mtx.vin.push_back (CTxIn (COutPoint (inNew, 0)));
+  mtx.vin.push_back (CTxIn (inNew));
   BOOST_CHECK (!CheckNameTransaction (mtx, 200000, view, state, 0));
   mtx.SetNamecoin ();
-  mtx.vin.push_back (CTxIn (COutPoint (inUpdate, 0)));
+  mtx.vin.push_back (CTxIn (inUpdate));
   BOOST_CHECK (!CheckNameTransaction (mtx, 200000, view, state, 0));
 
   /* Duplicate name outs are not allowed.  */
@@ -544,7 +548,7 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   mtx.SetNamecoin ();
   mtx.vout.push_back (CTxOut (COIN, scrNew));
   BOOST_CHECK (CheckNameTransaction (mtx, 200000, view, state, 0));
-  mtx.vin.push_back (CTxIn (COutPoint (inNew, 0)));
+  mtx.vin.push_back (CTxIn (inNew));
   BOOST_CHECK (!CheckNameTransaction (mtx, 200000, view, state, 0));
   BOOST_CHECK (IsStandardTx (mtx, reason));
 
@@ -565,9 +569,9 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   CCoinsViewCache viewFirst(&view);
   CCoinsViewCache viewReg(&view);
   CCoinsViewCache viewUpd(&view);
-  data1.fromScript (100000, COutPoint (inReg, 0), CNameScript (scrRegister));
+  data1.fromScript (100000, inReg, CNameScript (scrRegister));
   viewReg.SetName (name1, data1, false);
-  data1.fromScript (100000, COutPoint (inUpdate, 0), CNameScript (scrUpdate));
+  data1.fromScript (100000, inUpdate, CNameScript (scrUpdate));
   viewUpd.SetName (name1, data1, false);
 
   /* Check update of UPDATE output.  */
@@ -575,14 +579,14 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   mtx.SetNamecoin ();
   mtx.vout.push_back (CTxOut (1000 * COIN, scrUpdate));
   BOOST_CHECK (!CheckNameTransaction (mtx, 135999, viewUpd, state, 0));
-  mtx.vin.push_back (CTxIn (COutPoint (inUpdate, 0)));
+  mtx.vin.push_back (CTxIn (inUpdate));
   BOOST_CHECK (CheckNameTransaction (mtx, 135999, viewUpd, state, 0));
   BOOST_CHECK (IsStandardTx (mtx, reason));
 
   /* Check that a dead player is not allowed to be updated.  */
   CCoinsViewCache viewDead(&view);
   CNameData dataDead;
-  dataDead.setDead (150000, inUpdate);
+  dataDead.setDead (150000, inUpdate.hash);
   viewDead.SetName (name1, dataDead, false);
   BOOST_CHECK (!CheckNameTransaction (mtx, 155000, viewDead, state, 0));
 
@@ -590,12 +594,12 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
      be before the old-style FIRSTUPDATE test, since the following greedy test
      is based on mtx inputting the old-style FIRSTUPDATE output.  */
   mtx.vin.clear ();
-  mtx.vin.push_back (CTxIn (COutPoint (inReg, 0)));
+  mtx.vin.push_back (CTxIn (inReg));
   BOOST_CHECK (CheckNameTransaction (mtx, 135999, viewReg, state, 0));
 
   /* Check update of FIRSTUPDATE output.  */
   mtx.vin.clear ();
-  mtx.vin.push_back (CTxIn (COutPoint (inFirst, 0)));
+  mtx.vin.push_back (CTxIn (inFirst));
   BOOST_CHECK (CheckNameTransaction (mtx, 135999, viewFirst, state, 0));
 
   /* Greedy names.  In Huntercoin, the check here is that the amount
@@ -608,7 +612,7 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   /* Value length limits.  */
   mtx = CMutableTransaction (baseTx);
   mtx.SetNamecoin ();
-  mtx.vin.push_back (CTxIn (COutPoint (inUpdate, 0)));
+  mtx.vin.push_back (CTxIn (inUpdate));
   scr = CNameScript::buildNameUpdate (addr, name1, tooLongValue);
   mtx.vout.push_back (CTxOut (COIN, scr));
   BOOST_CHECK (!CheckNameTransaction (mtx, 110000, viewUpd, state, 0));
@@ -623,7 +627,7 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   mtx = CMutableTransaction (baseTx);
   mtx.SetNamecoin ();
   mtx.vout.push_back (CTxOut (COIN, scrUpdate));
-  mtx.vin.push_back (CTxIn (COutPoint (inNew, 0)));
+  mtx.vin.push_back (CTxIn (inNew));
   CCoinsViewCache viewNew(&view);
   viewNew.DeleteName (name1);
   BOOST_CHECK (!CheckNameTransaction (mtx, 110000, viewNew, state, 0));
@@ -639,7 +643,7 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   mtx.SetNamecoin ();
   mtx.vout.push_back (CTxOut (COIN, scrFirst));
   BOOST_CHECK (!CheckNameTransaction (mtx, 100002, viewClean, state, 0));
-  mtx.vin.push_back (CTxIn (COutPoint (inNew, 0)));
+  mtx.vin.push_back (CTxIn (inNew));
   BOOST_CHECK (CheckNameTransaction (mtx, 100002, viewClean, state, 0));
   BOOST_CHECK (IsStandardTx (mtx, reason));
 
@@ -667,10 +671,10 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   mtx = CMutableTransaction (baseTx);
   mtx.SetNamecoin ();
   mtx.vout.push_back (CTxOut (COIN, scrFirst));
-  mtx.vin.push_back (CTxIn (COutPoint (inUpdate, 0)));
+  mtx.vin.push_back (CTxIn (inUpdate));
   BOOST_CHECK (!CheckNameTransaction (mtx, 100002, viewClean, state, 0));
   mtx.vin.clear ();
-  mtx.vin.push_back (CTxIn (COutPoint (inFirst, 0)));
+  mtx.vin.push_back (CTxIn (inFirst));
   BOOST_CHECK (!CheckNameTransaction (mtx, 100002, viewClean, state, 0));
 
   /* New-style name registration.  */
@@ -679,7 +683,7 @@ BOOST_AUTO_TEST_CASE (name_tx_verification)
   mtx.vout.push_back (CTxOut (COIN, scrRegister));
   BOOST_CHECK (CheckNameTransaction (mtx, 100000, viewClean, state, 0));
   BOOST_CHECK (CheckNameTransaction (mtx, 100002, viewClean, state, 0));
-  mtx.vin.push_back (CTxIn (COutPoint (inNew, 0)));
+  mtx.vin.push_back (CTxIn (inNew));
   BOOST_CHECK (!CheckNameTransaction (mtx, 100002, viewClean, state, 0));
 }
 

@@ -85,12 +85,12 @@ class GameTestFramework (NameTestFramework):
       txid = self.pendingTxid (node, name)
       assert txid is not None
       txids.append (txid)
-      self.nodes[node].prioritisetransaction (txid, -100000000)
+      self.nodes[node].prioritisetransaction (txid=txid, fee_delta=-100000000)
 
     self.generate (node, numBlocks)
 
     for txid in txids:
-      self.nodes[node].prioritisetransaction (txid, 100000000)
+      self.nodes[node].prioritisetransaction (txid=txid, fee_delta=100000000)
 
   def finishMove (self, node, name, ind, advanceFirst = True):
     """

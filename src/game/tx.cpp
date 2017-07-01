@@ -194,10 +194,10 @@ ApplyGameTransactions (const std::vector<CTransactionRef>& vGameTx,
                        const StepResult& stepResult, unsigned nHeight,
                        CCoinsViewCache& view, CBlockUndo& undo)
 {
-  for (unsigned i = 0; i < vGameTx.size (); ++i)
+  for (const auto& gameTxRef : vGameTx)
     {
       undo.vtxundo.push_back (CTxUndo ());
-      UpdateCoins (*vGameTx[i], view, undo.vtxundo.back (), nHeight);
+      UpdateCoins (*gameTxRef, view, undo.vtxundo.back (), nHeight);
     }
 
   /* Update name db for killed players.  */

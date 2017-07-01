@@ -336,15 +336,15 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
   int nameIn = -1;
   CNameScript nameOpIn;
   CAmount nameAmountIn;
-  CCoins coinsIn;
+  Coin coinIn;
   for (unsigned i = 0; i < tx.vin.size (); ++i)
     {
       const COutPoint& prevout = tx.vin[i].prevout;
-      CCoins coins;
-      if (!view.GetCoins (prevout.hash, coins))
-        return error ("%s: failed to fetch input coins for %s", __func__, txid);
+      Coin coin;
+      if (!view.GetCoin (prevout, coin))
+        return error ("%s: failed to fetch input coin for %s", __func__, txid);
 
-      const CNameScript op(coins.vout[prevout.n].scriptPubKey);
+      const CNameScript op(coin.out.scriptPubKey);
       if (op.isNameOp ())
         {
           if (nameIn != -1)
@@ -352,8 +352,8 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
                                          " transaction %s", __func__, txid));
           nameIn = i;
           nameOpIn = op;
-          nameAmountIn = coins.vout[prevout.n].nValue;
-          coinsIn = coins;
+          nameAmountIn = coin.out.nValue;
+          coinIn = coin;
         }
     }
 
@@ -470,7 +470,7 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
       /* This is an internal consistency check.  If everything is fine,
          the input coins from the UTXO database should match the
          name database.  */
-      assert (static_cast<unsigned> (coinsIn.nHeight) == oldName.getHeight ());
+      assert (static_cast<unsigned> (coinIn.nHeight) == oldName.getHeight ());
       assert (tx.vin[nameIn].prevout == oldName.getUpdateOutpoint ());
 
       return true;
@@ -490,8 +490,8 @@ CheckNameTransaction (const CTransaction& tx, unsigned nHeight,
          to the mempool.  */
       if (!fMempool)
         {
-          assert (static_cast<unsigned> (coinsIn.nHeight) != MEMPOOL_HEIGHT);
-          if (coinsIn.nHeight + MIN_FIRSTUPDATE_DEPTH > nHeight)
+          assert (static_cast<unsigned> (coinIn.nHeight) != MEMPOOL_HEIGHT);
+          if (coinIn.nHeight + MIN_FIRSTUPDATE_DEPTH > nHeight)
             return state.Invalid (error ("CheckNameTransaction: NAME_NEW"
                                          " is not mature for FIRST_UPDATE"));
         }
@@ -541,20 +541,12 @@ ApplyNameTransaction (const CTransaction& tx, unsigned nHeight,
       && type != CChainParams::BUG_FULLY_APPLY)
     {
       if (type == CChainParams::BUG_FULLY_IGNORE)
-        {
-          CCoinsModifier coins = view.ModifyCoins (txHash);
-          for (unsigned i = 0; i < tx.vout.size (); ++i)
-            {
-              const CNameScript op(tx.vout[i].scriptPubKey);
-              if (op.isNameOp () && op.isAnyUpdate ())
-                {
-                  if (!coins->IsAvailable (i) || !coins->Spend (i))
-                    LogPrintf ("ERROR: %s : spending buggy name output failed",
-                               __func__);
-                }
-            }
-        }
-
+        for (unsigned i = 0; i < tx.vout.size (); ++i)
+          {
+            const CNameScript op(tx.vout[i].scriptPubKey);
+            if (op.isNameOp () && op.isAnyUpdate ())
+              view.SpendCoin (COutPoint (txHash, i));
+          }
       return;
     }
 

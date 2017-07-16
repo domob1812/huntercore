@@ -202,7 +202,7 @@ game_getpath (const JSONRPCRequest& request)
 
   UniValue res(UniValue::VARR);
   bool first = true;
-  BOOST_FOREACH(const Coord& c, path)
+  for (const auto& c : path)
     {
       if (first)
         {

@@ -25,8 +25,6 @@
 #include "util.h"
 #include "validation.h"
 
-#include <boost/foreach.hpp>
-
 bool
 CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
                         const StepResult& stepResult,
@@ -43,7 +41,7 @@ CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
   const PlayerSet& killedPlayers = stepResult.GetKilledPlayers ();
   const KilledByMap& killedBy = stepResult.GetKilledBy ();
   txKills.vin.reserve (killedPlayers.size ());
-  BOOST_FOREACH(const PlayerID &victim, killedPlayers)
+  for (const auto& victim : killedPlayers)
     {
       const valtype vchName = ValtypeFromString (victim);
       CNameData data;
@@ -126,7 +124,7 @@ CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
   txBounties.vin.reserve (stepResult.bounties.size ());
   txBounties.vout.reserve (stepResult.bounties.size ());
 
-  BOOST_FOREACH(const CollectedBounty& bounty, stepResult.bounties)
+  for (const auto& bounty : stepResult.bounties)
     {
       const valtype vchName = ValtypeFromString (bounty.character.player);
       CNameData data;
@@ -209,7 +207,7 @@ ApplyGameTransactions (const std::vector<CTransactionRef>& vGameTx,
       assert (txKills.vout.empty ());
       assert (txKills.vin.size () == victims.size ());
 
-      BOOST_FOREACH(const PlayerID& name, victims)
+      for (const auto& name : victims)
         {
           const valtype& vchName = ValtypeFromString (name);
           LogPrint (BCLog::NAMES, "Killing player at height %d: %s\n",

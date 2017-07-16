@@ -20,6 +20,7 @@ import datetime
 import os
 import time
 import shutil
+import signal
 import sys
 import subprocess
 import tempfile
@@ -82,7 +83,7 @@ BASE_SCRIPTS= [
     'rawtransactions.py',
     'reindex.py',
     # vv Tests less than 30s vv
-    "zmq_test.py",
+    'zmq_test.py',
     'mempool_resurrect_test.py',
     'txn_doublespend.py --mineblock',
     'txn_clone.py',
@@ -113,10 +114,13 @@ BASE_SCRIPTS= [
     # FIXME: Reenable and possibly fix once the BIP9 mining is activated.
     #'nulldummy.py',
     'import-rescan.py',
+    'mining.py',
     'bumpfee.py',
     'rpcnamedargs.py',
     'listsinceblock.py',
     'p2p-leaktests.py',
+    'wallet-encryption.py',
+    'uptime.py',
 
     # auxpow tests
     'auxpow_mining.py',
@@ -155,6 +159,7 @@ EXTENDED_SCRIPTS = [
     # vv Tests less than 5m vv
     'maxuploadtarget.py',
     'mempool_packages.py',
+    'dbcrash.py',
     # vv Tests less than 2m vv
     'bip68-sequence.py',
     'getblocktemplate_longpoll.py',
@@ -169,7 +174,7 @@ EXTENDED_SCRIPTS = [
     'bip65-cltv-p2p.py',
     'bipdersig-p2p.py',
     'bipdersig.py',
-    'getblocktemplate_proposals.py',
+    'example_test.py',
     'txn_doublespend.py',
     'txn_clone.py --mineblock',
     'forknotify.py',
@@ -432,6 +437,10 @@ class TestHandler:
             time.sleep(.5)
             for j in self.jobs:
                 (name, time0, proc, log_out, log_err) = j
+                if os.getenv('TRAVIS') == 'true' and int(time.time() - time0) > 20 * 60:
+                    # In travis, timeout individual tests after 20 minutes (to stop tests hanging and not
+                    # providing useful output.
+                    proc.send_signal(signal.SIGINT)
                 if proc.poll() is not None:
                     log_out.seek(0), log_err.seek(0)
                     [stdout, stderr] = [l.read().decode('utf-8') for l in (log_out, log_err)]

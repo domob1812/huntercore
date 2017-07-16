@@ -270,7 +270,7 @@ void Move::ApplyWaypoints(GameState &state) const
     if (pl == state.players.end ())
       return;
 
-    BOOST_FOREACH(const PAIRTYPE(int, std::vector<Coord>) &p, waypoints)
+    for (const auto& p : waypoints)
     {
         std::map<int, CharacterState>::iterator mi;
         mi = pl->second.characters.find(p.first);
@@ -350,7 +350,7 @@ StepData::addTransaction (const CTransaction& tx, const CCoinsView* pview,
      function fails later with an error.  */
   std::vector<Move> newMoves;
 
-  BOOST_FOREACH (const CTxOut& txo, tx.vout)
+  for (const auto& txo : tx.vout)
     {
       const CNameScript nameOp(txo.scriptPubKey);
       if (!nameOp.isNameOp () || !nameOp.isAnyUpdate ())

@@ -12,8 +12,6 @@
 
 class CBlock;
 class CBlockIndex;
-class CScript;
-class uint256;
 class UniValue;
 
 /**

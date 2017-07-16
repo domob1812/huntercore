@@ -215,7 +215,7 @@ name_list (const JSONRPCRequest& request)
         {
           for (const auto& txIn : tx.tx->vin)
             {
-              if (!pwalletMain->IsMine (txIn))
+              if (!pwallet->IsMine (txIn))
                 continue;
 
               valtype name;

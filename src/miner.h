@@ -19,9 +19,7 @@
 
 class CBlockIndex;
 class CChainParams;
-class CReserveKey;
 class CScript;
-class CWallet;
 
 static const bool DEFAULT_PRINTPRIORITY = false;
 

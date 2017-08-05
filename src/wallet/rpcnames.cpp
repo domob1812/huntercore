@@ -18,6 +18,7 @@
 #include "txmempool.h"
 #include "util.h"
 #include "validation.h"
+#include "wallet/coincontrol.h"
 #include "wallet/wallet.h"
 
 #include <univalue.h>
@@ -325,8 +326,10 @@ name_new (const JSONRPCRequest& request)
   const CScript addrName = GetScriptForDestination (pubKey.GetID ());
   const CScript newScript = CNameScript::buildNameNew (addrName, hash);
 
+  CCoinControl coinControl;
   CWalletTx wtx;
-  SendMoneyToScript (pwallet, newScript, NULL, NAMENEW_COIN_AMOUNT, false, wtx);
+  SendMoneyToScript (pwallet, newScript, nullptr,
+                     NAMENEW_COIN_AMOUNT, false, wtx, coinControl);
 
   keyName.KeepKey ();
 
@@ -459,8 +462,10 @@ name_firstupdate (const JSONRPCRequest& request)
     = CNameScript::buildNameFirstupdate (addrName, name, value, rand);
   const CAmount amount = GetRequiredGameFee (name, value);
 
+  CCoinControl coinControl;
   CWalletTx wtx;
-  SendMoneyToScript (pwallet, nameScript, &txIn, amount, false, wtx);
+  SendMoneyToScript (pwallet, nameScript, &txIn,
+                     amount, false, wtx, coinControl);
 
   if (usedKey)
     keyName.KeepKey ();
@@ -566,8 +571,10 @@ name_update (const JSONRPCRequest& request)
   CAmount amount = mi->second.lockedCoins;
   amount += GetRequiredGameFee (name, value);
 
+  CCoinControl coinControl;
   CWalletTx wtx;
-  SendMoneyToScript (pwallet, nameScript, &txIn, amount, false, wtx);
+  SendMoneyToScript (pwallet, nameScript, &txIn,
+                     amount, false, wtx, coinControl);
 
   if (usedKey)
     keyName.KeepKey ();
@@ -658,8 +665,10 @@ name_register (const JSONRPCRequest& request)
     = CNameScript::buildNameRegister (addrName, name, value);
   const CAmount amount = GetRequiredGameFee (name, value);
 
+  CCoinControl coinControl;
   CWalletTx wtx;
-  SendMoneyToScript (pwallet, nameScript, NULL, amount, false, wtx);
+  SendMoneyToScript (pwallet, nameScript, nullptr,
+                     amount, false, wtx, coinControl);
 
   if (usedKey)
     keyName.KeepKey ();
@@ -742,8 +751,9 @@ sendtoname (const JSONRPCRequest& request)
 
   EnsureWalletIsUnlocked(pwallet);
 
+  CCoinControl coinControl;
   SendMoneyToScript (pwallet, data.getAddress (), NULL,
-                     nAmount, fSubtractFeeFromAmount, wtx);
+                     nAmount, fSubtractFeeFromAmount, wtx, coinControl);
 
   return wtx.GetHash ().GetHex ();
 }

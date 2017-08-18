@@ -59,8 +59,8 @@ class GameBasicNamesTest (NameTestFramework):
     # Verify that the player is at the position we expect it to be.
     dat = self.nodes[2].game_getplayerstate (testname)
     assert_equal (dat['value'], Decimal('1'))
-    assert_equal (dat['0']['x'], 2)
-    assert_equal (dat['0']['y'], 2)
+    assert_equal (dat['characters']['0']['x'], 2)
+    assert_equal (dat['characters']['0']['y'], 2)
 
     # Check that registering another player of this name is not possible.
     new = self.nodes[1].name_new (testname)

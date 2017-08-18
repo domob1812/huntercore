@@ -47,7 +47,7 @@ class GameTestFramework (NameTestFramework):
     if not name in state['players']:
       return None
     data = state['players'][name]
-    if not str (ind) in data:
+    if not str (ind) in data['characters']:
       return None
 
     return Hunter (self, self.nodes[node], node, name, ind, data)
@@ -165,7 +165,7 @@ class Hunter:
     self.ind = ind
 
     self.colour = data['color']
-    hunterData = data[str (ind)]
+    hunterData = data['characters'][str (ind)]
     self.pos = [int (hunterData['x']), int (hunterData['y'])]
     self.loot = hunterData['loot']
     self.value = data['value']

@@ -840,45 +840,49 @@ PlayerState::CanSpawnCharacter() const
 
 UniValue PlayerState::ToJsonValue(int crown_index, bool dead /* = false*/) const
 {
-    UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("color", (int)color));
-    obj.push_back(Pair("value", ValueFromAmount(value)));
+  UniValue obj(UniValue::VOBJ);
+  obj.pushKV ("color", (int)color);
+  obj.pushKV ("value", ValueFromAmount(value));
 
-    /* If the character is poisoned, write that out.  Otherwise just
-       leave the field off.  */
-    if (remainingLife > 0)
-      obj.push_back (Pair("poison", remainingLife));
-    else
-      assert (remainingLife == -1);
+  /* If the character is poisoned, write that out.  Otherwise just
+     leave the field off.  */
+  if (remainingLife > 0)
+    obj.pushKV ("poison", remainingLife);
+  else
+    assert (remainingLife == -1);
 
-    if (!message.empty())
+  if (!message.empty())
     {
-        obj.push_back(Pair("msg", message));
-        obj.push_back(Pair("msg_block", message_block));
+      obj.pushKV ("msg", message);
+      obj.pushKV ("msg_block", message_block);
     }
 
-    if (!dead)
+  if (!dead)
     {
-        if (!address.empty())
-            obj.push_back(Pair("address", address));
-        if (!addressLock.empty())
-            obj.push_back(Pair("addressLock", address));
+      if (!address.empty())
+        obj.pushKV ("address", address);
+      if (!addressLock.empty())
+        obj.pushKV ("addressLock", address);
     }
-    else
+  else
     {
-        // Note: not all dead players are listed - only those who sent chat messages in their last move
-        assert(characters.empty());
-        obj.push_back(Pair("dead", 1));
+      // Note: not all dead players are listed - only those who sent chat
+      // messages in their last move.
+      assert(characters.empty());
+      obj.pushKV ("dead", 1);
     }
 
-    for (const auto& pc : characters)
-      {
-        int i = pc.first;
-        const CharacterState &ch = pc.second;
-        obj.push_back(Pair(strprintf("%d", i), ch.ToJsonValue(i == crown_index)));
-      }
+  UniValue characterObj(UniValue::VOBJ);
+  for (const auto& pc : characters)
+    {
+      int i = pc.first;
+      const CharacterState &ch = pc.second;
+      characterObj.pushKV (strprintf ("%d", i),
+                           ch.ToJsonValue (i == crown_index));
+    }
+  obj.pushKV ("characters", characterObj);
 
-    return obj;
+  return obj;
 }
 
 UniValue CharacterState::ToJsonValue(bool has_crown) const

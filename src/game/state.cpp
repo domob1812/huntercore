@@ -15,6 +15,7 @@
 
 #include "game/state.h"
 
+#include "core_io.h"
 #include "game/map.h"
 #include "game/move.h"
 #include "rpc/server.h"

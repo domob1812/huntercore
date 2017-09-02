@@ -19,7 +19,7 @@ bool CCoinsView::GetName(const valtype &name, CNameData &data) const { return fa
 bool CCoinsView::GetNameHistory(const valtype &name, CNameHistory &data) const { return false; }
 CNameIterator* CCoinsView::IterateNames() const { assert (false); }
 bool CCoinsView::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, const CNameCache &names) { return false; }
-CCoinsViewCursor *CCoinsView::Cursor() const { return 0; }
+CCoinsViewCursor *CCoinsView::Cursor() const { return nullptr; }
 bool CCoinsView::ValidateNameDB(CGameDB& gameDb) const { return false; }
 
 bool CCoinsView::HaveCoin(const COutPoint &outpoint) const

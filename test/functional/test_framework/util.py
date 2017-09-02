@@ -157,6 +157,28 @@ def str_to_b64str(string):
 def satoshi_round(amount):
     return Decimal(amount).quantize(Decimal('0.00000001'), rounding=ROUND_DOWN)
 
+def wait_until(predicate, *, attempts=float('inf'), timeout=float('inf'), lock=None):
+    if attempts == float('inf') and timeout == float('inf'):
+        timeout = 60
+    attempt = 0
+    timeout += time.time()
+
+    while attempt < attempts and time.time() < timeout:
+        if lock:
+            with lock:
+                if predicate():
+                    return
+        else:
+            if predicate():
+                return
+        attempt += 1
+        time.sleep(0.05)
+
+    # Print the cause of the timeout
+    assert_greater_than(attempts, attempt)
+    assert_greater_than(timeout, time.time())
+    raise RuntimeError('Unreachable')
+
 # RPC/P2P connection constants and functions
 ############################################
 
@@ -204,7 +226,7 @@ def rpc_port(n):
     return PORT_MIN + PORT_RANGE + n + (MAX_NODES * PortSeed.n) % (PORT_RANGE - 1 - MAX_NODES)
 
 def rpc_url(datadir, i, rpchost=None):
-    rpc_u, rpc_p = get_auth_cookie(datadir, i)
+    rpc_u, rpc_p = get_auth_cookie(datadir)
     host = '127.0.0.1'
     port = rpc_port(i)
     if rpchost:
@@ -249,7 +271,7 @@ def base_node_args(i):
 def get_datadir_path(dirname, n):
     return os.path.join(dirname, "node" + str(n))
 
-def get_auth_cookie(datadir, n):
+def get_auth_cookie(datadir):
     user = None
     password = None
     if os.path.isfile(os.path.join(datadir, "huntercoin.conf")):

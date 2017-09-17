@@ -10,6 +10,9 @@ from test_framework.util import *
 
 class GameBountiesTest (GameTestFramework):
 
+  def set_test_params (self):
+    self.setup_name_test ([[]] * 4)
+
   def run_test (self):
     # Register a player.
     self.register (0, "me", 0)

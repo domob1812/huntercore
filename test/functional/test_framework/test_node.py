@@ -18,8 +18,11 @@ from .util import (
     base_node_args,
     get_rpc_proxy,
     rpc_url,
+    wait_until,
 )
 from .authproxy import JSONRPCException
+
+BITCOIND_PROC_WAIT_TIMEOUT = 60
 
 class TestNode():
     """A class for representing a huntercoind node under test.
@@ -66,10 +69,14 @@ class TestNode():
         assert self.rpc_connected and self.rpc is not None, "Error: no RPC connection"
         return self.rpc.__getattr__(*args, **kwargs)
 
-    def start(self):
+    def start(self, extra_args=None, stderr=None):
         """Start the node."""
         base_args = base_node_args(self.index)
-        self.process = subprocess.Popen(self.args + self.extra_args + base_args, stderr=self.stderr)
+        if extra_args is None:
+            extra_args = self.extra_args
+        if stderr is None:
+            stderr = self.stderr
+        self.process = subprocess.Popen(self.args + extra_args + base_args, stderr=stderr)
         self.running = True
         self.log.debug("huntercoind started, waiting for RPC to come up")
 
@@ -80,7 +87,7 @@ class TestNode():
         for _ in range(poll_per_s * self.rpc_timeout):
             assert self.process.poll() is None, "huntercoind exited with status %i during initialization" % self.process.returncode
             try:
-                self.rpc = get_rpc_proxy(rpc_url(self.datadir, self.index, self.rpchost), self.index, coveragedir=self.coverage_dir)
+                self.rpc = get_rpc_proxy(rpc_url(self.datadir, self.index, self.rpchost), self.index, timeout=self.rpc_timeout, coveragedir=self.coverage_dir)
                 self.rpc.getblockcount()
                 # If the call to getblockcount() succeeds then the RPC connection is up
                 self.rpc_connected = True
@@ -123,14 +130,20 @@ class TestNode():
         if not self.running:
             return True
         return_code = self.process.poll()
-        if return_code is not None:
-            # process has stopped. Assert that it didn't return an error code.
-            assert_equal(return_code, 0)
-            self.running = False
-            self.process = None
-            self.log.debug("Node stopped")
-            return True
-        return False
+        if return_code is None:
+            return False
+
+        # process has stopped. Assert that it didn't return an error code.
+        assert_equal(return_code, 0)
+        self.running = False
+        self.process = None
+        self.rpc_connected = False
+        self.rpc = None
+        self.log.debug("Node stopped")
+        return True
+
+    def wait_until_stopped(self, timeout=BITCOIND_PROC_WAIT_TIMEOUT):
+        wait_until(self.is_node_stopped, timeout=timeout)
 
     def node_encrypt_wallet(self, passphrase):
         """"Encrypts the wallet.
@@ -138,17 +151,22 @@ class TestNode():
         This causes huntercoind to shutdown, so this method takes
         care of cleaning up resources."""
         self.encryptwallet(passphrase)
-        while not self.is_node_stopped():
-            time.sleep(0.1)
-        self.rpc = None
-        self.rpc_connected = False
+        self.wait_until_stopped()
 
 class TestNodeCLI():
     """Interface to bitcoin-cli for an individual node"""
 
     def __init__(self, binary, datadir):
+        self.args = []
         self.binary = binary
         self.datadir = datadir
+        self.input = None
+
+    def __call__(self, *args, input=None):
+        # TestNodeCLI is callable with bitcoin-cli command-line args
+        self.args = [str(arg) for arg in args]
+        self.input = input
+        return self
 
     def __getattr__(self, command):
         def dispatcher(*args, **kwargs):
@@ -161,9 +179,14 @@ class TestNodeCLI():
         pos_args = [str(arg) for arg in args]
         named_args = [str(key) + "=" + str(value) for (key, value) in kwargs.items()]
         assert not (pos_args and named_args), "Cannot use positional arguments and named arguments in the same bitcoin-cli call"
-        p_args = [self.binary, "-datadir=" + self.datadir]
+        p_args = [self.binary, "-datadir=" + self.datadir] + self.args
         if named_args:
             p_args += ["-named"]
         p_args += [command] + pos_args + named_args
-        cli_output = subprocess.check_output(p_args, universal_newlines=True)
-        return json.loads(cli_output, parse_float=decimal.Decimal)
+        process = subprocess.Popen(p_args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+        cli_stdout, cli_stderr = process.communicate(input=self.input)
+        returncode = process.poll()
+        if returncode:
+            # Ignore cli_stdout, raise with cli_stderr
+            raise subprocess.CalledProcessError(returncode, self.binary, output=cli_stderr)
+        return json.loads(cli_stdout, parse_float=decimal.Decimal)

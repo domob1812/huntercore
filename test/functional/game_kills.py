@@ -11,6 +11,9 @@ from test_framework.util import *
 
 class GameKillsTest (GameTestFramework):
 
+  def set_test_params (self):
+    self.setup_name_test ([[]] * 4)
+
   def run_test (self):
     # Create two players and kill them.
     print ("Creating and killing hunters...")

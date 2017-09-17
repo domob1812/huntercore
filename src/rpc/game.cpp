@@ -220,12 +220,12 @@ game_getpath (const JSONRPCRequest& request)
 /* ************************************************************************** */
 
 static const CRPCCommand commands[] =
-{ //  category              name                      actor (function)         okSafeMode
+{ //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
-    { "game",               "game_getplayerstate",    &game_getplayerstate,    true,  {"name","hash"} },
-    { "game",               "game_getstate",          &game_getstate,          true,  {"hash"} },
-    { "game",               "game_getpath",           &game_getpath,           true,  {"from","to"} },
-    { "game",               "game_waitforchange",     &game_waitforchange,     true,  {"hash"} },
+    { "game",               "game_getplayerstate",    &game_getplayerstate,    {"name","hash"} },
+    { "game",               "game_getstate",          &game_getstate,          {"hash"} },
+    { "game",               "game_getpath",           &game_getpath,           {"from","to"} },
+    { "game",               "game_waitforchange",     &game_waitforchange,     {"hash"} },
 };
 
 void RegisterGameRPCCommands(CRPCTable &t)

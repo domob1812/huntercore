@@ -1,4 +1,4 @@
-// Copyright (c) 2014-2016 Daniel Kraft
+// Copyright (c) 2014-2017 Daniel Kraft
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,6 +8,7 @@
 #include "names/common.h"
 #include "names/main.h"
 #include "primitives/transaction.h"
+#include "rpc/safemode.h"
 #include "rpc/server.h"
 #include "script/names.h"
 #include "txmempool.h"
@@ -45,7 +46,7 @@ getNameInfo (const valtype& name, const valtype& value,
   obj.pushKV ("name", ValtypeToString (name));
   if (!dead)
     obj.pushKV ("value", ValtypeToString (value));
-  obj.pushKV ("dead", dead);
+  obj.push_back (Pair ("dead", dead));
   obj.pushKV ("height", height);
   obj.pushKV ("txid", outp.hash.GetHex ());
   if (!dead)
@@ -56,10 +57,9 @@ getNameInfo (const valtype& name, const valtype& value,
   if (!dead)
     {
       CTxDestination dest;
-      CBitcoinAddress addrParsed;
       std::string addrStr;
-      if (ExtractDestination (addr, dest) && addrParsed.Set (dest))
-        addrStr = addrParsed.ToString ();
+      if (ExtractDestination (addr, dest))
+        addrStr = EncodeDestination (dest);
       else
         addrStr = "<nonstandard>";
       obj.pushKV ("address", addrStr);
@@ -143,10 +143,10 @@ AddRawTxNameOperation (CMutableTransaction& tx, const UniValue& obj)
   val = find_value (obj, "address");
   if (!val.isStr ())
     throw JSONRPCError (RPC_INVALID_PARAMETER, "missing address key");
-  const CBitcoinAddress toAddress(val.get_str ());
-  if (!toAddress.IsValid ())
+  const CTxDestination toDest = DecodeDestination (val.get_str ());
+  if (!IsValidDestination (toDest))
     throw JSONRPCError (RPC_INVALID_ADDRESS_OR_KEY, "invalid address");
-  const CScript addr = GetScriptForDestination (toAddress.Get ());
+  const CScript addr = GetScriptForDestination (toDest);
 
   tx.SetNamecoin ();
 
@@ -178,6 +178,8 @@ name_show (const JSONRPCRequest& request)
         + HelpExampleCli ("name_show", "\"myname\"")
         + HelpExampleRpc ("name_show", "\"myname\"")
       );
+
+  ObserveSafeMode ();
 
   const std::string nameStr = request.params[0].get_str ();
   const valtype name = ValtypeFromString (nameStr);
@@ -220,6 +222,8 @@ name_history (const JSONRPCRequest& request)
 
   if (!fNameHistory)
     throw std::runtime_error ("-namehistory is not enabled");
+
+  ObserveSafeMode ();
 
   const std::string nameStr = request.params[0].get_str ();
   const valtype name = ValtypeFromString (nameStr);
@@ -273,6 +277,8 @@ name_scan (const JSONRPCRequest& request)
         + HelpExampleRpc ("name_scan", "\"d/abc\"")
       );
 
+  ObserveSafeMode ();
+
   valtype start;
   if (request.params.size () >= 1)
     start = ValtypeFromString (request.params[0].get_str ());
@@ -322,6 +328,8 @@ name_filter (const JSONRPCRequest& request)
         + HelpExampleCli ("name_filter", "\"^id/\" 36000 0 0 \"stat\"")
         + HelpExampleRpc ("name_scan", "\"^d/\"")
       );
+
+  ObserveSafeMode ();
 
   /* ********************** */
   /* Interpret parameters.  */
@@ -451,10 +459,10 @@ name_pending (const JSONRPCRequest& request)
       );
 
 #ifdef ENABLE_WALLET
-    CWallet* pwallet = GetWalletForJSONRPCRequest (request);
-    LOCK2 (pwallet ? &pwallet->cs_wallet : nullptr, mempool.cs);
+  CWallet* pwallet = GetWalletForJSONRPCRequest (request);
+  LOCK2 (pwallet ? &pwallet->cs_wallet : nullptr, mempool.cs);
 #else
-    LOCK (mempool.cs);
+  LOCK (mempool.cs);
 #endif
 
   std::vector<uint256> txHashes;
@@ -513,7 +521,7 @@ name_pending (const JSONRPCRequest& request)
           if (pwallet)
             mine = IsMine (*pwallet, op.getAddress ());
           const bool isMine = (mine & ISMINE_SPENDABLE);
-          obj.pushKV ("ismine", isMine);
+          obj.push_back (Pair ("ismine", isMine));
 #endif
 
           arr.push_back (obj);
@@ -549,14 +557,14 @@ name_checkdb (const JSONRPCRequest& request)
 /* ************************************************************************** */
 
 static const CRPCCommand commands[] =
-{ //  category              name                      actor (function)         okSafeMode
+{ //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
-    { "namecoin",           "name_show",              &name_show,              false,  {"name"} },
-    { "namecoin",           "name_history",           &name_history,           false,  {"name"} },
-    { "namecoin",           "name_scan",              &name_scan,              false,  {"start","count"} },
-    { "namecoin",           "name_filter",            &name_filter,            false,  {"regexp","maxage","from","nb","stat"} },
-    { "namecoin",           "name_pending",           &name_pending,           true,   {"name"} },
-    { "namecoin",           "name_checkdb",           &name_checkdb,           false,  {} },
+    { "namecoin",           "name_show",              &name_show,              {"name"} },
+    { "namecoin",           "name_history",           &name_history,           {"name"} },
+    { "namecoin",           "name_scan",              &name_scan,              {"start","count"} },
+    { "namecoin",           "name_filter",            &name_filter,            {"regexp","maxage","from","nb","stat"} },
+    { "namecoin",           "name_pending",           &name_pending,           {"name"} },
+    { "namecoin",           "name_checkdb",           &name_checkdb,           {} },
 };
 
 void RegisterNameRPCCommands(CRPCTable &t)

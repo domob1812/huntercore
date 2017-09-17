@@ -15,7 +15,6 @@
 #include "validation.h"
 
 #include "test/test_bitcoin.h"
-#include "test/testutil.h"
 
 #include <boost/test/unit_test.hpp>
 
@@ -33,10 +32,11 @@ BOOST_FIXTURE_TEST_SUITE (name_tests, TestingSetup)
 static CScript
 getTestAddress ()
 {
-  CBitcoinAddress addr("HP5fFvKehqy2qnmi8DcPLUJ78XbrdoBwKR");
-  BOOST_CHECK (addr.IsValid ());
+  const CTxDestination dest
+    = DecodeDestination ("HP5fFvKehqy2qnmi8DcPLUJ78XbrdoBwKR");
+  BOOST_CHECK (IsValidDestination (dest));
 
-  return GetScriptForDestination (addr.Get ());
+  return GetScriptForDestination (dest);
 }
 
 /* ************************************************************************** */

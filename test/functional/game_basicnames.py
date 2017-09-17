@@ -10,6 +10,9 @@ from test_framework.util import *
 
 class GameBasicNamesTest (NameTestFramework):
 
+  def set_test_params (self):
+    self.setup_name_test ([[]] * 4)
+
   def run_test (self):
     # Perform some invalid name_new's and check for the corresponding
     # error messages.

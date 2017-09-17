@@ -212,6 +212,9 @@ extern bool fEnableReplacement;
 /** Block hash whose ancestors we will assume to have valid scripts without checking them. */
 extern uint256 hashAssumeValid;
 
+/** Minimum work we will assume exists on some valid chain. */
+extern arith_uint256 nMinimumChainWork;
+
 /* Lock and condition variable for game_waitforchange.  */
 extern boost::mutex mut_currentState;
 extern boost::condition_variable cv_stateChange;
@@ -522,7 +525,7 @@ static const unsigned int REJECT_HIGHFEE = 0x100;
 CBlockFileInfo* GetBlockFileInfo(size_t n);
 
 /** Dump the mempool to disk. */
-void DumpMempool();
+bool DumpMempool();
 
 /** Load the mempool from disk. */
 bool LoadMempool();

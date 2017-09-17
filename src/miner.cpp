@@ -148,6 +148,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(PowAlgo algo, con
 
     LOCK2(cs_main, mempool.cs);
     CBlockIndex* pindexPrev = chainActive.Tip();
+    assert(pindexPrev != nullptr);
     nHeight = pindexPrev->nHeight + 1;
 
     prevGameState.reset(new GameState(chainparams.GetConsensus()));

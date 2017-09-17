@@ -10,6 +10,9 @@ from test_framework.util import *
 
 class GameFeePolicyTest (NameTestFramework):
 
+  def set_test_params (self):
+    self.setup_name_test ([[]] * 3)
+
   def run_test (self):
     # Send ordinary tx and verify that it has low fee.
     addr = self.nodes[1].getnewaddress ()
@@ -44,7 +47,7 @@ class GameFeePolicyTest (NameTestFramework):
     Mine a block and verify that the given tx is included in it
     and has the expected fee.
     """
-    self.generate(3, 1)
+    self.generate(2, 1)
     data = self.nodes[0].gettransaction (txid)
     fee = -Decimal (data['fee'])
     print ("%s: %.8f" % (name, fee))

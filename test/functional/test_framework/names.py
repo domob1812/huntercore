@@ -10,8 +10,7 @@ from .util import *
 
 class NameTestFramework (BitcoinTestFramework):
 
-  def __init__ (self, args = [[]] * 4):
-    super ().__init__ ()
+  def setup_name_test (self, args = [[]] * 4):
     self.num_nodes = len (args)
     self.extra_args = args
     self.node_groups = None
@@ -96,6 +95,7 @@ class NameTestFramework (BitcoinTestFramework):
     assert_equal (data['name'], name)
     if not dead:
       assert_equal (data['value'], value)
+    assert isinstance (data['dead'], bool)
     assert_equal (data['dead'], dead)
 
   def checkNameHistory (self, ind, name, values):

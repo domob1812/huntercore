@@ -11,12 +11,14 @@ from test_framework.util import *
 
 class DualAlgoTest (BitcoinTestFramework):
 
+  def set_test_params (self):
+    self.num_nodes = 1
+
   def run_test (self):
     # Check for difficulty reports in various RPC calls.  Where the "current"
     # state is involved, we get two (for each algo).  Where a particular block
     # is involved, we just get that block's difficulty (whatever the algo).
     dual = []
-    dual.append (self.nodes[0].getinfo ())
     dual.append (self.nodes[0].getblockchaininfo ())
     dual.append (self.nodes[0].getmininginfo ())
     for data in dual:

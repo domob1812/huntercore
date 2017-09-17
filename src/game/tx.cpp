@@ -138,10 +138,10 @@ CreateGameTransactions (const CCoinsView& view, unsigned nHeight,
         {
           /* Player-provided addresses are validated before accepting them,
              so failing here is ok.  */
-          CBitcoinAddress addr(bounty.address);
-          if (!addr.IsValid ())
+          const CTxDestination dest = DecodeDestination (bounty.address);
+          if (!IsValidDestination (dest))
             return error ("Failed to set player-provided address for bounty");
-          txout.scriptPubKey = GetScriptForDestination (addr.Get ());
+          txout.scriptPubKey = GetScriptForDestination (dest);
         }
       else
         txout.scriptPubKey = data.getAddress ();

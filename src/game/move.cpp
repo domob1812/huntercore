@@ -102,8 +102,8 @@ IsValidReceiveAddress (const std::string& str)
      we have to disable support to stay consensus-compatible with
      the existing client.  */
 
-  CBitcoinAddress addr(str);
-  return addr.IsValid () && !addr.IsScript ();
+  const CTxDestination dest = DecodeDestination (str);
+  return IsKeyDestination (dest);
 }
 
 bool Move::Parse(const PlayerID &p, const std::string &json)
@@ -399,10 +399,8 @@ StepData::addTransaction (const CTransaction& tx, const CCoinsView* pview,
                 continue;
 
               CTxDestination dest;
-              CBitcoinAddress addrParsed;
               if (ExtractDestination (coin.out.scriptPubKey, dest)
-                    && addrParsed.Set (dest)
-                    && addrParsed.ToString () == addressLock)
+                    && EncodeDestination (dest) == addressLock)
                 {
                   found = true;
                   break;

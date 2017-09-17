@@ -10,6 +10,9 @@ from test_framework.util import *
 
 class GetStatsForHeightTest (BitcoinTestFramework):
 
+  def set_test_params (self):
+    self.num_nodes = 2
+
   def run_test (self):
     # Generate a block so that we are not "downloading blocks".
     self.nodes[0].generate (1)

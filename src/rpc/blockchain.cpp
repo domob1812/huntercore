@@ -1660,7 +1660,7 @@ getcoinsnapshot (const JSONRPCRequest& request)
     const CAmount minAmount = AmountFromValue (request.params[0]);
 
     FlushStateToDisk ();
-    std::unique_ptr<CCoinsViewCursor> pcursor(pcoinsTip->Cursor ());
+    std::unique_ptr<CCoinsViewCursor> pcursor(pcoinsdbview->Cursor ());
 
     UniValue ret(UniValue::VOBJ);
     ret.pushKV ("hashblock", pcursor->GetBestBlock ().GetHex ());

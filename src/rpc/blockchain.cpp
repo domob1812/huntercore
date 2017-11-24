@@ -28,6 +28,7 @@
 #include "util.h"
 #include "utilstrencodings.h"
 #include "hash.h"
+#include "warnings.h"
 
 #include <stdint.h>
 
@@ -1235,6 +1236,7 @@ UniValue getblockchaininfo(const JSONRPCRequest& request)
             "        }\n"
             "     }\n"
             "  }\n"
+            "  \"warnings\" : \"...\",         (string) any network and blockchain warnings.\n"
             "}\n"
             "\nExamples:\n"
             + HelpExampleCli("getblockchaininfo", "")
@@ -1275,6 +1277,7 @@ UniValue getblockchaininfo(const JSONRPCRequest& request)
 
         obj.push_back(Pair("pruneheight",        block->nHeight));
     }
+    obj.push_back(Pair("warnings", GetWarnings("statusbar")));
     return obj;
 }
 

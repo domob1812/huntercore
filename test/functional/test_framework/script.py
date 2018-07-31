@@ -112,6 +112,7 @@ OP_1 = CScriptOp(0x51)
 OP_TRUE=OP_1
 OP_2 = CScriptOp(0x52)
 OP_3 = CScriptOp(0x53)
+OP_NAME_UPDATE=OP_3
 OP_4 = CScriptOp(0x54)
 OP_5 = CScriptOp(0x55)
 OP_6 = CScriptOp(0x56)

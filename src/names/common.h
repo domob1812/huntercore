@@ -16,6 +16,7 @@
 
 class CNameScript;
 class CDBBatch;
+class UniValue;
 
 /** Whether or not name history is enabled.  */
 extern bool fNameHistory;
@@ -41,6 +42,13 @@ ValtypeToString (const valtype& val)
 {
   return std::string (val.begin (), val.end ());
 }
+
+/**
+ * Push a name or value to the JSON object with the given key, if it is valid
+ * UTF-8.  Otherwise, push a "key_error" field instead.
+ */
+void PushValidatedNameValue (UniValue& obj, const std::string& key,
+                             const valtype& val);
 
 /* ************************************************************************** */
 /* CNameData.  */

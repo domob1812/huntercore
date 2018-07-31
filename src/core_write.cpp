@@ -241,16 +241,15 @@ void ScriptPubKeyToUniv(const CScript& scriptPubKey,
 
         case OP_NAME_FIRSTUPDATE:
         {
-            const std::string name = ValtypeToString (nameOp.getOpName ());
-            const std::string value = ValtypeToString (nameOp.getOpValue ());
             const bool newStyle = nameOp.isNewStyleRegistration ();
-
             if (newStyle)
               jsonOp.pushKV ("op", "name_register");
             else
               jsonOp.pushKV ("op", "name_firstupdate");
-            jsonOp.pushKV ("name", name);
-            jsonOp.pushKV ("value", value);
+
+            PushValidatedNameValue (jsonOp, "name", nameOp.getOpName ());
+            PushValidatedNameValue (jsonOp, "value", nameOp.getOpValue ());
+
             if (!newStyle)
               jsonOp.pushKV ("rand", HexStr (nameOp.getOpRand ()));
             break;
@@ -258,12 +257,9 @@ void ScriptPubKeyToUniv(const CScript& scriptPubKey,
 
         case OP_NAME_UPDATE:
         {
-            const std::string name = ValtypeToString (nameOp.getOpName ());
-            const std::string value = ValtypeToString (nameOp.getOpValue ());
-
             jsonOp.pushKV ("op", "name_update");
-            jsonOp.pushKV ("name", name);
-            jsonOp.pushKV ("value", value);
+            PushValidatedNameValue (jsonOp, "name", nameOp.getOpName ());
+            PushValidatedNameValue (jsonOp, "value", nameOp.getOpValue ());
             break;
         }
 

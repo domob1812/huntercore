@@ -6,7 +6,12 @@
 # Test basic handling of names (name RPC commands) in the context of gaming.
 
 from test_framework.names import NameTestFramework
+from test_framework.mininode import *
+from test_framework.script import *
 from test_framework.util import *
+
+import binascii
+import codecs
 
 class GameBasicNamesTest (NameTestFramework):
 
@@ -147,6 +152,63 @@ class GameBasicNamesTest (NameTestFramework):
     assert_equal (2, len (arr))
     self.checkNameData (arr[0], testname, None, True)
     self.checkNameData (arr[1], "newstyle", None, True)
+
+    self.testInvalidUtf8 ()
+
+  def testInvalidUtf8 (self):
+    """
+    Tests the situation with invalid UTF-8 in a name's value.  We have to
+    use raw transactions for that because otherwise the JSON RPC interface
+    won't accept it.
+    """
+
+    nm = "inv-value"
+    self.nodes[0].name_register (nm, '{"color":0}')
+    self.nodes[0].generate (1)
+
+    data = self.nodes[0].name_show (nm)
+    tx = CTransaction ()
+    tx.nVersion = NAMECOIN_TX_VERSION
+    tx.vin.append (CTxIn (COutPoint (int (data['txid'], 16), data['vout'])))
+
+    nmBytes = codecs.encode (nm, 'ascii')
+    valBytes = bytearray (codecs.encode ('{"msg":"', 'ascii'))
+    valBytes.append (0x80)
+    valBytes.extend (codecs.encode ('"}', 'ascii'))
+    scrUpd = CScript ([OP_NAME_UPDATE, nmBytes, valBytes, OP_2DROP, OP_DROP,
+                       OP_TRUE])
+    tx.vout.append (CTxOut (COIN, scrUpd))
+    txHex = bytes_to_hex_str (tx.serialize ())
+
+    txHex = self.nodes[0].fundrawtransaction (txHex)['hex']
+    signed = self.nodes[0].signrawtransaction (txHex)
+    assert signed['complete']
+    txid = self.nodes[0].sendrawtransaction (signed['hex'])
+
+    data = self.nodes[0].name_pending (nm)[0]
+    assert_equal (data['name'], nm)
+    assert 'value' not in data
+    assert_equal (data['value_error'], 'invalid UTF-8')
+
+    self.nodes[0].generate (1)
+    data = self.nodes[0].name_show (nm)
+    assert_equal (data['name'], nm)
+    assert 'value' not in data
+    assert_equal (data['value_error'], 'invalid UTF-8')
+
+    data = self.nodes[0].getrawtransaction (txid, 1)
+    found = False
+    for vout in data['vout']:
+      if not 'nameOp' in vout['scriptPubKey']:
+        continue
+      nmop = vout['scriptPubKey']['nameOp']
+      assert_equal (nmop['name'], nm)
+      assert 'value' not in nmop
+      assert_equal (nmop['value_error'], 'invalid UTF-8')
+      scr = self.nodes[0].decodescript (vout['scriptPubKey']['hex'])
+      assert_equal (scr['nameOp'], nmop)
+      found = True
+    assert found
 
 if __name__ == '__main__':
   GameBasicNamesTest ().main ()

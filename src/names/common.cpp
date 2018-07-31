@@ -6,7 +6,20 @@
 
 #include "script/names.h"
 
+#include <univalue.h>
+
 bool fNameHistory = false;
+
+void
+PushValidatedNameValue (UniValue& obj, const std::string& key,
+                        const valtype& val)
+{
+  const std::string str = ValtypeToString (val);
+  if (IsValidUtf8String (str))
+    obj.pushKV (key, str);
+  else
+    obj.pushKV (key + "_error",  "invalid UTF-8");
+}
 
 /* ************************************************************************** */
 /* CNameData.  */

@@ -44,9 +44,9 @@ getNameInfo (const valtype& name, const valtype& value,
              const CScript& addr, int height)
 {
   UniValue obj(UniValue::VOBJ);
-  obj.pushKV ("name", ValtypeToString (name));
+  PushValidatedNameValue (obj, "name", name);
   if (!dead)
-    obj.pushKV ("value", ValtypeToString (value));
+    PushValidatedNameValue (obj, "value", value);
   obj.push_back (Pair ("dead", dead));
   obj.pushKV ("height", height);
   obj.pushKV ("txid", outp.hash.GetHex ());
@@ -457,11 +457,8 @@ name_pending (const JSONRPCRequest& request)
           if (!op.isNameOp () || !op.isAnyUpdate ())
             continue;
 
-          const valtype vchName = op.getOpName ();
-          const valtype vchValue = op.getOpValue ();
-
-          const std::string name = ValtypeToString (vchName);
-          const std::string value = ValtypeToString (vchValue);
+          const valtype name = op.getOpName ();
+          const valtype value = op.getOpValue ();
 
           std::string strOp;
           switch (op.getNameOp ())
@@ -478,8 +475,8 @@ name_pending (const JSONRPCRequest& request)
 
           UniValue obj(UniValue::VOBJ);
           obj.pushKV ("op", strOp);
-          obj.pushKV ("name", name);
-          obj.pushKV ("value", value);
+          PushValidatedNameValue (obj, "name", name);
+          PushValidatedNameValue (obj, "value", value);
           obj.pushKV ("txid", tx->GetHash ().GetHex ());
 
 #ifdef ENABLE_WALLET

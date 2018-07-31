@@ -283,4 +283,12 @@ extern const UniValue NullUniValue;
 
 const UniValue& find_value( const UniValue& obj, const std::string& name);
 
+/**
+ * Verifies whether a given string consists only of valid UTF-8 code points
+ * as per the JSONUTF8StringFilter.
+ *
+ * This method is exposed to stop returning invalid UTF-8 names/values in RPCs.
+ */
+bool IsValidUtf8String(const std::string& str);
+
 #endif // __UNIVALUE_H__

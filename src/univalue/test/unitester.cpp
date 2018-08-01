@@ -113,6 +113,8 @@ static const char *filenames[] = {
         "fail39.json",               // invalid unicode: only second half of surrogate pair
         "fail40.json",               // invalid unicode: broken UTF-8
         "fail41.json",               // invalid unicode: unfinished UTF-8
+        "fail42.json",               // valid json with garbage following a nul byte
+        "fail44.json",               // unterminated string
         "fail3.json",
         "fail4.json",                // extra comma
         "fail5.json",
@@ -125,6 +127,11 @@ static const char *filenames[] = {
         "pass3.json",
         "round1.json",              // round-trip test
         "round2.json",              // unicode
+        "round3.json",              // bare string
+        "round4.json",              // bare number
+        "round5.json",              // bare true
+        "round6.json",              // bare false
+        "round7.json",              // bare null
 };
 
 // Test \u handling
@@ -150,6 +157,26 @@ void unescape_unicode_test()
     f_assert(val[0].get_str() == "\xf0\x9d\x85\xa1");
 }
 
+void
+huntercoin_test ()
+{
+  // All of these strings should parse fine in non-strict mode but be
+  // invalid with strict parsing.  They appear in legacy Huntercoin moves
+  // and were apparently accepted by json_spirit.
+  std::vector<std::string> strings;
+  strings.push_back ("{\"2\":{\"wp\":[026,-0474,027,-474,0026,475]}}");
+  strings.push_back ("{\"msg\":\"foobar\r\n\"}");
+  strings.push_back ("{\"msg\":\"can\\\'t\"}");
+  strings.push_back ("{\"msg\":\"invalid UTF-8: \x80\"}");
+
+  for (size_t i = 0; i < strings.size (); ++i)
+    {
+      UniValue obj;
+      f_assert (obj.read (strings[i], false));
+      f_assert (!obj.read (strings[i]));
+    }
+}
+
 int main (int argc, char *argv[])
 {
     for (unsigned int fidx = 0; fidx < ARRAY_SIZE(filenames); fidx++) {
@@ -157,6 +184,7 @@ int main (int argc, char *argv[])
     }
 
     unescape_unicode_test();
+    huntercoin_test();
 
     return test_failed ? 1 : 0;
 }

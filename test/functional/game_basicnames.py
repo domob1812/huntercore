@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2016-2017 Daniel Kraft
+# Copyright (c) 2016-2018 Daniel Kraft
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -23,7 +23,7 @@ class GameBasicNamesTest (NameTestFramework):
     # error messages.
     invalids = ["x" * 11, "", " abc", "abc ", "abc  abc", "a+b"]
     for nm in invalids:
-      assert_raises_jsonrpc (-8, None, self.nodes[0].name_new, nm)
+      assert_raises_rpc_error (-8, None, self.nodes[0].name_new, nm)
 
     # On the other hand, these names should all be allowed.  We do not
     # finalise the registration, just make sure that the same test that
@@ -36,10 +36,10 @@ class GameBasicNamesTest (NameTestFramework):
     testname = "foobar"
     new = self.nodes[0].name_new (testname)
     self.generate (0, 2)
-    assert_raises_jsonrpc (-4, 'name not found',
-                           self.nodes[0].name_show, testname)
-    assert_raises_jsonrpc (-5, 'No such player',
-                           self.nodes[0].game_getplayerstate, testname)
+    assert_raises_rpc_error (-4, 'name not found',
+                             self.nodes[0].name_show, testname)
+    assert_raises_rpc_error (-5, 'No such player',
+                             self.nodes[0].game_getplayerstate, testname)
     state = self.nodes[0].game_getstate ()
     assert_equal (state['players'], {})
     assert_equal ([], self.nodes[0].name_list ())
@@ -73,9 +73,9 @@ class GameBasicNamesTest (NameTestFramework):
     # Check that registering another player of this name is not possible.
     new = self.nodes[1].name_new (testname)
     self.generate (1, 2)
-    assert_raises_jsonrpc (-25, 'this name is already active',
-                           self.firstupdateName,
-                           1, testname, new, '{"color":0}')
+    assert_raises_rpc_error (-25, 'this name is already active',
+                             self.firstupdateName,
+                             1, testname, new, '{"color":0}')
 
     # Kill the player on the map.
     self.nodes[0].name_update (testname, '{"0":{"destruct":true}}')

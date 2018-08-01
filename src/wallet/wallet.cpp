@@ -1649,7 +1649,7 @@ int64_t CWallet::RescanFromTime(int64_t startTime, bool update)
     LogPrintf("%s: Rescanning last %i blocks\n", __func__, startBlock ? chainActive.Height() - startBlock->nHeight + 1 : 0);
 
     if (startBlock) {
-        const CBlockIndex* const failedBlock = ScanForWalletTransactions(startBlock, update);
+        const CBlockIndex* const failedBlock = ScanForWalletTransactions(startBlock, nullptr, update);
         if (failedBlock) {
             return failedBlock->GetBlockTimeMax() + TIMESTAMP_WINDOW + 1;
         }
@@ -1665,11 +1665,18 @@ int64_t CWallet::RescanFromTime(int64_t startTime, bool update)
  * Returns null if scan was successful. Otherwise, if a complete rescan was not
  * possible (due to pruning or corruption), returns pointer to the most recent
  * block that could not be scanned.
+ *
+ * If pindexStop is not a nullptr, the scan will stop at the block-index
+ * defined by pindexStop
  */
-CBlockIndex* CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate)
+CBlockIndex* CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, CBlockIndex* pindexStop, bool fUpdate)
 {
     int64_t nNow = GetTime();
     const CChainParams& chainParams = Params();
+
+    if (pindexStop) {
+        assert(pindexStop->nHeight >= pindexStart->nHeight);
+    }
 
     CBlockIndex* pindex = pindexStart;
     CBlockIndex* ret = nullptr;
@@ -1700,6 +1707,9 @@ CBlockIndex* CWallet::ScanForWalletTransactions(CBlockIndex* pindexStart, bool f
                     AddToWalletIfInvolvingMe(vGameTx[i], pindex, block.vtx.size() + i, fUpdate);
             } else {
                 ret = pindex;
+            }
+            if (pindex == pindexStop) {
+                break;
             }
             pindex = chainActive.Next(pindex);
         }
@@ -2849,6 +2859,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient>& vecSend,
 
                     if (recipient.fSubtractFeeFromAmount)
                     {
+                        assert(nSubtractFeeFromAmount != 0);
                         txout.nValue -= nFeeRet / nSubtractFeeFromAmount; // Subtract fee equally from each selected recipient
 
                         if (fFirst) // first receiver pays the remainder not divisible by output count
@@ -4081,7 +4092,7 @@ CWallet* CWallet::CreateWalletFromFile(const std::string walletFile)
         }
 
         nStart = GetTimeMillis();
-        walletInstance->ScanForWalletTransactions(pindexRescan, true);
+        walletInstance->ScanForWalletTransactions(pindexRescan, nullptr, true);
         LogPrintf(" rescan      %15dms\n", GetTimeMillis() - nStart);
         walletInstance->SetBestChain(chainActive.GetLocator());
         walletInstance->dbw->IncrementUpdateCounter();

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright (c) 2016-2017 Daniel Kraft
+# Copyright (c) 2016-2018 Daniel Kraft
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -69,8 +69,8 @@ class GameBountiesTest (GameTestFramework):
     # Import the private key into node 3 and verify that rescanning
     # makes the game tx appear.
     print ("Importing private key into wallet and rescanning...")
-    assert_raises_jsonrpc (-5, 'Invalid or non-wallet transaction',
-                           self.verifyTx, 3, txid, blkhash, value, 1)
+    assert_raises_rpc_error (-5, 'Invalid or non-wallet transaction',
+                             self.verifyTx, 3, txid, blkhash, value, 1)
     privkey = self.nodes[0].dumpprivkey (addr)
     self.nodes[3].importprivkey (privkey)
     self.verifyTx (3, txid, blkhash, value, 1)
@@ -85,8 +85,8 @@ class GameBountiesTest (GameTestFramework):
     data = self.nodes[0].signrawtransaction (rawtx)
     assert data['complete']
     rawtx = data['hex']
-    assert_raises_jsonrpc (-26, 'premature-spend-of-gametx',
-                           self.nodes[2].sendrawtransaction, rawtx)
+    assert_raises_rpc_error (-26, 'premature-spend-of-gametx',
+                             self.nodes[2].sendrawtransaction, rawtx)
 
     # The amount should become available as the tx matures.
     print ("Letting bounty tx mature...")

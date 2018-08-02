@@ -260,6 +260,7 @@ public:
         vFixedSeeds.clear();
         vSeeds.clear();
         /* FIXME: Testnet seeds?  */
+        // nodes with support for servicebits filtering should be at the top
         //vSeeds.emplace_back("dnsseed.test.namecoin.webbtc.com", false);
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,100);

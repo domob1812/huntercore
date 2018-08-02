@@ -130,6 +130,7 @@ BASE_SCRIPTS= [
     'resendwallettransactions.py',
     'minchainwork.py',
     'p2p-fingerprint.py',
+    'uacomment.py',
 
     # auxpow tests
     'auxpow_mining.py',
@@ -502,7 +503,7 @@ def check_script_list(src_dir):
             # On travis this warning is an error to prevent merging incomplete commits into master
             sys.exit(1)
 
-class RPCCoverage(object):
+class RPCCoverage():
     """
     Coverage reporting utilities for test_runner.
 

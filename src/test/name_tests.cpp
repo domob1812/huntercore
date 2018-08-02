@@ -896,7 +896,7 @@ BOOST_AUTO_TEST_CASE (name_mempool)
   BOOST_CHECK (mempool.getTxForName (nameUpd) == txUpd1.GetHash ());
 
   /* Run mempool sanity check.  */
-  CCoinsViewCache view(pcoinsTip);
+  CCoinsViewCache view(pcoinsTip.get());
   const CNameScript nameOp(upd1);
   CNameData data;
   data.fromScript (100, COutPoint (uint256 (), 0), nameOp);

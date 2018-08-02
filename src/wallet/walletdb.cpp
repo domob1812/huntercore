@@ -270,7 +270,7 @@ ReadKeyValue(CWallet* pwallet, CDataStream& ssKey, CDataStream& ssValue,
             CValidationState state;
             /* Skip CheckTransaction for game transactions, as they are special
                and fail some of the tests done in the function.  */
-            if (!wtx.IsGameTx() && !(CheckTransaction(wtx, state) && (wtx.GetHash() == hash) && state.IsValid()))
+            if (!wtx.IsGameTx() && !(CheckTransaction(*wtx.tx, state) && (wtx.GetHash() == hash) && state.IsValid()))
                 return false;
 
             // Undo serialize changes in 31600

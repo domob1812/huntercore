@@ -307,7 +307,7 @@ void BlockAssembler::AddToBlock(CTxMemPool::txiter iter)
        to the game rules, but that one "should" not fail and will lead to
        an invalid block.  */
     CValidationState state;
-    if (!gameStep->addTransaction(iter->GetTx(), pcoinsTip, state))
+    if (!gameStep->addTransaction(iter->GetTx(), pcoinsTip.get(), state))
         throw std::runtime_error(strprintf("tx %s not accepted for game step",
                                            iter->GetTx().GetHash().GetHex().c_str()));
 

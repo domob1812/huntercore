@@ -77,6 +77,7 @@ bitcoin-qt
 huntercoin-qt
 Bitcoin-Qt.app
 Huntercoin-Qt.app
+background.tiff*
 
 # Unit-tests
 Makefile.test

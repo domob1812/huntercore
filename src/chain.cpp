@@ -3,9 +3,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "chain.h"
+#include <chain.h>
 
-#include "validation.h"
+#include <validation.h>
 
 /* Moved here from the header, because we need auxpow and the logic
    becomes more involved.  */

@@ -5,8 +5,8 @@
 #ifndef BITCOIN_RPC_BLOCKCHAIN_H
 #define BITCOIN_RPC_BLOCKCHAIN_H
 
-#include "pow.h"
-#include "primitives/transaction.h"
+#include <pow.h>
+#include <primitives/transaction.h>
 
 #include <vector>
 

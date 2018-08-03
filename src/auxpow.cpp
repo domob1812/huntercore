@@ -5,18 +5,18 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
-#include "auxpow.h"
+#include <auxpow.h>
 
-#include "compat/endian.h"
-#include "consensus/consensus.h"
-#include "consensus/merkle.h"
-#include "consensus/validation.h"
-#include "hash.h"
-#include "script/script.h"
-#include "txmempool.h"
-#include "util.h"
-#include "utilstrencodings.h"
-#include "validation.h"
+#include <compat/endian.h>
+#include <consensus/consensus.h>
+#include <consensus/merkle.h>
+#include <consensus/validation.h>
+#include <hash.h>
+#include <script/script.h>
+#include <txmempool.h>
+#include <util.h>
+#include <utilstrencodings.h>
+#include <validation.h>
 
 #include <algorithm>
 
@@ -68,13 +68,6 @@ int CMerkleTx::GetBlocksToMaturity() const
     if (IsGameTx())
         return std::max(0, (GAMETX_MATURITY+1) - GetDepthInMainChain());
     return 0;
-}
-
-
-bool CMerkleTx::AcceptToMemoryPool(const CAmount& nAbsurdFee, CValidationState& state)
-{
-    return ::AcceptToMemoryPool(mempool, state, tx, nullptr /* pfMissingInputs */,
-                                nullptr /* plTxnReplaced */, false /* bypass_limits */, nAbsurdFee);
 }
 
 /* ************************************************************************** */

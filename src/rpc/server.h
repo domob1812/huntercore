@@ -6,11 +6,11 @@
 #ifndef BITCOIN_RPCSERVER_H
 #define BITCOIN_RPCSERVER_H
 
-#include "amount.h"
-#include "consensus/params.h"
-#include "rpc/protocol.h"
-#include "script/script.h"
-#include "uint256.h"
+#include <amount.h>
+#include <consensus/params.h>
+#include <rpc/protocol.h>
+#include <script/script.h>
+#include <uint256.h>
 
 #include <list>
 #include <map>

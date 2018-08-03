@@ -16,9 +16,9 @@
 #ifndef GAME_COMMON_H
 #define GAME_COMMON_H
 
-#include "arith_uint256.h"
-#include "serialize.h"
-#include "uint256.h"
+#include <arith_uint256.h>
+#include <serialize.h>
+#include <uint256.h>
 
 #include <map>
 #include <set>

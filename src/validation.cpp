@@ -3,49 +3,49 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "validation.h"
+#include <validation.h>
 
-#include "arith_uint256.h"
-#include "auxpow.h"
-#include "chain.h"
-#include "chainparams.h"
-#include "checkpoints.h"
-#include "checkqueue.h"
-#include "consensus/consensus.h"
-#include "consensus/merkle.h"
-#include "consensus/tx_verify.h"
-#include "consensus/validation.h"
-#include "cuckoocache.h"
-#include "fs.h"
-#include "game/db.h"
-#include "game/move.h"
-#include "game/state.h"
-#include "game/tx.h"
-#include "hash.h"
-#include "init.h"
-#include "policy/fees.h"
-#include "policy/policy.h"
-#include "policy/rbf.h"
-#include "pow.h"
-#include "primitives/block.h"
-#include "primitives/transaction.h"
-#include "random.h"
-#include "reverse_iterator.h"
-#include "script/script.h"
-#include "script/sigcache.h"
-#include "script/standard.h"
-#include "timedata.h"
-#include "tinyformat.h"
-#include "txdb.h"
-#include "txmempool.h"
-#include "ui_interface.h"
-#include "undo.h"
-#include "util.h"
-#include "utilmoneystr.h"
-#include "utilstrencodings.h"
-#include "validationinterface.h"
-#include "versionbits.h"
-#include "warnings.h"
+#include <arith_uint256.h>
+#include <auxpow.h>
+#include <chain.h>
+#include <chainparams.h>
+#include <checkpoints.h>
+#include <checkqueue.h>
+#include <consensus/consensus.h>
+#include <consensus/merkle.h>
+#include <consensus/tx_verify.h>
+#include <consensus/validation.h>
+#include <cuckoocache.h>
+#include <fs.h>
+#include <game/db.h>
+#include <game/move.h>
+#include <game/state.h>
+#include <game/tx.h>
+#include <hash.h>
+#include <init.h>
+#include <policy/fees.h>
+#include <policy/policy.h>
+#include <policy/rbf.h>
+#include <pow.h>
+#include <primitives/block.h>
+#include <primitives/transaction.h>
+#include <random.h>
+#include <reverse_iterator.h>
+#include <script/script.h>
+#include <script/sigcache.h>
+#include <script/standard.h>
+#include <timedata.h>
+#include <tinyformat.h>
+#include <txdb.h>
+#include <txmempool.h>
+#include <ui_interface.h>
+#include <undo.h>
+#include <util.h>
+#include <utilmoneystr.h>
+#include <utilstrencodings.h>
+#include <validationinterface.h>
+#include <versionbits.h>
+#include <warnings.h>
 
 #include <atomic>
 #include <sstream>
@@ -2339,8 +2339,8 @@ bool static DisconnectTip(CValidationState& state, const CChainParams& chainpara
     // Read block from disk.
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
     CBlock& block = *pblock;
-    std::vector<CTransactionRef> vGameTx;
-    if (!ReadBlockFromDisk(block, vGameTx, pindexDelete, chainparams.GetConsensus()))
+    auto vGameTx = std::make_shared<std::vector<CTransactionRef>>();
+    if (!ReadBlockFromDisk(block, *vGameTx, pindexDelete, chainparams.GetConsensus()))
         return AbortNode(state, "Failed to read block");
     // Apply the block atomically to the chain state.
     int64_t nStart = GetTimeMicros();
@@ -2362,7 +2362,7 @@ bool static DisconnectTip(CValidationState& state, const CChainParams& chainpara
 
     // Fix the pool for conflicts due to revived players.
     std::set<valtype> revivedNames;
-    for (const auto& tx : vGameTx) {
+    for (const auto& tx : *vGameTx) {
         if (tx->IsKillTx()) {
             for (const auto& txin : tx->vin) {
                 valtype name;
@@ -2405,10 +2405,10 @@ static int64_t nTimePostConnect = 0;
 struct PerBlockConnectTrace {
     CBlockIndex* pindex = nullptr;
     std::shared_ptr<const CBlock> pblock;
-    std::vector<CTransactionRef> vGameTx;
+    std::shared_ptr<std::vector<CTransactionRef>> vGameTx;
     std::shared_ptr<std::vector<CTransactionRef>> conflictedTxs;
     std::shared_ptr<std::vector<CTransactionRef>> txNameConflicts;
-    PerBlockConnectTrace() : vGameTx(),
+    PerBlockConnectTrace() : vGameTx(std::make_shared<std::vector<CTransactionRef>>()),
                              conflictedTxs(std::make_shared<std::vector<CTransactionRef>>()),
                              txNameConflicts(std::make_shared<std::vector<CTransactionRef>>()) {}
 };
@@ -2443,13 +2443,13 @@ public:
         pool.NotifyEntryRemoved.disconnect(boost::bind(&ConnectTrace::NotifyEntryRemoved, this, _1, _2));
     }
 
-    void BlockConnected(CBlockIndex* pindex, std::shared_ptr<const CBlock> pblock, const std::vector<CTransactionRef>& vGameTx) {
+    void BlockConnected(CBlockIndex* pindex, std::shared_ptr<const CBlock> pblock, std::shared_ptr<std::vector<CTransactionRef>> vGameTx) {
         assert(!blocksConnected.back().pindex);
         assert(pindex);
         assert(pblock);
         blocksConnected.back().pindex = pindex;
         blocksConnected.back().pblock = std::move(pblock);
-        blocksConnected.back().vGameTx = vGameTx;
+        blocksConnected.back().vGameTx = std::move(vGameTx);
         blocksConnected.emplace_back();
     }
 
@@ -2460,7 +2460,7 @@ public:
         // one waiting for the transactions from the next block. We pop
         // the last entry here to make sure the list we return is sane.
         assert(!blocksConnected.back().pindex);
-        assert(blocksConnected.back().vGameTx.empty());
+        assert(blocksConnected.back().vGameTx->empty());
         assert(blocksConnected.back().conflictedTxs->empty());
         assert(blocksConnected.back().txNameConflicts->empty());
         blocksConnected.pop_back();
@@ -2504,14 +2504,14 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
         pthisBlock = pblock;
     }
     const CBlock& blockConnecting = *pthisBlock;
-    std::vector<CTransactionRef> vGameTx;
+    auto vGameTx = std::make_shared<std::vector<CTransactionRef>>();
     // Apply the block atomically to the chain state.
     int64_t nTime2 = GetTimeMicros(); nTimeReadFromDisk += nTime2 - nTime1;
     int64_t nTime3;
     LogPrint(BCLog::BENCH, "  - Load block from disk: %.2fms [%.2fs]\n", (nTime2 - nTime1) * MILLI, nTimeReadFromDisk * MICRO);
     {
         CCoinsViewCache view(pcoinsTip.get());
-        bool rv = ConnectBlockWithGameTx(blockConnecting, state, pindexNew, view, vGameTx, chainparams);
+        bool rv = ConnectBlockWithGameTx(blockConnecting, state, pindexNew, view, *vGameTx, chainparams);
         GetMainSignals().BlockChecked(blockConnecting, state);
         if (!rv) {
             if (state.IsInvalid())
@@ -2532,9 +2532,9 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
     LogPrint(BCLog::BENCH, "  - Writing chainstate: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime5 - nTime4) * MILLI, nTimeChainState * MICRO, nTimeChainState * MILLI / nBlocksTotal);
     // Remove conflicting transactions from the mempool.;
     mempool.removeForBlock(blockConnecting.vtx, pindexNew->nHeight);
-    mempool.removeForBlock(vGameTx, pindexNew->nHeight);
+    mempool.removeForBlock(*vGameTx, pindexNew->nHeight);
     disconnectpool.removeForBlock(blockConnecting.vtx);
-    disconnectpool.removeForBlock(vGameTx);
+    disconnectpool.removeForBlock(*vGameTx);
     // Update chainActive & related variables.
     UpdateTip(pindexNew, chainparams);
     CheckNameDB (false);
@@ -2543,7 +2543,7 @@ bool static ConnectTip(CValidationState& state, const CChainParams& chainparams,
     LogPrint(BCLog::BENCH, "  - Connect postprocess: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime6 - nTime5) * MILLI, nTimePostConnect * MICRO, nTimePostConnect * MILLI / nBlocksTotal);
     LogPrint(BCLog::BENCH, "- Connect block: %.2fms [%.2fs (%.2fms/blk)]\n", (nTime6 - nTime1) * MILLI, nTimeTotal * MICRO, nTimeTotal * MILLI / nBlocksTotal);
 
-    connectTrace.BlockConnected(pindexNew, std::move(pthisBlock), vGameTx);
+    connectTrace.BlockConnected(pindexNew, std::move(pthisBlock), std::move(vGameTx));
     return true;
 }
 
@@ -2772,7 +2772,7 @@ bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams,
 
             for (const PerBlockConnectTrace& trace : connectTrace.GetBlocksConnected()) {
                 assert(trace.pblock && trace.pindex);
-                GetMainSignals().BlockConnected(trace.pblock, trace.pindex, trace.vGameTx, *trace.conflictedTxs, *trace.txNameConflicts);
+                GetMainSignals().BlockConnected(trace.pblock, trace.pindex, trace.vGameTx, trace.conflictedTxs, trace.txNameConflicts);
             }
         }
         // When we reach this point, we switched to a new tip (stored in pindexNewTip).

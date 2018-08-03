@@ -13,17 +13,17 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "game/tx.h"
+#include <game/tx.h>
 
-#include "base58.h"
-#include "coins.h"
-#include "game/state.h"
-#include "names/common.h"
-#include "primitives/transaction.h"
-#include "script/standard.h"
-#include "undo.h"
-#include "util.h"
-#include "validation.h"
+#include <base58.h>
+#include <coins.h>
+#include <game/state.h>
+#include <names/common.h>
+#include <primitives/transaction.h>
+#include <script/standard.h>
+#include <undo.h>
+#include <util.h>
+#include <validation.h>
 
 bool
 CreateGameTransactions (const CCoinsView& view, unsigned nHeight,

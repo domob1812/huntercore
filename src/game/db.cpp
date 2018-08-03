@@ -13,15 +13,15 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "game/db.h"
+#include <game/db.h>
 
-#include "chain.h"
-#include "chainparams.h"
-#include "consensus/validation.h"
-#include "game/move.h"
-#include "game/state.h"
-#include "util.h"
-#include "validation.h"
+#include <chain.h>
+#include <chainparams.h>
+#include <consensus/validation.h>
+#include <game/move.h>
+#include <game/state.h>
+#include <util.h>
+#include <validation.h>
 
 #include <vector>
 #include <memory>

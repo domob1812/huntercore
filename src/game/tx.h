@@ -16,7 +16,7 @@
 #ifndef GAME_TX_H
 #define GAME_TX_H
 
-#include "names/common.h"
+#include <names/common.h>
 
 #include <vector>
 

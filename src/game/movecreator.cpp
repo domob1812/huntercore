@@ -13,10 +13,10 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "game/movecreator.h"
+#include <game/movecreator.h>
 
-#include "game/map.h"
-#include "game/state.h"
+#include <game/map.h>
+#include <game/state.h>
 
 #include <boost/graph/astar_search.hpp>
 #include <boost/graph/grid_graph.hpp>

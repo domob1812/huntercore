@@ -13,11 +13,11 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "game/common.h"
+#include <game/common.h>
 
-#include "hash.h"
-#include "names/common.h"
-#include "tinyformat.h"
+#include <hash.h>
+#include <names/common.h>
+#include <tinyformat.h>
 
 std::string CharacterID::ToString() const
 {

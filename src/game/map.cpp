@@ -13,7 +13,7 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "game/map.h"
+#include <game/map.h>
 
 // Note: modification of ObstacleMap or HarvestAreas will create a hard-fork
 // (even changing the order of HarvestAreas), because these values are used

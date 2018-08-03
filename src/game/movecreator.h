@@ -16,7 +16,7 @@
 #ifndef GAME_MOVECREATOR_H
 #define GAME_MOVECREATOR_H
 
-#include "game/common.h"
+#include <game/common.h>
 
 #include <vector>
 

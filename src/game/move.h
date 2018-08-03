@@ -1,10 +1,10 @@
 #ifndef GAME_MOVE_H
 #define GAME_MOVE_H
 
-#include "amount.h"
-#include "game/common.h"
-#include "consensus/params.h"
-#include "uint256.h"
+#include <amount.h>
+#include <game/common.h>
+#include <consensus/params.h>
+#include <uint256.h>
 
 #include <univalue.h>
 

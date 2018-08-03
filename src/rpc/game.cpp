@@ -13,16 +13,16 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "chainparams.h"
-#include "game/common.h"
-#include "game/db.h"
-#include "game/movecreator.h"
-#include "game/state.h"
-#include "game/tx.h"
-#include "rpc/server.h"
-#include "script/script.h"
-#include "uint256.h"
-#include "validation.h"
+#include <chainparams.h>
+#include <game/common.h>
+#include <game/db.h>
+#include <game/movecreator.h>
+#include <game/state.h>
+#include <game/tx.h>
+#include <rpc/server.h>
+#include <script/script.h>
+#include <uint256.h>
+#include <validation.h>
 
 #include <univalue.h>
 

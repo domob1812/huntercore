@@ -16,9 +16,9 @@
 #ifndef BITCOIN_GAME_DB
 #define BITCOIN_GAME_DB
 
-#include "dbwrapper.h"
-#include "sync.h"
-#include "uint256.h"
+#include <dbwrapper.h>
+#include <sync.h>
+#include <uint256.h>
 
 #include <map>
 

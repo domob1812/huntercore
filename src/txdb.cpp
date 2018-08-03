@@ -3,21 +3,20 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "txdb.h"
+#include <txdb.h>
 
-#include "chainparams.h"
-#include "game/db.h"
-#include "game/state.h"
-#include "hash.h"
-#include "random.h"
-#include "pow.h"
-#include "uint256.h"
-#include "util.h"
-#include "ui_interface.h"
-#include "validation.h"
-#include "init.h"
-
-#include "script/names.h"
+#include <chainparams.h>
+#include <game/db.h>
+#include <game/state.h>
+#include <hash.h>
+#include <random.h>
+#include <pow.h>
+#include <script/names.h>
+#include <uint256.h>
+#include <util.h>
+#include <ui_interface.h>
+#include <validation.h>
+#include <init.h>
 
 #include <stdint.h>
 

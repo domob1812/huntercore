@@ -16,11 +16,11 @@
 #ifndef GAME_STATE_H
 #define GAME_STATE_H
 
-#include "amount.h"
-#include "consensus/params.h"
-#include "game/common.h"
-#include "uint256.h"
-#include "serialize.h"
+#include <amount.h>
+#include <consensus/params.h>
+#include <game/common.h>
+#include <uint256.h>
+#include <serialize.h>
 
 #include <univalue.h>
 

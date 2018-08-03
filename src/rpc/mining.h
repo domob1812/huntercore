@@ -5,8 +5,8 @@
 #ifndef BITCOIN_RPC_MINING_H
 #define BITCOIN_RPC_MINING_H
 
-#include "pow.h"
-#include "script/script.h"
+#include <pow.h>
+#include <script/script.h>
 
 #include <string>
 

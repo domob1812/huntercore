@@ -6,9 +6,9 @@
 #ifndef BITCOIN_PRIMITIVES_PUREHEADER_H
 #define BITCOIN_PRIMITIVES_PUREHEADER_H
 
-#include "consensus/params.h"
-#include "serialize.h"
-#include "uint256.h"
+#include <consensus/params.h>
+#include <serialize.h>
+#include <uint256.h>
 
 /**
  * A block header without auxpow information.  This "intermediate step"

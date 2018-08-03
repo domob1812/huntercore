@@ -13,14 +13,14 @@
 //  You should have received a copy of the GNU General Public License
 //  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#include "game/state.h"
+#include <game/state.h>
 
-#include "core_io.h"
-#include "game/map.h"
-#include "game/move.h"
-#include "rpc/server.h"
-#include "util.h"
-#include "utilstrencodings.h"
+#include <core_io.h>
+#include <game/map.h>
+#include <game/move.h>
+#include <rpc/server.h>
+#include <util.h>
+#include <utilstrencodings.h>
 
 #include <functional>
 

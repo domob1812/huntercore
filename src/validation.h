@@ -215,8 +215,8 @@ extern uint256 hashAssumeValid;
 extern arith_uint256 nMinimumChainWork;
 
 /* Lock and condition variable for game_waitforchange.  */
-extern boost::mutex mut_currentState;
-extern boost::condition_variable cv_stateChange;
+extern CWaitableCriticalSection mut_currentState;
+extern CConditionVariable cv_stateChange;
 
 /** Best header we've seen so far (used for getheaders queries' starting points). */
 extern CBlockIndex *pindexBestHeader;

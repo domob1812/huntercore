@@ -1,4 +1,4 @@
-// Copyright (C) 2015-2017 Crypto Realities Ltd
+// Copyright (C) 2015-2018 Crypto Realities Ltd
 
 //  This program is free software: you can redistribute it and/or modify
 //  it under the terms of the GNU General Public License as published by
@@ -21,12 +21,11 @@
 #include <game/tx.h>
 #include <rpc/server.h>
 #include <script/script.h>
+#include <sync.h>
 #include <uint256.h>
 #include <validation.h>
 
 #include <univalue.h>
-
-#include <boost/thread.hpp>
 
 UniValue
 game_getplayerstate (const JSONRPCRequest& request)
@@ -136,7 +135,7 @@ game_waitforchange (const JSONRPCRequest& request)
       throw JSONRPCError (RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
   }
 
-  boost::unique_lock<boost::mutex> lock(mut_currentState);
+  WaitableLock lock(mut_currentState);
   while (IsRPCRunning())
     {
       /* Atomically check whether we have found a new best block and return

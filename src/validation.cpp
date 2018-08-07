@@ -966,65 +966,69 @@ bool AcceptToMemoryPool(CTxMemPool& pool, CValidationState &state, const CTransa
     return AcceptToMemoryPoolWithTime(chainparams, pool, state, tx, pfMissingInputs, GetTime(), plTxnReplaced, bypass_limits, nAbsurdFee);
 }
 
-/** Return transaction in txOut, and if it was found inside a block, its hash is placed in hashBlock */
-bool GetTransaction(const uint256 &hash, CTransactionRef &txOut, const Consensus::Params& consensusParams, uint256 &hashBlock, bool fAllowSlow)
+/**
+ * Return transaction in txOut, and if it was found inside a block, its hash is placed in hashBlock.
+ * If blockIndex is provided, the transaction is fetched from the corresponding block.
+ */
+bool GetTransaction(const uint256& hash, CTransactionRef& txOut, const Consensus::Params& consensusParams, uint256& hashBlock, bool fAllowSlow, CBlockIndex* blockIndex)
 {
-    CBlockIndex *pindexSlow = nullptr;
+    CBlockIndex* pindexSlow = blockIndex;
 
     LOCK(cs_main);
 
-    CTransactionRef ptx = mempool.get(hash);
-    if (ptx)
-    {
-        txOut = ptx;
-        return true;
-    }
-
-    if (fTxIndex) {
-        CDiskTxPos postx;
-        if (pblocktree->ReadTxIndex(hash, postx)) {
-            CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
-            if (file.IsNull())
-                return error("%s: OpenBlockFile failed", __func__);
-            CBlockHeader header;
-            try {
-                file >> header;
-                if (!postx.IsGameTx()) {
-                    fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
-                    file >> txOut;
-                }
-            } catch (const std::exception& e) {
-                return error("%s: Deserialize or I/O error - %s", __func__, e.what());
-            }
-            hashBlock = header.GetHash();
-
-            /* Read also the undo file for a game tx.  Note that we have
-               to read the header first in this case as well, so that
-               we can set hashBlock.  */
-            if (postx.IsGameTx()) {
-                CAutoFile undo(OpenUndoFile(postx.GetGamePos(), true),
-                               SER_DISK, CLIENT_VERSION);
-                if (undo.IsNull())
-                    return error("%s: OpenUndoFile failed", __func__);
-                try {
-                    undo >> txOut;
-                } catch (const std::exception& e) {
-                    return error("%s: Deserialize or I/O error - %s", __func__, e.what());
-                }
-            }
-
-            if (txOut->GetHash() != hash)
-                return error("%s: txid mismatch", __func__);
+    if (!blockIndex) {
+        CTransactionRef ptx = mempool.get(hash);
+        if (ptx) {
+            txOut = ptx;
             return true;
         }
 
-        // transaction not found in index, nothing more can be done
-        return false;
-    }
+        if (fTxIndex) {
+            CDiskTxPos postx;
+            if (pblocktree->ReadTxIndex(hash, postx)) {
+                CAutoFile file(OpenBlockFile(postx, true), SER_DISK, CLIENT_VERSION);
+                if (file.IsNull())
+                    return error("%s: OpenBlockFile failed", __func__);
+                CBlockHeader header;
+                try {
+                    file >> header;
+                    if (!postx.IsGameTx()) {
+                        fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
+                        file >> txOut;
+                    }
+                } catch (const std::exception& e) {
+                    return error("%s: Deserialize or I/O error - %s", __func__, e.what());
+                }
+                hashBlock = header.GetHash();
 
-    if (fAllowSlow) { // use coin database to locate block that contains transaction, and scan it
-        const Coin& coin = AccessByTxid(*pcoinsTip, hash);
-        if (!coin.IsSpent()) pindexSlow = chainActive[coin.nHeight];
+                /* Read also the undo file for a game tx.  Note that we have
+                   to read the header first in this case as well, so that
+                   we can set hashBlock.  */
+                if (postx.IsGameTx()) {
+                    CAutoFile undo(OpenUndoFile(postx.GetGamePos(), true),
+                                   SER_DISK, CLIENT_VERSION);
+                    if (undo.IsNull())
+                        return error("%s: OpenUndoFile failed", __func__);
+                    try {
+                        undo >> txOut;
+                    } catch (const std::exception& e) {
+                        return error("%s: Deserialize or I/O error - %s", __func__, e.what());
+                    }
+                }
+
+                if (txOut->GetHash() != hash)
+                    return error("%s: txid mismatch", __func__);
+                return true;
+            }
+
+            // transaction not found in index, nothing more can be done
+            return false;
+        }
+
+        if (fAllowSlow) { // use coin database to locate block that contains transaction, and scan it
+            const Coin& coin = AccessByTxid(*pcoinsTip, hash);
+            if (!coin.IsSpent()) pindexSlow = chainActive[coin.nHeight];
+        }
     }
 
     /* Note that this won't work for game transactions.  For them,

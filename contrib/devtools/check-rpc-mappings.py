@@ -13,8 +13,10 @@ import sys
 SOURCES = [
     "src/rpc/server.cpp",
     "src/rpc/blockchain.cpp",
+    "src/rpc/game.cpp",
     "src/rpc/mining.cpp",
     "src/rpc/misc.cpp",
+    "src/rpc/names.cpp",
     "src/rpc/net.cpp",
     "src/rpc/rawtransaction.cpp",
     "src/wallet/rpcwallet.cpp",

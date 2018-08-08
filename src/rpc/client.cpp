@@ -133,6 +133,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "logging", 1, "exclude" },
     { "disconnectnode", 1, "nodeid" },
     { "addwitnessaddress", 1, "p2sh" },
+    { "createauxblock", 1, "algo" },
     { "name_scan", 1, "count" },
     { "name_filter", 1, "maxage" },
     { "name_filter", 2, "from" },

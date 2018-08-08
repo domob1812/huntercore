@@ -15,13 +15,12 @@ class CBlockIndex;
 class UniValue;
 
 /**
- * Get the difficulty of the net wrt to the given block index, or the chain tip if
- * not provided.
+ * Get the difficulty of the net wrt to the given block index.
  *
  * @return A floating point number that is a multiple of the main net minimum
  * difficulty (4295032833 hashes).
  */
-double GetDifficulty(const CBlockIndex* blockindex = nullptr);
+double GetDifficulty(const CBlockIndex* blockindex);
 
 /** Get the difficulty for a given algo at the chain tip.  */
 double GetDifficulty(PowAlgo algo);

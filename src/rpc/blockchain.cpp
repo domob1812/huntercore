@@ -48,18 +48,16 @@ static CUpdatedBlock latestblock;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);
 
+/* Calculate the difficulty for a given block index.
+ */
 double GetDifficulty(const CBlockIndex* blockindex)
 {
     if (blockindex == nullptr)
     {
-        if (chainActive.Tip() == nullptr)
-            return 1.0;
-        else
-            blockindex = chainActive.Tip();
+        return 1.0;
     }
 
     int nShift = (blockindex->nBits >> 24) & 0xff;
-
     double dDiff =
         (double)0x0000ffff / (double)(blockindex->nBits & 0x00ffffff);
 
@@ -92,7 +90,9 @@ double GetDifficulty(PowAlgo algo)
     return GetDifficulty(pindex);
 }
 
-static UniValue AuxpowToJSON(const CAuxPow& auxpow)
+namespace
+{
+UniValue AuxpowToJSON(const CAuxPow& auxpow)
 {
     UniValue result(UniValue::VOBJ);
 
@@ -127,6 +127,7 @@ static UniValue AuxpowToJSON(const CAuxPow& auxpow)
 
     return result;
 }
+} // anonymous namespace
 
 static UniValue TxArrayToUniv(const std::vector<CTransactionRef>& vtx, bool txDetails)
 {
@@ -1421,7 +1422,7 @@ UniValue mempoolInfoToJSON()
     ret.push_back(Pair("usage", (int64_t) mempool.DynamicMemoryUsage()));
     size_t maxmempool = gArgs.GetArg("-maxmempool", DEFAULT_MAX_MEMPOOL_SIZE) * 1000000;
     ret.push_back(Pair("maxmempool", (int64_t) maxmempool));
-    ret.push_back(Pair("mempoolminfee", ValueFromAmount(mempool.GetMinFee(maxmempool).GetFeePerK())));
+    ret.push_back(Pair("mempoolminfee", ValueFromAmount(std::max(mempool.GetMinFee(maxmempool), ::minRelayTxFee).GetFeePerK())));
 
     return ret;
 }

@@ -3,9 +3,6 @@
 echo "\nAuxpow..."
 ./auxpow_mining.py
 
-echo "\nDual-algo..."
-./dualalgo.py
-
 echo "\nBasic name operations..."
 ./game_basicnames.py
 
@@ -27,5 +24,8 @@ echo "\nGame mempool cleanup..."
 echo "\nGame miner taxes..."
 ./game_minertaxes.py
 
+echo "\nDual-algo..."
+./mining_dualalgo.py
+
 echo "\ngetstatsforheight..."
-./getstatsforheight.py
+./rpc_getstatsforheight.py

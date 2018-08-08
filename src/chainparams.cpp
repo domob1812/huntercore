@@ -158,9 +158,13 @@ public:
         assert(consensus.hashGenesisBlock == uint256S("0x00000000db7eb7a9e1a06cf995363dcdc4c28e8ae04827a961942657db9a1631"));
         assert(genesis.hashMerkleRoot == uint256S("0xc4ee946ffcb0bffa454782432d530bbeb8562b09594c1fbc8ceccd46ce34a754"));
 
+        // Note that of those which support the service bits prefix, most only support a subset of
+        // possible options.
+        // This is fine at runtime as we'll fall back to using them as a oneshot if they dont support the
+        // service bits we want, but we should get them updated to support all service bits wanted by any
+        // release ASAP to avoid it where possible.
         /* FIXME: Add DNS seeds.  */
-        // Note that of those with the service bits flag, most only support a subset of possible options
-        //vSeeds.emplace_back("nmc.seed.quisquis.de", false);
+        //vSeeds.emplace_back("nmc.seed.quisquis.de");
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,40);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,13); // FIXME: Update.
@@ -263,7 +267,7 @@ public:
         vSeeds.clear();
         /* FIXME: Testnet seeds?  */
         // nodes with support for servicebits filtering should be at the top
-        //vSeeds.emplace_back("dnsseed.test.namecoin.webbtc.com", false);
+        //vSeeds.emplace_back("dnsseed.test.namecoin.webbtc.com");
 
         base58Prefixes[PUBKEY_ADDRESS] = std::vector<unsigned char>(1,100);
         base58Prefixes[SCRIPT_ADDRESS] = std::vector<unsigned char>(1,196); // FIXME: Update

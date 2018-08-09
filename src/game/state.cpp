@@ -889,25 +889,25 @@ UniValue PlayerState::ToJsonValue(int crown_index, bool dead /* = false*/) const
 UniValue CharacterState::ToJsonValue(bool has_crown) const
 {
     UniValue obj(UniValue::VOBJ);
-    obj.push_back(Pair("x", coord.x));
-    obj.push_back(Pair("y", coord.y));
+    obj.pushKV("x", coord.x);
+    obj.pushKV("y", coord.y);
     if (!waypoints.empty())
     {
-        obj.push_back(Pair("fromX", from.x));
-        obj.push_back(Pair("fromY", from.y));
+        obj.pushKV("fromX", from.x);
+        obj.pushKV("fromY", from.y);
         UniValue arr(UniValue::VARR);
         for (int i = waypoints.size() - 1; i >= 0; i--)
         {
             arr.push_back(waypoints[i].x);
             arr.push_back(waypoints[i].y);
         }
-        obj.push_back(Pair("wp", arr));
+        obj.pushKV("wp", arr);
     }
-    obj.push_back(Pair("dir", (int)dir));
-    obj.push_back(Pair("stay_in_spawn_area", stay_in_spawn_area));
-    obj.push_back(Pair("loot", ValueFromAmount(loot.nAmount)));
+    obj.pushKV("dir", (int)dir);
+    obj.pushKV("stay_in_spawn_area", stay_in_spawn_area);
+    obj.pushKV("loot", ValueFromAmount(loot.nAmount));
     if (has_crown)
-        obj.push_back(Pair("has_crown", true));
+        obj.pushKV("has_crown", true);
 
     return obj;
 }
@@ -961,65 +961,65 @@ UniValue GameState::ToJsonValue() const
     for (const auto& p : players)
       {
         int crown_index = p.first == crownHolder.player ? crownHolder.index : -1;
-        jsonPlayers.push_back(Pair(p.first, p.second.ToJsonValue(crown_index)));
+        jsonPlayers.pushKV(p.first, p.second.ToJsonValue(crown_index));
       }
 
     // Save chat messages of dead players
     for (const auto& p : dead_players_chat)
-        jsonPlayers.push_back(Pair(p.first, p.second.ToJsonValue(-1, true)));
+        jsonPlayers.pushKV(p.first, p.second.ToJsonValue(-1, true));
 
-    obj.push_back(Pair("players", jsonPlayers));
+    obj.pushKV("players", jsonPlayers);
 
     UniValue jsonLoot(UniValue::VARR);
     for (const auto& p : loot)
       {
         UniValue subobj(UniValue::VOBJ);
-        subobj.push_back(Pair("x", p.first.x));
-        subobj.push_back(Pair("y", p.first.y));
-        subobj.push_back(Pair("amount", ValueFromAmount(p.second.nAmount)));
+        subobj.pushKV("x", p.first.x);
+        subobj.pushKV("y", p.first.y);
+        subobj.pushKV("amount", ValueFromAmount(p.second.nAmount));
         UniValue blk_rng(UniValue::VARR);
         blk_rng.push_back(p.second.firstBlock);
         blk_rng.push_back(p.second.lastBlock);
-        subobj.push_back(Pair("blockRange", blk_rng));
+        subobj.pushKV("blockRange", blk_rng);
         jsonLoot.push_back(subobj);
       }
-    obj.push_back(Pair("loot", jsonLoot));
+    obj.pushKV("loot", jsonLoot);
 
     UniValue jsonHearts(UniValue::VARR);
     for (const auto& c : hearts)
       {
         UniValue subobj(UniValue::VOBJ);
-        subobj.push_back (Pair ("x", c.x));
-        subobj.push_back (Pair ("y", c.y));
+        subobj.pushKV ("x", c.x);
+        subobj.pushKV ("y", c.y);
         jsonHearts.push_back (subobj);
       }
-    obj.push_back (Pair ("hearts", jsonHearts));
+    obj.pushKV ("hearts", jsonHearts);
 
     UniValue jsonBanks(UniValue::VARR);
     for (const auto& b : banks)
       {
         UniValue subobj(UniValue::VOBJ);
-        subobj.push_back (Pair ("x", b.first.x));
-        subobj.push_back (Pair ("y", b.first.y));
-        subobj.push_back (Pair ("life", static_cast<int> (b.second)));
+        subobj.pushKV ("x", b.first.x);
+        subobj.pushKV ("y", b.first.y);
+        subobj.pushKV ("life", static_cast<int> (b.second));
         jsonBanks.push_back (subobj);
       }
-    obj.push_back (Pair ("banks", jsonBanks));
+    obj.pushKV ("banks", jsonBanks);
 
     UniValue jsonCrown(UniValue::VOBJ);
-    jsonCrown.push_back(Pair("x", crownPos.x));
-    jsonCrown.push_back(Pair("y", crownPos.y));
+    jsonCrown.pushKV("x", crownPos.x);
+    jsonCrown.pushKV("y", crownPos.y);
     if (!crownHolder.player.empty())
     {
-        jsonCrown.push_back(Pair("holderName", crownHolder.player));
-        jsonCrown.push_back(Pair("holderIndex", crownHolder.index));
+        jsonCrown.pushKV("holderName", crownHolder.player);
+        jsonCrown.pushKV("holderIndex", crownHolder.index);
     }
-    obj.push_back(Pair("crown", jsonCrown));
+    obj.pushKV("crown", jsonCrown);
 
-    obj.push_back (Pair("gameFund", ValueFromAmount (gameFund)));
-    obj.push_back (Pair("height", nHeight));
-    obj.push_back (Pair("disasterHeight", nDisasterHeight));
-    obj.push_back (Pair("hashBlock", hashBlock.ToString().c_str()));
+    obj.pushKV ("gameFund", ValueFromAmount (gameFund));
+    obj.pushKV ("height", nHeight);
+    obj.pushKV ("disasterHeight", nDisasterHeight);
+    obj.pushKV ("hashBlock", hashBlock.ToString().c_str());
 
     return obj;
 }

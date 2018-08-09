@@ -47,7 +47,7 @@ getNameInfo (const valtype& name, const valtype& value,
   PushValidatedNameValue (obj, "name", name);
   if (!dead)
     PushValidatedNameValue (obj, "value", value);
-  obj.push_back (Pair ("dead", dead));
+  obj.pushKV ("dead", dead);
   obj.pushKV ("height", height);
   obj.pushKV ("txid", outp.hash.GetHex ());
   if (!dead)
@@ -484,7 +484,7 @@ name_pending (const JSONRPCRequest& request)
           if (pwallet)
             mine = IsMine (*pwallet, op.getAddress ());
           const bool isMine = (mine & ISMINE_SPENDABLE);
-          obj.push_back (Pair ("ismine", isMine));
+          obj.pushKV ("ismine", isMine);
 #endif
 
           arr.push_back (obj);

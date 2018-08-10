@@ -31,7 +31,7 @@ class GameMempoolTest (GameTestFramework):
     self.checkName (1, "foobar", '{"color":0}', False)
     data = self.nodes[1].name_show ("foobar")
     addr = data['address']
-    valid = self.nodes[0].validateaddress (addr)
+    valid = self.nodes[0].getaddressinfo (addr)
     assert valid['ismine']
     data = self.nodes[2].gettransaction (txidB)
     assert_equal (data['confirmations'], -1)

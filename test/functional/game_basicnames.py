@@ -181,7 +181,7 @@ class GameBasicNamesTest (NameTestFramework):
     txHex = bytes_to_hex_str (tx.serialize ())
 
     txHex = self.nodes[0].fundrawtransaction (txHex)['hex']
-    signed = self.nodes[0].signrawtransaction (txHex)
+    signed = self.nodes[0].signrawtransactionwithwallet (txHex)
     assert signed['complete']
     txid = self.nodes[0].sendrawtransaction (signed['hex'])
 

@@ -33,7 +33,7 @@ class GameBountiesTest (GameTestFramework):
 
     # Try to get information of the tx in the wallet of node 0.
     print ("Verifying bounty transaction in the wallet...")
-    valid = self.nodes[0].validateaddress (addr)
+    valid = self.nodes[0].getaddressinfo (addr)
     assert valid['ismine']
     blkhash = self.nodes[0].getbestblockhash ()
     self.verifyTx (0, txid, blkhash, value, 1)
@@ -82,7 +82,7 @@ class GameBountiesTest (GameTestFramework):
     inputs = [{"txid": txid, "vout": 0}]
     outputs = {toAddr: spendValue}
     rawtx = self.nodes[0].createrawtransaction (inputs, outputs)
-    data = self.nodes[0].signrawtransaction (rawtx)
+    data = self.nodes[0].signrawtransactionwithwallet (rawtx)
     assert data['complete']
     rawtx = data['hex']
     assert_raises_rpc_error (-26, 'premature-spend-of-gametx',

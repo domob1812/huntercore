@@ -18,6 +18,7 @@
 #include <base58.h>
 #include <coins.h>
 #include <game/state.h>
+#include <key_io.h>
 #include <names/common.h>
 #include <primitives/transaction.h>
 #include <script/standard.h>

@@ -5,8 +5,8 @@
 #include <rpc/server.h>
 #include <rpc/client.h>
 
-#include <base58.h>
 #include <core_io.h>
+#include <key_io.h>
 #include <netbase.h>
 
 #include <test/test_bitcoin.h>
@@ -109,8 +109,8 @@ BOOST_AUTO_TEST_CASE(rpc_rawsign)
     r = CallRPC(std::string("createrawtransaction ")+prevout+" "+
       "{\"6WXzX1jC3dSoR8TkQLD8PTyDEcY698wDZz\":11}");
     std::string notsigned = r.get_str();
-    std::string privkey1 = "\"KzsXybp9jX64P5ekX1KUxRQ79Jht9uzW7LorgwE65i5rWACL6LQe\"";
-    std::string privkey2 = "\"Kyhdf5LuKTRx4ge69ybABsiUAWjVRK4XGxAKk2FQLp2HjGMy87Z4\"";
+    std::string privkey1 = "\"Rv4kr4E8jfjZMnBUe37CoPBb6gjyYeqad1j5575sirEKmQ98TWYj\"";
+    std::string privkey2 = "\"RttrXXktKc5T3PApH1Nt2qVx7tmap3ubnd5Y8C7ByxAkzWLgfF2t\"";
     r = CallRPC(std::string("signrawtransactionwithkey ")+notsigned+" [] "+prevout);
     BOOST_CHECK(find_value(r.get_obj(), "complete").get_bool() == false);
     r = CallRPC(std::string("signrawtransactionwithkey ")+notsigned+" ["+privkey1+","+privkey2+"] "+prevout);

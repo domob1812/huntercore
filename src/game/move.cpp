@@ -5,11 +5,13 @@
 #include <game/db.h>
 #include <game/map.h>
 #include <game/state.h>
+#include <key_io.h>
 #include <names/common.h>
 #include <names/main.h>
 #include <primitives/block.h>
 #include <primitives/transaction.h>
 #include <script/names.h>
+#include <script/standard.h>
 #include <util.h>
 #include <utilstrencodings.h>
 #include <validation.h>

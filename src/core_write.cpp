@@ -4,10 +4,10 @@
 
 #include <core_io.h>
 
-#include <base58.h>
 #include <consensus/consensus.h>
 #include <consensus/validation.h>
 #include <game/tx.h>
+#include <key_io.h>
 #include <names/common.h>
 #include <script/names.h>
 #include <script/script.h>

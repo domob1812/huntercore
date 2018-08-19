@@ -524,7 +524,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
 {
     CWalletScanState wss;
     bool fNoncriticalErrors = false;
-    DBErrors result = DB_LOAD_OK;
+    DBErrors result = DBErrors::LOAD_OK;
 
     LOCK(pwallet->cs_wallet);
     try {
@@ -532,7 +532,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         if (batch.Read((std::string)"minversion", nMinVersion))
         {
             if (nMinVersion > CLIENT_VERSION)
-                return DB_TOO_NEW;
+                return DBErrors::TOO_NEW;
             pwallet->LoadMinVersion(nMinVersion);
         }
 
@@ -541,7 +541,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         if (!pcursor)
         {
             LogPrintf("Error getting wallet database cursor\n");
-            return DB_CORRUPT;
+            return DBErrors::CORRUPT;
         }
 
         while (true)
@@ -555,7 +555,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
             else if (ret != 0)
             {
                 LogPrintf("Error reading next record from wallet database\n");
-                return DB_CORRUPT;
+                return DBErrors::CORRUPT;
             }
 
             // Try to be tolerant of single corrupt records:
@@ -565,7 +565,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
                 // losing keys is considered a catastrophic error, anything else
                 // we assume the user can live with:
                 if (IsKeyType(strType) || strType == "defaultkey")
-                    result = DB_CORRUPT;
+                    result = DBErrors::CORRUPT;
                 else
                 {
                     // Leave other errors alone, if we try to fix them we might make things worse.
@@ -584,15 +584,15 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
         throw;
     }
     catch (...) {
-        result = DB_CORRUPT;
+        result = DBErrors::CORRUPT;
     }
 
-    if (fNoncriticalErrors && result == DB_LOAD_OK)
-        result = DB_NONCRITICAL_ERROR;
+    if (fNoncriticalErrors && result == DBErrors::LOAD_OK)
+        result = DBErrors::NONCRITICAL_ERROR;
 
     // Any wallet corruption at all: skip any rewriting or
     // upgrading, we don't want to make it worse.
-    if (result != DB_LOAD_OK)
+    if (result != DBErrors::LOAD_OK)
         return result;
 
     LogPrintf("nFileVersion = %d\n", wss.nFileVersion);
@@ -609,7 +609,7 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
 
     // Rewrite encrypted wallets of versions 0.4.0 and 0.5.0rc:
     if (wss.fIsEncrypted && (wss.nFileVersion == 40000 || wss.nFileVersion == 50000))
-        return DB_NEED_REWRITE;
+        return DBErrors::NEED_REWRITE;
 
     if (wss.nFileVersion < CLIENT_VERSION) // Update
         WriteVersion(CLIENT_VERSION);
@@ -628,14 +628,14 @@ DBErrors CWalletDB::LoadWallet(CWallet* pwallet)
 
 DBErrors CWalletDB::FindWalletTx(std::vector<uint256>& vTxHash, std::vector<CWalletTx>& vWtx)
 {
-    DBErrors result = DB_LOAD_OK;
+    DBErrors result = DBErrors::LOAD_OK;
 
     try {
         int nMinVersion = 0;
         if (batch.Read((std::string)"minversion", nMinVersion))
         {
             if (nMinVersion > CLIENT_VERSION)
-                return DB_TOO_NEW;
+                return DBErrors::TOO_NEW;
         }
 
         // Get cursor
@@ -643,7 +643,7 @@ DBErrors CWalletDB::FindWalletTx(std::vector<uint256>& vTxHash, std::vector<CWal
         if (!pcursor)
         {
             LogPrintf("Error getting wallet database cursor\n");
-            return DB_CORRUPT;
+            return DBErrors::CORRUPT;
         }
 
         while (true)
@@ -657,7 +657,7 @@ DBErrors CWalletDB::FindWalletTx(std::vector<uint256>& vTxHash, std::vector<CWal
             else if (ret != 0)
             {
                 LogPrintf("Error reading next record from wallet database\n");
-                return DB_CORRUPT;
+                return DBErrors::CORRUPT;
             }
 
             std::string strType;
@@ -679,7 +679,7 @@ DBErrors CWalletDB::FindWalletTx(std::vector<uint256>& vTxHash, std::vector<CWal
         throw;
     }
     catch (...) {
-        result = DB_CORRUPT;
+        result = DBErrors::CORRUPT;
     }
 
     return result;
@@ -691,7 +691,7 @@ DBErrors CWalletDB::ZapSelectTx(std::vector<uint256>& vTxHashIn, std::vector<uin
     std::vector<uint256> vTxHash;
     std::vector<CWalletTx> vWtx;
     DBErrors err = FindWalletTx(vTxHash, vWtx);
-    if (err != DB_LOAD_OK) {
+    if (err != DBErrors::LOAD_OK) {
         return err;
     }
 
@@ -718,9 +718,9 @@ DBErrors CWalletDB::ZapSelectTx(std::vector<uint256>& vTxHashIn, std::vector<uin
     }
 
     if (delerror) {
-        return DB_CORRUPT;
+        return DBErrors::CORRUPT;
     }
-    return DB_LOAD_OK;
+    return DBErrors::LOAD_OK;
 }
 
 DBErrors CWalletDB::ZapWalletTx(std::vector<CWalletTx>& vWtx)
@@ -728,16 +728,16 @@ DBErrors CWalletDB::ZapWalletTx(std::vector<CWalletTx>& vWtx)
     // build list of wallet TXs
     std::vector<uint256> vTxHash;
     DBErrors err = FindWalletTx(vTxHash, vWtx);
-    if (err != DB_LOAD_OK)
+    if (err != DBErrors::LOAD_OK)
         return err;
 
     // erase each wallet TX
     for (uint256& hash : vTxHash) {
         if (!EraseTx(hash))
-            return DB_CORRUPT;
+            return DBErrors::CORRUPT;
     }
 
-    return DB_LOAD_OK;
+    return DBErrors::LOAD_OK;
 }
 
 void MaybeCompactWalletDB()

@@ -272,6 +272,11 @@ int64_t GetVirtualTransactionSize(const CTransaction& tx, int64_t nSigOpCost)
     return GetVirtualTransactionSize(GetTransactionWeight(tx), nSigOpCost);
 }
 
+int64_t GetVirtualTransactionInputSize(const CTxIn& txin, int64_t nSigOpCost)
+{
+    return GetVirtualTransactionSize(GetTransationInputWeight(txin), nSigOpCost);
+}
+
 CAmount
 GetHuntercoinMinFee (const CTransaction& tx)
 {

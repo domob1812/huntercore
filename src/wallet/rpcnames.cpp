@@ -343,14 +343,14 @@ name_new (const JSONRPCRequest& request)
   const CScript newScript = CNameScript::buildNameNew (addrName, hash);
 
   CCoinControl coinControl;
-  CWalletTx wtx;
-  SendMoneyToScript (pwallet, newScript, nullptr,
-                     NAMENEW_COIN_AMOUNT, false, wtx, coinControl);
+  CTransactionRef tx = SendMoneyToScript (pwallet, newScript, nullptr,
+                                          NAMENEW_COIN_AMOUNT, false,
+                                          coinControl, {}, {});
 
   keyName.KeepKey ();
 
   const std::string randStr = HexStr (rand);
-  const std::string txid = wtx.GetHash ().GetHex ();
+  const std::string txid = tx->GetHash ().GetHex ();
   LogPrintf ("name_new: name=%s, rand=%s, tx=%s\n",
              nameStr.c_str (), randStr.c_str (), txid.c_str ());
 
@@ -486,14 +486,14 @@ name_firstupdate (const JSONRPCRequest& request)
   const CAmount amount = GetRequiredGameFee (name, value);
 
   CCoinControl coinControl;
-  CWalletTx wtx;
-  SendMoneyToScript (pwallet, nameScript, &txIn,
-                     amount, false, wtx, coinControl);
+  CTransactionRef tx = SendMoneyToScript (pwallet, nameScript, &txIn,
+                                          amount, false,
+                                          coinControl, {}, {});
 
   if (usedKey)
     keyName.KeepKey ();
 
-  return wtx.GetHash ().GetHex ();
+  return tx->GetHash ().GetHex ();
 }
 
 /* ************************************************************************** */
@@ -601,14 +601,14 @@ name_update (const JSONRPCRequest& request)
   amount += GetRequiredGameFee (name, value);
 
   CCoinControl coinControl;
-  CWalletTx wtx;
-  SendMoneyToScript (pwallet, nameScript, &txIn,
-                     amount, false, wtx, coinControl);
+  CTransactionRef tx = SendMoneyToScript (pwallet, nameScript, &txIn,
+                                          amount, false,
+                                          coinControl, {}, {});
 
   if (usedKey)
     keyName.KeepKey ();
 
-  return wtx.GetHash ().GetHex ();
+  return tx->GetHash ().GetHex ();
 }
 
 /* ************************************************************************** */
@@ -698,14 +698,14 @@ name_register (const JSONRPCRequest& request)
   const CAmount amount = GetRequiredGameFee (name, value);
 
   CCoinControl coinControl;
-  CWalletTx wtx;
-  SendMoneyToScript (pwallet, nameScript, nullptr,
-                     amount, false, wtx, coinControl);
+  CTransactionRef tx = SendMoneyToScript (pwallet, nameScript, nullptr,
+                                          amount, false,
+                                          coinControl, {}, {});
 
   if (usedKey)
     keyName.KeepKey ();
 
-  return wtx.GetHash ().GetHex ();
+  return tx->GetHash ().GetHex ();
 }
 
 /* ************************************************************************** */
@@ -781,13 +781,13 @@ sendtoname (const JSONRPCRequest& request)
       throw JSONRPCError(RPC_TYPE_ERROR, "Invalid amount for send");
 
   // Wallet comments
-  CWalletTx wtx;
+  mapValue_t mapValue;
   if (request.params.size() > 2 && !request.params[2].isNull()
         && !request.params[2].get_str().empty())
-      wtx.mapValue["comment"] = request.params[2].get_str();
+      mapValue["comment"] = request.params[2].get_str();
   if (request.params.size() > 3 && !request.params[3].isNull()
         && !request.params[3].get_str().empty())
-      wtx.mapValue["to"]      = request.params[3].get_str();
+      mapValue["to"] = request.params[3].get_str();
 
   bool fSubtractFeeFromAmount = false;
   if (!request.params[4].isNull())
@@ -812,8 +812,9 @@ sendtoname (const JSONRPCRequest& request)
 
   EnsureWalletIsUnlocked(pwallet);
 
-  SendMoneyToScript (pwallet, data.getAddress (), nullptr,
-                     nAmount, fSubtractFeeFromAmount, wtx, coin_control);
-
-  return wtx.GetHash ().GetHex ();
+  CTransactionRef tx = SendMoneyToScript (pwallet, data.getAddress (), nullptr,
+                                          nAmount, fSubtractFeeFromAmount,
+                                          coin_control, std::move(mapValue),
+                                          {} /* fromAccount */);
+  return tx->GetHash ().GetHex ();
 }

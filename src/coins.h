@@ -80,7 +80,7 @@ public:
         nHeight = code >> 2;
         fCoinBase = code & 1;
         fGameTx = static_cast<bool>(code & 2);
-        ::Unserialize(s, REF(CTxOutCompressor(out)));
+        ::Unserialize(s, CTxOutCompressor(out));
     }
 
     bool IsSpent() const {

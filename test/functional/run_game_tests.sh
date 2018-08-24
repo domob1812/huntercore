@@ -1,7 +1,10 @@
 #!/bin/sh
 
+./create_cache.py || exit 1
+
 echo "\nAuxpow..."
 ./auxpow_mining.py
+./auxpow_mining.py --segwit
 
 echo "\nBasic name operations..."
 ./game_basicnames.py

@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(subsidy_limit_test)
     /* Note that this includes only the block subsidies, not the
        coins placed in the game world.  Thus the actual number of coins
        in the end is ten times as much.  */
-    BOOST_CHECK_EQUAL(nSum, 419999974800000ULL);
+    BOOST_CHECK_EQUAL(nSum, CAmount{419999974800000});
 }
 
 bool ReturnFalse() { return false; }

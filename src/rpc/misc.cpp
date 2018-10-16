@@ -532,7 +532,7 @@ getstatsforheight (const JSONRPCRequest& request)
   assert (nNameTx + nCurrencyTx == block.vtx.size ());
   transactions.pushKV ("currency", static_cast<int> (nCurrencyTx));
   transactions.pushKV ("name", static_cast<int> (nNameTx));
-  transactions.pushKV ("game", vGameTx.size ());
+  transactions.pushKV ("game", static_cast<int> (vGameTx.size ()));
 
   GameState gameState(Params ().GetConsensus ());
   if (!pgameDb->get (block.GetHash (), gameState))

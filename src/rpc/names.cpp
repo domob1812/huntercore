@@ -10,7 +10,6 @@
 #include "names/common.h"
 #include "names/main.h"
 #include "primitives/transaction.h"
-#include "rpc/safemode.h"
 #include "rpc/server.h"
 #include "script/names.h"
 #include "txmempool.h"
@@ -136,7 +135,9 @@ name_show (const JSONRPCRequest& request)
 
   RPCTypeCheck (request.params, {UniValue::VSTR});
 
-  ObserveSafeMode ();
+  if (IsInitialBlockDownload ())
+    throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD,
+                       "Namecoin is downloading blocks...");
 
   const std::string nameStr = request.params[0].get_str ();
   const valtype name = ValtypeFromString (nameStr);
@@ -182,7 +183,9 @@ name_history (const JSONRPCRequest& request)
   if (!fNameHistory)
     throw std::runtime_error ("-namehistory is not enabled");
 
-  ObserveSafeMode ();
+  if (IsInitialBlockDownload ())
+    throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD,
+                       "Namecoin is downloading blocks...");
 
   const std::string nameStr = request.params[0].get_str ();
   const valtype name = ValtypeFromString (nameStr);
@@ -238,7 +241,9 @@ name_scan (const JSONRPCRequest& request)
 
   RPCTypeCheck (request.params, {UniValue::VSTR, UniValue::VNUM});
 
-  ObserveSafeMode ();
+  if (IsInitialBlockDownload ())
+    throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD,
+                       "Namecoin is downloading blocks...");
 
   valtype start;
   if (request.params.size () >= 1)
@@ -294,7 +299,9 @@ name_filter (const JSONRPCRequest& request)
                 {UniValue::VSTR, UniValue::VNUM, UniValue::VNUM, UniValue::VNUM,
                  UniValue::VSTR});
 
-  ObserveSafeMode ();
+  if (IsInitialBlockDownload ())
+    throw JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD,
+                       "Namecoin is downloading blocks...");
 
   /* ********************** */
   /* Interpret parameters.  */

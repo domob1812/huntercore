@@ -433,7 +433,8 @@ name_pending (const JSONRPCRequest& request)
   RPCTypeCheck (request.params, {UniValue::VSTR});
 
 #ifdef ENABLE_WALLET
-  CWallet* pwallet = GetWalletForJSONRPCRequest (request);
+  std::shared_ptr<CWallet> const wallet = GetWalletForJSONRPCRequest (request);
+  CWallet* const pwallet = wallet.get ();
   LOCK2 (pwallet ? &pwallet->cs_wallet : nullptr, mempool.cs);
 #else
   LOCK (mempool.cs);
@@ -680,12 +681,12 @@ name_checkdb (const JSONRPCRequest& request)
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         argNames
   //  --------------------- ------------------------  -----------------------  ----------
-    { "namecoin",           "name_show",              &name_show,              {"name"} },
-    { "namecoin",           "name_history",           &name_history,           {"name"} },
-    { "namecoin",           "name_scan",              &name_scan,              {"start","count"} },
-    { "namecoin",           "name_filter",            &name_filter,            {"regexp","maxage","from","nb","stat"} },
-    { "namecoin",           "name_pending",           &name_pending,           {"name"} },
-    { "namecoin",           "name_checkdb",           &name_checkdb,           {} },
+    { "names",              "name_show",              &name_show,              {"name"} },
+    { "names",              "name_history",           &name_history,           {"name"} },
+    { "names",              "name_scan",              &name_scan,              {"start","count"} },
+    { "names",              "name_filter",            &name_filter,            {"regexp","maxage","from","nb","stat"} },
+    { "names",              "name_pending",           &name_pending,           {"name"} },
+    { "names",              "name_checkdb",           &name_checkdb,           {} },
     { "rawtransactions",    "namerawtransaction",     &namerawtransaction,     {"hexstring","vout","nameop"} },
 };
 

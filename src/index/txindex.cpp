@@ -291,7 +291,9 @@ bool TxIndex::FindTx(const uint256& tx_hash, uint256& block_hash, CTransactionRe
     try {
         file >> header;
         if (!postx.IsGameTx()) {
-            fseek(file.Get(), postx.nTxOffset, SEEK_CUR);
+            if (fseek(file.Get(), postx.nTxOffset, SEEK_CUR)) {
+                return error("%s: fseek(...) failed", __func__);
+            }
             file >> tx;
         }
     } catch (const std::exception& e) {

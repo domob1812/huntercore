@@ -107,7 +107,9 @@ class GameBasicNamesTest (NameTestFramework):
     self.checkNameData (arr[0], testname, None, True)
 
     # Also perform a new-style name_register registration.
-    self.nodes[2].name_register ("newstyle", '{"color":1}')
+    addr = self.nodes[2].getnewaddress ()
+    self.nodes[2].name_register ("newstyle", '{"color":1}',
+                                 {"destAddress": addr})
     assert_equal ([], self.nodes[2].name_list ())
     self.generate (0, 1)
     arr = self.nodes[2].name_list ()
@@ -121,7 +123,7 @@ class GameBasicNamesTest (NameTestFramework):
 
     # Transfer the name and check name_list afterwards.
     addr = self.nodes[1].getnewaddress ()
-    self.nodes[2].name_update ("newstyle", '{}', addr)
+    self.nodes[2].name_update ("newstyle", '{}', {"destAddress": addr})
     self.generate (0, 1)
     self.checkName (3, "newstyle", '{}', False)
     arr = self.nodes[1].name_list ()

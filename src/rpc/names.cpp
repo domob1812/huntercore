@@ -22,6 +22,7 @@
 
 #include <boost/xpressive/xpressive_dynamic.hpp>
 
+#include <cassert>
 #include <memory>
 #include <sstream>
 
@@ -30,25 +31,17 @@
 /**
  * Utility routine to construct a "name info" object to return.  This is used
  * for name_show and also name_list.
- * @param name The name.
- * @param value The name's value.
- * @param dead Whether or not the name is dead.
- * @param outp The last update's outpoint.
- * @param addr The name's address script.
- * @param height The name's last update height.
- * @return A JSON object to return.
  */
 UniValue
 getNameInfo (const valtype& name, const valtype& value,
              bool dead, const COutPoint& outp,
-             const CScript& addr, int height)
+             const CScript& addr)
 {
   UniValue obj(UniValue::VOBJ);
   PushValidatedNameValue (obj, "name", name);
   if (!dead)
     PushValidatedNameValue (obj, "value", value);
   obj.pushKV ("dead", dead);
-  obj.pushKV ("height", height);
   obj.pushKV ("txid", outp.hash.GetHex ());
   if (!dead)
     obj.pushKV ("vout", static_cast<int> (outp.n));
@@ -70,46 +63,65 @@ getNameInfo (const valtype& name, const valtype& value,
 }
 
 /**
+ * Adds information to the JSON object that is based on the last-update
+ * height for the name given.
+ */
+void
+addHeightInfo (const int height, UniValue& data)
+{
+  data.pushKV ("height", height);
+}
+
+/**
  * Return name info object for a CNameData object.
- * @param name The name.
- * @param data The name's data.
- * @return A JSON object to return.
  */
 UniValue
 getNameInfo (const valtype& name, const CNameData& data)
 {
-  return getNameInfo (name, data.getValue (), data.isDead (),
-                      data.getUpdateOutpoint (),
-                      data.getAddress (), data.getHeight ());
+  UniValue result = getNameInfo (name, data.getValue (), data.isDead (),
+                                 data.getUpdateOutpoint (),
+                                 data.getAddress ());
+  addHeightInfo (data.getHeight (), result);
+  return result;
 }
 
-/**
- * Return the help string description to use for name info objects.
- * @param indent Indentation at the line starts.
- * @param trailing Trailing string (e. g., comma for an array of these objects).
- * @return The description string.
- */
-std::string
-getNameInfoHelp (const std::string& indent, const std::string& trailing)
+NameInfoHelp::NameInfoHelp (const std::string& ind)
+  : indent(ind)
 {
-  std::ostringstream res;
+  result << indent << "{" << std::endl;
+  withField ("\"name\": xxxxx", "(string) the requested name");
+  withField ("\"value\": xxxxx", "(string) the name's current value");
+  withField ("\"txid\": xxxxx", "(string) the name's last update tx");
+  withField ("\"dead\": xxxxx", "(bool) whether the player is dead");
+  withField ("\"vout\": xxxxx",
+           "(numeric) the index of the name output in the last update");
+  withField ("\"address\": xxxxx", "(string) the address holding the name");
+}
 
-  res << indent << "{" << std::endl;
-  res << indent << "  \"name\": xxxxx,           "
-      << "(string) the requested name" << std::endl;
-  res << indent << "  \"value\": xxxxx,          "
-      << "(string) the name's current value" << std::endl;
-  res << indent << "  \"height\": xxxxx,         "
-      << "(numeric) the name's last update height" << std::endl;
-  res << indent << "  \"dead\": xxxxx,           "
-      << "(logical) whether the player is dead" << std::endl;
-  res << indent << "  \"txid\": xxxxx,           "
-      << "(string) the name's last update tx" << std::endl;
-  res << indent << "  \"address\": xxxxx,        "
-      << "(string) the address holding the name" << std::endl;
-  res << indent << "}" << trailing << std::endl;
+NameInfoHelp&
+NameInfoHelp::withField (const std::string& field, const std::string& doc)
+{
+  constexpr size_t len = 25;
+  assert (field.size () < len);
 
-  return res.str ();
+  result << indent << "  " << field << ",";
+  result << std::string (len - field.size (), ' ') << doc << std::endl;
+
+  return *this;
+}
+
+NameInfoHelp&
+NameInfoHelp::withHeight ()
+{
+  withField ("\"height\": xxxxx", "(numeric) the name's last update height");
+  return *this;
+}
+
+std::string
+NameInfoHelp::finish (const std::string& trailing)
+{
+  result << indent << "}" << trailing << std::endl;
+  return result.str ();
 }
 
 /* ************************************************************************** */
@@ -127,7 +139,7 @@ name_show (const JSONRPCRequest& request)
         "\nArguments:\n"
         "1. \"name\"          (string, required) the name to query for\n"
         "\nResult:\n"
-        + getNameInfoHelp ("", "") +
+        + NameInfoHelp ("").withHeight ().finish ("") +
         "\nExamples:\n"
         + HelpExampleCli ("name_show", "\"myname\"")
         + HelpExampleRpc ("name_show", "\"myname\"")
@@ -170,7 +182,7 @@ name_history (const JSONRPCRequest& request)
         "1. \"name\"          (string, required) the name to query for\n"
         "\nResult:\n"
         "[\n"
-        + getNameInfoHelp ("  ", ",") +
+        + NameInfoHelp ("  ").withHeight ().finish (",") +
         "  ...\n"
         "]\n"
         "\nExamples:\n"
@@ -229,7 +241,7 @@ name_scan (const JSONRPCRequest& request)
         "2. \"count\"       (numeric, optional, default=500) stop after this many names\n"
         "\nResult:\n"
         "[\n"
-        + getNameInfoHelp ("  ", ",") +
+        + NameInfoHelp ("  ").withHeight ().finish (",") +
         "  ...\n"
         "]\n"
         "\nExamples:\n"
@@ -285,7 +297,7 @@ name_filter (const JSONRPCRequest& request)
         "5. \"stat\"        (string, optional) if set to the string \"stat\", print statistics instead of returning the names\n"
         "\nResult:\n"
         "[\n"
-        + getNameInfoHelp ("  ", ",") +
+        + NameInfoHelp ("  ").withHeight ().finish (",") +
         "  ...\n"
         "]\n"
         "\nExamples:\n"
@@ -416,12 +428,12 @@ name_pending (const JSONRPCRequest& request)
         "1. \"name\"        (string, optional) only look for this name\n"
         "\nResult:\n"
         "[\n"
-        "  {\n"
-        "    \"op\": xxxx       (string) the operation being performed\n"
-        "    \"name\": xxxx     (string) the name operated on\n"
-        "    \"value\": xxxx    (string) the name's new value\n"
-        "    \"txid\": xxxx     (string) the txid corresponding to the operation\n"
-        "    \"ismine\": xxxx   (boolean) whether the name is owned by the wallet\n"
+        + NameInfoHelp ("  ")
+            .withField ("\"op\": xxxxx",
+                        "(string) the operation being performed")
+            .withField ("\"ismine\": xxxxx",
+                        "(boolean) whether the name is owned by the wallet")
+            .finish (",") +
         "  },\n"
         "  ...\n"
         "]\n"
@@ -453,40 +465,34 @@ name_pending (const JSONRPCRequest& request)
     }
 
   UniValue arr(UniValue::VARR);
-  for (std::vector<uint256>::const_iterator i = txHashes.begin ();
-       i != txHashes.end (); ++i)
+  for (const auto& txHash : txHashes)
     {
-      std::shared_ptr<const CTransaction> tx = mempool.get (*i);
+      std::shared_ptr<const CTransaction> tx = mempool.get (txHash);
       if (!tx || !tx->IsNamecoin ())
         continue;
 
-      for (const auto& txOut : tx->vout)
+      for (size_t n = 0; n < tx->vout.size (); ++n)
         {
+          const auto& txOut = tx->vout[n];
           const CNameScript op(txOut.scriptPubKey);
           if (!op.isNameOp () || !op.isAnyUpdate ())
             continue;
 
-          const valtype name = op.getOpName ();
-          const valtype value = op.getOpValue ();
-
-          std::string strOp;
+          UniValue obj = getNameInfo (op.getOpName (), op.getOpValue (),
+                                      false,
+                                      COutPoint (tx->GetHash (), n),
+                                      op.getAddress ());
           switch (op.getNameOp ())
             {
             case OP_NAME_FIRSTUPDATE:
-              strOp = "name_firstupdate";
+              obj.pushKV ("op", "name_firstupdate");
               break;
             case OP_NAME_UPDATE:
-              strOp = "name_update";
+              obj.pushKV ("op", "name_update");
               break;
             default:
               assert (false);
             }
-
-          UniValue obj(UniValue::VOBJ);
-          obj.pushKV ("op", strOp);
-          PushValidatedNameValue (obj, "name", name);
-          PushValidatedNameValue (obj, "value", value);
-          obj.pushKV ("txid", tx->GetHash ().GetHex ());
 
 #ifdef ENABLE_WALLET
           isminetype mine = ISMINE_NO;
